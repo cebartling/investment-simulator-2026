@@ -11,6 +11,10 @@ let package = Package(
             // ADR-0003: presentation models are main-actor isolated by default.
             swiftSettings: [.defaultIsolation(MainActor.self)],
         ),
+        .target(
+            name: "InvestmentSimulatorPersistence",
+            dependencies: ["InvestmentSimulatorCore"],
+        ),
         .executableTarget(
             name: "InvestmentSimulator",
             dependencies: ["InvestmentSimulatorCore", "InvestmentSimulatorPresentation"],
@@ -20,6 +24,10 @@ let package = Package(
         .testTarget(
             name: "InvestmentSimulatorCoreTests",
             dependencies: ["InvestmentSimulatorCore"],
+        ),
+        .testTarget(
+            name: "InvestmentSimulatorPersistenceTests",
+            dependencies: ["InvestmentSimulatorPersistence"],
         ),
         .testTarget(
             name: "InvestmentSimulatorPresentationTests",
