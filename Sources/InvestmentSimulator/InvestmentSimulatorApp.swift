@@ -29,14 +29,17 @@ struct MainWindow: View {
     }
 
     var body: some View {
-        ContentView(model: model)
-            .onChange(of: model.experiment) { _, experiment in
-                document.experiment = experiment
+        // Writing on create, not on a change in value, marks even a $0
+        // experiment (equal to the new document's) as edited.
+        ContentView(model: model, onCreate: {
+            if let created = model.createExperiment() {
+                document.experiment = created
             }
-            // Changes the document makes itself, like File › Revert To.
-            .onChange(of: document.experiment) { _, experiment in
-                model.replaceExperiment(with: experiment)
-            }
+        })
+        // Changes the document makes itself, like File › Revert To.
+        .onChange(of: document.experiment) { _, experiment in
+            model.replaceExperiment(with: experiment)
+        }
     }
 }
 

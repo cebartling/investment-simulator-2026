@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Bindable var model: MainWindowModel
+    let onCreate: () -> Void
 
     var body: some View {
         NavigationSplitView {
@@ -26,7 +27,7 @@ struct ContentView: View {
         .sheet(isPresented: $model.isShowingNewExperiment) {
             NewExperimentSheet(
                 model: model.newExperiment,
-                onCreate: model.createExperiment,
+                onCreate: onCreate,
                 onCancel: model.cancelNewExperiment,
             )
         }

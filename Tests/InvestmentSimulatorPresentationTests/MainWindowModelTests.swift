@@ -48,19 +48,25 @@ struct MainWindowModelTests {
         let model = try makeModel(needsSetup: true)
         model.newExperiment.cashBalance = 10000
 
-        model.createExperiment()
+        let created = model.createExperiment()
 
-        #expect(try model.experiment == Experiment(cashBalance: Money(10000)))
+        #expect(try created == Experiment(cashBalance: Money(10000)))
+        #expect(model.experiment == created)
         #expect(model.cashBalance == 10000)
         #expect(!model.isShowingNewExperiment)
+    }
+
+    @Test func `creating a zero balance experiment still returns it`() throws {
+        let model = try makeModel(needsSetup: true)
+
+        #expect(model.createExperiment() == Experiment.empty)
     }
 
     @Test func `invalid create keeps the sheet and the experiment`() throws {
         let model = try makeModel(cashBalance: 0, needsSetup: true)
         model.newExperiment.cashBalance = -1
 
-        model.createExperiment()
-
+        #expect(model.createExperiment() == nil)
         #expect(model.isShowingNewExperiment)
         #expect(model.cashBalance == 0)
     }

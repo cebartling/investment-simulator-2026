@@ -28,14 +28,17 @@ public final class MainWindowModel {
         experiment.cashBalance.amount
     }
 
-    /// Does nothing while the input is invalid, leaving the sheet open with
-    /// its validation message.
-    public func createExperiment() {
+    /// Returns the created experiment, for the document to save. Returns nil
+    /// while the input is invalid, leaving the sheet open with its
+    /// validation message.
+    @discardableResult
+    public func createExperiment() -> Experiment? {
         guard let created = newExperiment.create() else {
-            return
+            return nil
         }
         experiment = created
         isShowingNewExperiment = false
+        return created
     }
 
     /// Shows a change the document made itself, such as File › Revert To.
