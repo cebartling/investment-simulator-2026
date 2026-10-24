@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # xcode-27 is a public-preview image; its default Xcode is 27.0.
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select Xcode 27.1
+        run: sudo xcode-select -s /Applications/Xcode_27.1.app
+
+      - name: Install tools
+        run: brew install just swiftformat swiftlint
+
+      - name: Show tool versions
+        run: |
+          xcodebuild -version
+          swift --version
+          swiftformat --version
+          swiftlint version
+
+      - name: Lint
+        run: just lint
+
+      - name: Test
+        run: just test
+
+      - name: Bundle
+        run: just bundle
