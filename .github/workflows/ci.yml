@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install tools
+        run: brew install just swiftformat swiftlint
+
+      - name: Show tool versions
+        run: |
+          xcodebuild -version
+          swift --version
+          swiftformat --version
+          swiftlint version
+
+      - name: Lint
+        run: just lint
+
+      - name: Test
+        run: just test
+
+      - name: Bundle
+        run: just bundle
