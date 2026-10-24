@@ -22,6 +22,16 @@ struct NewExperimentModelTests {
         #expect(model.validationMessage == "Cash balance can't be negative.")
     }
 
+    @Test(arguments: [("-0.004", true), ("-0.006", false), ("0.004", true)])
+    func `validation checks the amount rounded to cents`(entered: String, valid: Bool) throws {
+        let model = NewExperimentModel()
+
+        model.cashBalance = try #require(Decimal(string: entered))
+
+        #expect(model.canCreate == valid)
+        #expect((model.create() != nil) == valid)
+    }
+
     @Test func `negative cash balance creates nothing`() {
         let model = NewExperimentModel()
         model.cashBalance = -1

@@ -9,8 +9,14 @@ public final class NewExperimentModel {
 
     public init() {}
 
+    /// Typed input is normalized to whole cents; validation and creation
+    /// both use this value.
+    private var roundedCashBalance: Money {
+        Money(cashBalance).roundedToCents()
+    }
+
     public var canCreate: Bool {
-        cashBalance >= 0
+        roundedCashBalance.amount >= 0
     }
 
     public var validationMessage: String? {
@@ -24,7 +30,7 @@ public final class NewExperimentModel {
             return nil
         }
         do {
-            return try Experiment(cashBalance: Money(cashBalance).roundedToCents())
+            return try Experiment(cashBalance: roundedCashBalance)
         } catch {
             preconditionFailure("canCreate allowed an invalid cash balance: \(error)")
         }
