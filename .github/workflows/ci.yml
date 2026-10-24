@@ -11,9 +11,13 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-26
+    # xcode-27 is a public-preview image; its default Xcode is 27.0.
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v7
+
+      - name: Select Xcode 27.1
+        run: sudo xcode-select -s /Applications/Xcode_27.1.app
 
       - name: Install tools
         run: brew install just swiftformat swiftlint
