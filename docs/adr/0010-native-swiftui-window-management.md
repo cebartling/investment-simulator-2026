@@ -74,5 +74,5 @@ The key comes from the root view's type name. A stale `InvestmentSimulator.Conte
   - Renaming the root view resets saved window frames once. The `WindowGroup` to `DocumentGroup` switch likely does too; verify it when that lands. Treat both as user-visible changes.
   - `just run` and `just open` keep their saved frames in separate `UserDefaults` domains, so their window positions differ.
 - **Revisit:**
-  - When `DocumentGroup` lands, check that per-document frames behave as expected and update this ADR's status if they don't.
+  - When `DocumentGroup` lands, check that per-document frames behave as expected; if they don't, supersede this ADR.
   - If a requirement appears that native persistence can't meet, such as frames that survive a view rename, supersede this ADR instead of adding a workaround.
