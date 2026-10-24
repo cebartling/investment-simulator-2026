@@ -8,11 +8,11 @@ let package = Package(
         .target(name: "InvestmentSimulatorCore"),
         .executableTarget(
             name: "InvestmentSimulator",
-            dependencies: ["InvestmentSimulatorCore"]
+            dependencies: ["InvestmentSimulatorCore"],
         ),
         .testTarget(
             name: "InvestmentSimulatorCoreTests",
-            dependencies: ["InvestmentSimulatorCore"]
+            dependencies: ["InvestmentSimulatorCore"],
         ),
-    ]
+    ],
 )

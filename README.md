@@ -4,7 +4,7 @@ Investments simulator built in Swift and SwiftUI
 ## Requirements
 
 - macOS 26+
-- Swift 6.2+ toolchain (Xcode or Command Line Tools installed; the Xcode IDE is not used)
+- Xcode installed and selected (`xcode-select -p`); it supplies the Swift 6.2+ toolchain and the Swift Testing module. The Xcode IDE itself is never opened. Command Line Tools alone are not enough: `swift test` fails with `no such module 'Testing'`.
 - [just](https://github.com/casey/just), [SwiftFormat](https://github.com/nicklockwood/SwiftFormat), [SwiftLint](https://github.com/realm/SwiftLint): `brew install just swiftformat swiftlint`
 
 ## Commands

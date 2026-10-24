@@ -2,7 +2,7 @@ import InvestmentSimulatorCore
 import Testing
 
 struct AppMetadataTests {
-    @Test func displayNameIsInvestmentSimulator() {
+    @Test func `display name is investment simulator`() {
         #expect(AppMetadata.displayName == "Investment Simulator")
     }
 }
