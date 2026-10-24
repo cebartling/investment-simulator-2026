@@ -20,7 +20,7 @@ The key comes from the root view's type name. A stale `InvestmentSimulator.Conte
 
 ## Decision
 
-- **Use `WindowGroup` until the scenario document lands, then replace it with `DocumentGroup` (ADR-0005).** The switch comes with the first `FileDocument`, not before. CLAUDE.md marks the `DocumentGroup` rule as planned until then.
+- **Use `WindowGroup` until the scenario document lands, then replace it with `DocumentGroup` (ADR-0005).** The switch comes with the first `FileDocument`, not before.
 - **Scope the composition root to a window.** Each window's root view (`MainWindow` today, the document's root view later) creates its own presentation model, so windows share no UI state. App-wide services, once they exist, are built once at the `App` level and passed into each window's root view through its initializer (ADR-0004). They never go in `@Environment`.
 - **Window frame and placement come from SwiftUI and AppKit's built-in persistence.** The app adds no custom frame saving, autosave names or `NSWindow` access for this. Window size is configured only through SwiftUI scene modifiers (`.defaultSize`, `.windowResizability`) and view `frame` constraints.
 - **Check native behavior first.** A new window-state requirement starts with an experiment against the bundled app (`just open`), reading `UserDefaults` and real window bounds, before any custom code is planned.
