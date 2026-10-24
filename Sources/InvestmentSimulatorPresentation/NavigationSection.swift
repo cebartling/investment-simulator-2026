@@ -1,5 +1,5 @@
 /// A destination in the main window's sidebar.
-public nonisolated enum NavigationSection: String, CaseIterable, Identifiable, Hashable, Sendable {
+public nonisolated enum NavigationSection: CaseIterable, Identifiable, Sendable {
     case scenario
     case simulation
     case results

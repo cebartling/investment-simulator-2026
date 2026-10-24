@@ -9,10 +9,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build:
     # xcode-27 is a public-preview image; its default Xcode is 27.0.
     runs-on: xcode-27
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 

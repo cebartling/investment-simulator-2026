@@ -26,7 +26,9 @@ Investments simulator built in Swift and SwiftUI
 ## Layout
 
 - `Sources/InvestmentSimulatorCore`: UI-free logic, covered by tests
+- `Sources/InvestmentSimulatorPresentation`: UI-free `@Observable` presentation models, covered by tests
 - `Sources/InvestmentSimulator`: SwiftUI app entry point and views
-- `Tests/InvestmentSimulatorCoreTests`: Swift Testing suites
+- `Tests/InvestmentSimulatorCoreTests`: Swift Testing suites for Core
+- `Tests/InvestmentSimulatorPresentationTests`: Swift Testing suites for Presentation
 - `Resources/Info.plist`: bundle metadata used by `just bundle`
 - `docs/adr/`: Architecture Decision Records, starting with [ADR-0001: Hexagonal Architecture](docs/adr/0001-hexagonal-architecture.md)

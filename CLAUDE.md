@@ -16,6 +16,7 @@ All tasks go through the `justfile`:
 - `just open`: bundle, then open the `.app`
 - `just format`: SwiftFormat in place
 - `just lint`: SwiftFormat in lint mode plus `swiftlint lint --strict`; CI fails on any violation
+- `just clean`: `swift package clean` plus removing `build/`
 
 ## Architecture
 
@@ -33,7 +34,7 @@ Rules from the accepted ADRs:
 
 - **Money (ADR-0002):** amounts are Core's `Money` type wrapping `Decimal`, never `Double`, and `Money` is not `Codable`. Rates are `Decimal`; stochastic samples are `Double` only inside the engine. Round to cents with banker's rounding only at reporting boundaries, through `Money`. Core never formats display strings.
 - **Concurrency (ADR-0003):** Swift 6 mode everywhere. Core is nonisolated with `Sendable` value types. The app and Presentation targets set `defaultIsolation(MainActor.self)` in `Package.swift`. Mark types SwiftUI calls off the main actor, like the `FileDocument`, `nonisolated`. Driven ports are `async` when they do I/O. Use structured concurrency for heavy simulation, with cancellation checks. No Combine, `ObservableObject`, `DispatchQueue` or global mutable state.
-- **Persistence (ADR-0005):** document-based app (`DocumentGroup`), one scenario per `.invsim` JSON file with a `schemaVersion`. No SwiftData or SQLite. Document types and the exported UTI go in `Resources/Info.plist`.
+- **Persistence (ADR-0005, *planned*: the app uses `WindowGroup` until the scenario document lands):** document-based app (`DocumentGroup`), one scenario per `.invsim` JSON file with a `schemaVersion`. No SwiftData or SQLite. Document types and the exported UTI go in `Resources/Info.plist`.
 
 `AppDelegate` sets the activation policy to `.regular` in `applicationWillFinishLaunching`. A bare SwiftPM executable otherwise launches as a background process with no Dock icon and an unresponsive menu bar. Setting it later, in `didFinishLaunching`, is too late.
 
