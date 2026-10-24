@@ -8,7 +8,7 @@
 
 ADR-0005 makes the app document-based (`DocumentGroup`), but no scenario document exists yet. Until it does, the app needs some other scene to host the main window. Today that is `WindowGroup(AppMetadata.displayName)` in `InvestmentSimulatorApp.swift`, whose root view `MainWindow` creates a `MainWindowModel` in `@State`. A code comment explains this choice, but no ADR records it.
 
-ADR-0004 makes the app target the composition root. It doesn't say what the composition root is scoped to. `@State` on the `App` is shared by every window `WindowGroup` opens, so an app-level model would let windows step on each other's selection and state.
+ADR-0001 makes the app target the composition root, and ADR-0004 governs how models are passed down. Neither says what the composition root is scoped to. `@State` on the `App` is shared by every window `WindowGroup` opens, so an app-level model would let windows step on each other's selection and state.
 
 Window state such as size and position came up in PIN-397. The plan there assumed SwiftUI restores frames only through state restoration, which macOS turns off when "Close windows when quitting an app" is on (the default), so it proposed AppKit frame autosave through an `NSViewRepresentable`. Testing on 2026-10-24 disproved the assumption:
 
