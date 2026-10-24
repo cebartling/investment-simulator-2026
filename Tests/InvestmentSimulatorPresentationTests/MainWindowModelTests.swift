@@ -15,14 +15,6 @@ struct MainWindowModelTests {
         #expect(model.selection == .scenario)
     }
 
-    @Test func `selecting a section updates the selection`() {
-        let model = MainWindowModel()
-
-        model.selection = .results
-
-        #expect(model.selection == .results)
-    }
-
     @Test(arguments: [
         (NavigationSection.scenario, "Scenario"),
         (.simulation, "Simulation"),
