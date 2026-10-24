@@ -12,6 +12,10 @@ struct ExperimentTests {
         #expect(experiment.cashBalance == cashBalance)
     }
 
+    @Test func `empty experiment has a zero cash balance`() {
+        #expect(Experiment.empty.cashBalance == .zero)
+    }
+
     @Test func `negative cash balance is rejected`() throws {
         let cashBalance = try Money(#require(Decimal(string: "-0.01")))
 
