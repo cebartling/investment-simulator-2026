@@ -1,10 +1,10 @@
 # ADR-0007: Swift Testing and Core-Focused Test Strategy
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-23
 **Deciders:** Christopher Bartling
 
-_This ADR records a decision already in effect (see `CLAUDE.md` and `Tests/`). It is written retroactively; change its status to Accepted once confirmed._
+_This ADR records a decision already in effect (see `CLAUDE.md` and `Tests/`). It was written retroactively._
 
 ## Context
 
@@ -15,8 +15,8 @@ Swift has two test frameworks: XCTest and Swift Testing (`import Testing`). Swif
 ## Decision
 
 - **Tests are written with Swift Testing** (`@Test`, `#expect`, `#require`, `@Suite`). XCTest is not used for new tests.
-- **Core is the primary test target.** `InvestmentSimulatorCoreTests` holds the unit tests. Anything testable is placed in `InvestmentSimulatorCore`, which is why it has no UI imports.
-- **Tests go through ports with in-memory fakes** for driven ports (see ADR-0001). No test touches the disk, network, real clock or system random source.
+- **Every library target has a test target, and Core is the primary one.** `InvestmentSimulatorCoreTests` holds the domain unit tests. Anything testable is placed in `InvestmentSimulatorCore`, which is why it has no UI imports. `InvestmentSimulatorPresentationTests` (ADR-0004) and `InvestmentSimulatorPersistenceTests` (ADR-0005) are created together with their targets. The executable app target has no tests.
+- **Tests go through ports with in-memory fakes** for driven ports (see ADR-0001). No test touches the disk, network, real clock or system random source; the stochastic engine (ADR-0002) takes an injected, seedable random number generator.
 - **Table-driven logic uses parameterized tests** (`@Test(arguments:)`), for example for financial formulas across rates and horizons.
 - **Test names are descriptive sentences** using raw identifiers, for example `` @Test func `display name is investment simulator`() ``. SwiftFormat's defaults produce this style (see ADR-0008).
 - **Run commands:** `just test` for all tests; `swift test --filter <Suite>` or `--filter <Suite>/<test>` for one.
@@ -60,6 +60,5 @@ Swift has two test frameworks: XCTest and Swift Testing (`import Testing`). Swif
 - **Easier:** testing domain logic quickly and in isolation; running one test from the terminal.
 - **Harder:** anything in the app target is untested unless it moves into Core or a presentation target.
 - **Revisit:**
-  - If ADR-0004 is accepted, add `InvestmentSimulatorPresentationTests` and update `CLAUDE.md`, which says Core is the only target with tests.
   - Whether to add a coverage report to CI.
   - Whether to add snapshot or other UI checks if the view layer grows.

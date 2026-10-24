@@ -1,10 +1,10 @@
 # ADR-0006: SwiftPM-Only Build and Hand-Assembled App Bundle
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-23
 **Deciders:** Christopher Bartling
 
-_This ADR records a decision already in effect (see `CLAUDE.md`, `Package.swift` and `justfile`). It is written retroactively; change its status to Accepted once confirmed._
+_This ADR records a decision already in effect (see `CLAUDE.md`, `Package.swift` and `justfile`). It was written retroactively._
 
 ## Context
 
@@ -20,9 +20,8 @@ Xcode itself must still be installed and selected: Command Line Tools alone lack
 - **The `justfile` is the single entry point** for build, test, run, bundle, format, lint and clean. CI runs the same recipes.
 - **`just bundle` assembles the `.app` by hand:** a release build, the executable copied into `Contents/MacOS`, `Resources/Info.plist` copied into `Contents`, and an ad-hoc `codesign`.
 - **`AppDelegate` promotes the process to a regular app** (`setActivationPolicy(.regular)` in `applicationWillFinishLaunching`) so `swift run` shows a Dock icon and working menu bar.
-- **No `#Preview` blocks.** They fail to build without Xcode.app and are not part of the workflow.
-- **Formatting and linting gate CI:** SwiftFormat (target version from `.swift-version`) and `swiftlint --strict`.
-- **CI uses a pinned Xcode on a macOS runner** and matches the local toolchain; the pinned path is updated when the runner image changes.
+- **No `#Preview` blocks.** They render only in the Xcode IDE, which is not used, so they would be dead code.
+- **Formatting, linting and CI are decided separately,** in ADR-0008 and ADR-0009.
 - **Names stay in sync by convention.** The app and executable name appear in `AppMetadata.displayName`, `Info.plist` and the `justfile`; they are changed together.
 
 ## Options Considered
@@ -68,4 +67,3 @@ Xcode itself must still be installed and selected: Command Line Tools alone lack
   - Add Developer ID signing, hardened runtime and notarization to `just bundle` before any distribution outside this machine.
   - Single-source the app name, for example by generating `Info.plist` values from one variable.
   - If UI testing or asset catalogs become necessary, reconsider Option C.
-  - The pinned Xcode on the CI runner, which will change when the preview image moves.

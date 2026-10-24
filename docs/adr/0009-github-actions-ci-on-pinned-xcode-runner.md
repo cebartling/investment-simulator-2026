@@ -1,10 +1,10 @@
 # ADR-0009: GitHub Actions CI on a Pinned Xcode Runner
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-23
 **Deciders:** Christopher Bartling
 
-_This ADR records a decision already in effect (see `.github/workflows/ci.yml` and `CLAUDE.md`). It is written retroactively; change its status to Accepted once confirmed._
+_This ADR records a decision already in effect (see `.github/workflows/ci.yml` and `CLAUDE.md`). It was written retroactively._
 
 ## Context
 

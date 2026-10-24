@@ -1,6 +1,6 @@
 # ADR-0002: Represent Money as Decimal in a `Money` Value Type
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-23
 **Deciders:** Christopher Bartling
 
@@ -16,7 +16,7 @@ Core imports only Foundation, so the solution must be available there. `Foundati
 
 ## Decision
 
-- **Monetary amounts are a `Money` struct in Core**, wrapping `Foundation.Decimal`. It is `Sendable`, `Hashable` and `Codable`. Arithmetic between `Money` values is defined on the type; multiplying by a rate takes a `Decimal`.
+- **Monetary amounts are a `Money` struct in Core**, wrapping `Foundation.Decimal`. It is `Sendable` and `Hashable`. It is not `Codable`: file formats are the persistence adapter's concern, which maps `Money` to and from its own DTOs (see ADR-0005). Arithmetic between `Money` values is defined on the type; multiplying by a rate takes a `Decimal`.
 - **Rates, returns and percentages are `Decimal`** in the deterministic model. Randomly sampled returns are generated as `Double` inside the stochastic engine and converted to `Decimal` once, at the point they are applied to a balance.
 - **Currency is USD only for now.** `Money` does not carry a currency code. If multi-currency is ever needed, that is a new ADR that supersedes this one.
 - **Rounding is explicit and happens at defined boundaries.** Intermediate calculations keep full `Decimal` precision. Rounding to cents (banker's rounding, `.bankers`) is applied only where a value becomes a reported figure, such as a period-end balance, through one `Money` method rather than ad hoc.

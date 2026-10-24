@@ -1,6 +1,6 @@
 # ADR-0003: Swift 6 Concurrency and Actor Isolation
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-23
 **Deciders:** Christopher Bartling
 
@@ -19,8 +19,8 @@ Swift 6.2 lets a target set its default actor isolation (`.defaultIsolation(Main
 
 - **Swift 6 language mode stays on for all targets.** No target drops to Swift 5 mode and no `@preconcurrency` or `nonisolated(unsafe)` is added without a comment explaining why.
 - **Core uses the default (nonisolated) isolation.** Domain types are value types and `Sendable`. Use cases are `async` where they do work that may take time, and plain synchronous functions where they are pure.
-- **The app target (and any presentation target) sets `defaultIsolation(MainActor.self)`.** Views and presentation models are main-actor isolated without annotations.
-- **Driven ports are `async` protocols and `Sendable`.** Adapters hide their own isolation (an actor, a serial queue, or main-actor access) behind the port.
+- **The app target (and any presentation target) sets `defaultIsolation(MainActor.self)`.** Views and presentation models are main-actor isolated without annotations. Types in those targets that SwiftUI calls off the main actor, such as the `FileDocument` (ADR-0005), are declared `nonisolated`.
+- **Driven ports are `Sendable` protocols, and `async` when they do I/O or may take time** (prices, storage). Pure, fast transformations stay synchronous, notably `ScenarioCoding` (ADR-0005), which SwiftUI's synchronous `FileDocument` read and write must call. Adapters hide their own isolation (an actor, a serial queue, or main-actor access) behind the port.
 - **Heavy simulation runs off the main actor using structured concurrency** (`async let`, `TaskGroup`), not `DispatchQueue` or detached tasks. Cancellation is checked in long loops so the UI can cancel a run.
 - **Combine is not used.** State flows through `@Observable` and `async` calls, and streams use `AsyncSequence`.
 - **No global mutable state.** This also supports the no-singletons rule in ADR-0001.
