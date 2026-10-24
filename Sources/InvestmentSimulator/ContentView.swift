@@ -26,18 +26,9 @@ struct ContentView: View {
         .sheet(isPresented: $model.isShowingNewExperiment) {
             NewExperimentSheet(
                 model: model.newExperiment,
-                onCreate: createExperiment,
+                onCreate: model.createExperiment,
                 onCancel: model.cancelNewExperiment,
             )
-        }
-    }
-
-    private func createExperiment() {
-        do {
-            try model.createExperiment()
-        } catch {
-            // Create is disabled while the input is invalid.
-            preconditionFailure("Create was enabled for an invalid experiment: \(error)")
         }
     }
 }

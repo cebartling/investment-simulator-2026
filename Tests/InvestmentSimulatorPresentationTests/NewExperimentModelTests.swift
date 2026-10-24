@@ -22,13 +22,11 @@ struct NewExperimentModelTests {
         #expect(model.validationMessage == "Cash balance can't be negative.")
     }
 
-    @Test func `negative cash balance throws on create`() {
+    @Test func `negative cash balance creates nothing`() {
         let model = NewExperimentModel()
         model.cashBalance = -1
 
-        #expect(throws: ExperimentError.negativeCashBalance(Money(-1))) {
-            try model.create()
-        }
+        #expect(model.create() == nil)
     }
 
     @Test(arguments: [
@@ -40,7 +38,7 @@ struct NewExperimentModelTests {
         let model = NewExperimentModel()
         model.cashBalance = try #require(Decimal(string: entered))
 
-        let experiment = try model.create()
+        let experiment = try #require(model.create())
 
         #expect(try experiment.cashBalance == Money(#require(Decimal(string: expected))))
     }

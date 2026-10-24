@@ -48,20 +48,19 @@ struct MainWindowModelTests {
         let model = try makeModel(needsSetup: true)
         model.newExperiment.cashBalance = 10000
 
-        try model.createExperiment()
+        model.createExperiment()
 
         #expect(try model.experiment == Experiment(cashBalance: Money(10000)))
         #expect(model.cashBalance == 10000)
         #expect(!model.isShowingNewExperiment)
     }
 
-    @Test func `failed create keeps the sheet and the experiment`() throws {
+    @Test func `invalid create keeps the sheet and the experiment`() throws {
         let model = try makeModel(cashBalance: 0, needsSetup: true)
         model.newExperiment.cashBalance = -1
 
-        #expect(throws: ExperimentError.self) {
-            try model.createExperiment()
-        }
+        model.createExperiment()
+
         #expect(model.isShowingNewExperiment)
         #expect(model.cashBalance == 0)
     }

@@ -28,8 +28,13 @@ public final class MainWindowModel {
         experiment.cashBalance.amount
     }
 
-    public func createExperiment() throws {
-        experiment = try newExperiment.create()
+    /// Does nothing while the input is invalid, leaving the sheet open with
+    /// its validation message.
+    public func createExperiment() {
+        guard let created = newExperiment.create() else {
+            return
+        }
+        experiment = created
         isShowingNewExperiment = false
     }
 

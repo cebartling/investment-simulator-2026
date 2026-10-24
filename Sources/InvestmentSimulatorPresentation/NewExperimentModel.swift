@@ -17,7 +17,16 @@ public final class NewExperimentModel {
         canCreate ? nil : "Cash balance can't be negative."
     }
 
-    public func create() throws -> Experiment {
-        try Experiment(cashBalance: Money(cashBalance).roundedToCents())
+    /// The experiment to create, or nil while the input is invalid; the
+    /// reason is in `validationMessage`.
+    public func create() -> Experiment? {
+        guard canCreate else {
+            return nil
+        }
+        do {
+            return try Experiment(cashBalance: Money(cashBalance).roundedToCents())
+        } catch {
+            preconditionFailure("canCreate allowed an invalid cash balance: \(error)")
+        }
     }
 }
