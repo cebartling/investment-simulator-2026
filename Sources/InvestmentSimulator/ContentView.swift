@@ -11,13 +11,34 @@ struct ContentView: View {
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
         } detail: {
-            if let section = model.selection {
+            switch model.selection {
+            case .experiment:
+                ExperimentDetailView(cashBalance: model.cashBalance)
+            case let section?:
                 ContentUnavailableView(section.title, systemImage: section.systemImage)
-            } else {
+            case nil:
                 ContentUnavailableView("No Selection", systemImage: "sidebar.left")
             }
         }
         .frame(minWidth: 640, minHeight: 400)
+        // Cancelling the new experiment closes the new, untitled document.
+        .background(WindowCloser(isClosing: model.shouldCloseWindow))
+        .sheet(isPresented: $model.isShowingNewExperiment) {
+            NewExperimentSheet(
+                model: model.newExperiment,
+                onCreate: createExperiment,
+                onCancel: model.cancelNewExperiment,
+            )
+        }
+    }
+
+    private func createExperiment() {
+        do {
+            try model.createExperiment()
+        } catch {
+            // Create is disabled while the input is invalid.
+            preconditionFailure("Create was enabled for an invalid experiment: \(error)")
+        }
     }
 }
 

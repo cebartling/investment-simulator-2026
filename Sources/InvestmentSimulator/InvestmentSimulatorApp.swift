@@ -1,5 +1,4 @@
 import AppKit
-import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
@@ -8,19 +7,32 @@ struct InvestmentSimulatorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        WindowGroup(AppMetadata.displayName) {
-            MainWindow()
+        DocumentGroup(newDocument: ExperimentDocument()) { file in
+            MainWindow(document: file.$document)
         }
     }
 }
 
-/// Composition root for one window. `@State` on the `App` would be shared by
-/// every window `WindowGroup` opens; here each window gets its own model.
+/// Composition root for one document window (ADR-0010). `@State` on the
+/// `App` would be shared by every window; here each window gets its own
+/// model, seeded from its document. Model changes flow back to the document.
 struct MainWindow: View {
-    @State private var model = MainWindowModel()
+    @Binding var document: ExperimentDocument
+    @State private var model: MainWindowModel
+
+    init(document: Binding<ExperimentDocument>) {
+        _document = document
+        _model = State(initialValue: MainWindowModel(
+            experiment: document.wrappedValue.experiment,
+            needsSetup: document.wrappedValue.needsSetup,
+        ))
+    }
 
     var body: some View {
         ContentView(model: model)
+            .onChange(of: model.experiment) { _, experiment in
+                document.experiment = experiment
+            }
     }
 }
 
