@@ -35,7 +35,7 @@ The key comes from the root view's type name. A stale `InvestmentSimulator.Conte
 - A per-window model maps directly onto one model per document once `DocumentGroup` arrives.
 
 **Cons:**
-- The autosave key is SwiftUI's private format, built from the root view's type name. Renaming that view, or moving to `DocumentGroup`, loses every user's saved frame once.
+- The autosave key is SwiftUI's private format, built from the root view's type name. Renaming that view loses every user's saved frame once, and moving to `DocumentGroup` likely does too (untested).
 - Restoration can be turned on or off (`.restorationBehavior`), but the app can't control the autosave key or how frames are matched. If SwiftUI changes that, the app changes with it.
 
 ### Option B: Custom frame persistence (AppKit autosave or a stored frame)
@@ -52,7 +52,7 @@ The key comes from the root view's type name. A stale `InvestmentSimulator.Conte
 ### Option C: Adopt `DocumentGroup` now, before a scenario document exists
 
 **Pros:**
-- Matches ADR-0005 immediately, so the scene type changes once and frames reset once.
+- Matches ADR-0005 immediately, so the scene type changes only once, along with any frame reset that change brings.
 
 **Cons:**
 - Needs a placeholder `FileDocument`, document types and an exported UTI with nothing real to save, which is speculative code.
@@ -71,7 +71,7 @@ The key comes from the root view's type name. A stale `InvestmentSimulator.Conte
 
 - **Easier:** no window-management code; new windows behave like native macOS windows; the per-window root carries straight over to `DocumentGroup`.
 - **Harder:**
-  - Renaming the root view, or the `WindowGroup` to `DocumentGroup` switch, resets saved window frames once. Treat both as user-visible changes.
+  - Renaming the root view resets saved window frames once. The `WindowGroup` to `DocumentGroup` switch likely does too; verify it when that lands. Treat both as user-visible changes.
   - `just run` and `just open` keep their saved frames in separate `UserDefaults` domains, so their window positions differ.
 - **Revisit:**
   - When `DocumentGroup` lands, check that per-document frames behave as expected and update this ADR's status if they don't.
