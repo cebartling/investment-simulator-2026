@@ -38,6 +38,11 @@ public final class MainWindowModel {
         isShowingNewExperiment = false
     }
 
+    /// Shows a change the document made itself, such as File › Revert To.
+    public func replaceExperiment(with experiment: Experiment) {
+        self.experiment = experiment
+    }
+
     public func cancelNewExperiment() {
         isShowingNewExperiment = false
         shouldCloseWindow = true

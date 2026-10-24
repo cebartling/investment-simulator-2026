@@ -65,6 +65,14 @@ struct MainWindowModelTests {
         #expect(model.cashBalance == 0)
     }
 
+    @Test func `replacing the experiment shows the document's new balance`() throws {
+        let model = try makeModel(cashBalance: 100)
+
+        try model.replaceExperiment(with: Experiment(cashBalance: Money(250)))
+
+        #expect(model.cashBalance == 250)
+    }
+
     @Test func `window stays open by default`() throws {
         let model = try makeModel(needsSetup: true)
 

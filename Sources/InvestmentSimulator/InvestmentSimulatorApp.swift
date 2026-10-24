@@ -15,7 +15,7 @@ struct InvestmentSimulatorApp: App {
 
 /// Composition root for one document window (ADR-0010). `@State` on the
 /// `App` would be shared by every window; here each window gets its own
-/// model, seeded from its document. Model changes flow back to the document.
+/// model, seeded from its document. Changes flow both ways.
 struct MainWindow: View {
     @Binding var document: ExperimentDocument
     @State private var model: MainWindowModel
@@ -32,6 +32,10 @@ struct MainWindow: View {
         ContentView(model: model)
             .onChange(of: model.experiment) { _, experiment in
                 document.experiment = experiment
+            }
+            // Changes the document makes itself, like File › Revert To.
+            .onChange(of: document.experiment) { _, experiment in
+                model.replaceExperiment(with: experiment)
             }
     }
 }
