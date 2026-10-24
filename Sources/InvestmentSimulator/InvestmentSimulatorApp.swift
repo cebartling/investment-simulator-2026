@@ -6,12 +6,21 @@ import SwiftUI
 @main
 struct InvestmentSimulatorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var mainWindowModel = MainWindowModel()
 
     var body: some Scene {
         WindowGroup(AppMetadata.displayName) {
-            ContentView(model: mainWindowModel)
+            MainWindow()
         }
+    }
+}
+
+/// Composition root for one window. `@State` on the `App` would be shared by
+/// every window `WindowGroup` opens; here each window gets its own model.
+struct MainWindow: View {
+    @State private var model = MainWindowModel()
+
+    var body: some View {
+        ContentView(model: model)
     }
 }
 
