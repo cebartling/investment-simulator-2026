@@ -19,8 +19,11 @@ All tasks go through the `justfile`:
 
 ## Architecture
 
-- `InvestmentSimulatorCore` (library): all logic, no UI imports. This is the only target with tests, so put anything testable here.
-- `InvestmentSimulator` (executable): SwiftUI `App` entry point and views; depends on Core.
+The project follows Hexagonal Architecture ([ADR-0001](docs/adr/0001-hexagonal-architecture.md)). Decisions are recorded as ADRs in `docs/adr/`; read them before changing structure, and add one for any new architectural decision.
+
+- `InvestmentSimulatorCore` (library): the hexagon. Domain model, use cases, and ports as protocols. Imports only Foundation, never SwiftUI, AppKit, SwiftData or networking. This is the only target with tests, so put anything testable here.
+- `InvestmentSimulator` (executable): the SwiftUI driving adapter and the composition root, which builds adapters and injects them into Core through initializers. Depends on Core.
+- Driven adapters (persistence, market data) each get their own SwiftPM target that depends on Core, added only when a real adapter is needed. Core never depends on them.
 - `InvestmentSimulatorCoreTests`: Swift Testing suites for Core.
 
 `AppDelegate` sets the activation policy to `.regular` in `applicationWillFinishLaunching`. A bare SwiftPM executable otherwise launches as a background process with no Dock icon and an unresponsive menu bar. Setting it later, in `didFinishLaunching`, is too late.
