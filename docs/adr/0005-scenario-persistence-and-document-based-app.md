@@ -1,6 +1,6 @@
 # ADR-0005: Persist Scenarios as Versioned JSON Documents in a Document-Based App
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-23
 **Deciders:** Christopher Bartling
 
@@ -19,7 +19,8 @@ The build is SwiftPM-only with a hand-assembled bundle, so anything that needs d
 - **The app is document-based.** A scenario is one document, shown through `DocumentGroup`. There is no app-wide database.
 - **The on-disk format is versioned, human-readable JSON** with a top-level `schemaVersion` field and the file extension `.invsim` (exported as a custom `UTType` conforming to `public.json`).
 - **Persistence DTOs are separate from domain types.** A driven adapter target, `InvestmentSimulatorPersistence`, depends on Core. It defines Codable DTOs per schema version, a codec that maps DTOs to and from Core's `Scenario`, and migrations from older versions. Core never imports it and never sees `Codable` file concerns.
-- **Core owns the port.** Core defines a small `ScenarioCoding` port (encode and decode a `Scenario` to and from `Data`). The `FileDocument` in the app target is a thin wrapper that calls it; it holds no format knowledge.
+- **Core owns the port.** Core defines a small, synchronous `ScenarioCoding` port (encode and decode a `Scenario` to and from `Data`). It is synchronous because `FileDocument` reads and writes synchronously (see ADR-0003). The `FileDocument` in the app target is a thin wrapper that calls it; it holds no format knowledge. It is declared `nonisolated`, because SwiftUI may read and write documents off the main actor while the app target defaults to main-actor isolation.
+- **The codec is tested with plain `Data`** in an `InvestmentSimulatorPersistenceTests` target, including decoding each older schema version through its migration.
 - **No SwiftData and no SQLite for now.**
 - **`Info.plist` declares the document type and exported UTI,** and `just bundle` carries them into the app bundle.
 

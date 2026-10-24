@@ -1,6 +1,6 @@
 # ADR-0004: `@Observable` Presentation Models and Dependency Injection into SwiftUI
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-23
 **Deciders:** Christopher Bartling
 
@@ -69,6 +69,5 @@ Observation (`@Observable`) is part of the Swift standard library, not SwiftUI, 
 - **Easier:** testing screen behavior, keeping views simple, and replacing use cases with fakes.
 - **Harder:** more types and wiring per screen; two test targets.
 - **Revisit:**
-  - Update `CLAUDE.md`, which says Core is the only target with tests, if this ADR is accepted.
   - Whether `@Environment` for the root model is worth it or whether initializer passing alone is enough.
   - Whether simple screens may skip a presentation model.

@@ -1,10 +1,10 @@
 # ADR-0008: SwiftFormat and SwiftLint as CI Gates
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-23
 **Deciders:** Christopher Bartling
 
-_This ADR records a decision already in effect (see `CLAUDE.md`, `justfile`, `.swiftlint.yml` and `.swift-version`). It is written retroactively; change its status to Accepted once confirmed._
+_This ADR records a decision already in effect (see `CLAUDE.md`, `justfile`, `.swiftlint.yml` and `.swift-version`). It was written retroactively._
 
 ## Context
 

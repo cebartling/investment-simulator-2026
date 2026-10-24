@@ -21,10 +21,19 @@ All tasks go through the `justfile`:
 
 The project follows Hexagonal Architecture ([ADR-0001](docs/adr/0001-hexagonal-architecture.md)). Decisions are recorded as ADRs in `docs/adr/`; read them before changing structure, and add one for any new architectural decision.
 
-- `InvestmentSimulatorCore` (library): the hexagon. Domain model, use cases, and ports as protocols. Imports only Foundation, never SwiftUI, AppKit, SwiftData or networking. This is the only target with tests, so put anything testable here.
-- `InvestmentSimulator` (executable): the SwiftUI driving adapter and the composition root, which builds adapters and injects them into Core through initializers. Depends on Core.
-- Driven adapters (persistence, market data) each get their own SwiftPM target that depends on Core, added only when a real adapter is needed. Core never depends on them.
-- `InvestmentSimulatorCoreTests`: Swift Testing suites for Core.
+Targets (those marked *planned* don't exist yet; create each one with its test target when the first code needs it):
+
+- `InvestmentSimulatorCore` (library): the hexagon. Domain model, use cases, and ports as protocols. Imports only Foundation, never SwiftUI, AppKit, SwiftData or networking. Put anything testable here.
+- `InvestmentSimulatorPresentation` (library, *planned*, ADR-0004): `@Observable` presentation models, one per screen. Imports only Foundation and Observation, never SwiftUI or AppKit.
+- `InvestmentSimulatorPersistence` (library, *planned*, ADR-0005): versioned JSON DTOs, the codec implementing Core's `ScenarioCoding` port, and schema migrations.
+- `InvestmentSimulator` (executable): thin SwiftUI views and the composition root, which builds adapters and presentation models and passes them down through initializers. Adapters and services never go in `@Environment`. The app has no tests.
+- Every library target has a matching `…Tests` target using Swift Testing (ADR-0007). Driven ports are faked in memory; no test touches disk, network, the real clock or system randomness.
+
+Rules from the accepted ADRs:
+
+- **Money (ADR-0002):** amounts are Core's `Money` type wrapping `Decimal`, never `Double`, and `Money` is not `Codable`. Rates are `Decimal`; stochastic samples are `Double` only inside the engine. Round to cents with banker's rounding only at reporting boundaries, through `Money`. Core never formats display strings.
+- **Concurrency (ADR-0003):** Swift 6 mode everywhere. Core is nonisolated with `Sendable` value types. The app and presentation targets use `defaultIsolation(MainActor.self)`, not yet set in `Package.swift`. Mark types SwiftUI calls off the main actor, like the `FileDocument`, `nonisolated`. Driven ports are `async` when they do I/O. Use structured concurrency for heavy simulation, with cancellation checks. No Combine, `ObservableObject`, `DispatchQueue` or global mutable state.
+- **Persistence (ADR-0005):** document-based app (`DocumentGroup`), one scenario per `.invsim` JSON file with a `schemaVersion`. No SwiftData or SQLite. Document types and the exported UTI go in `Resources/Info.plist`.
 
 `AppDelegate` sets the activation policy to `.regular` in `applicationWillFinishLaunching`. A bare SwiftPM executable otherwise launches as a background process with no Dock icon and an unresponsive menu bar. Setting it later, in `didFinishLaunching`, is too late.
 
