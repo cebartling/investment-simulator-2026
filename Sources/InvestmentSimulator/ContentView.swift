@@ -24,7 +24,7 @@ struct ContentView: View {
 private extension NavigationSection {
     var systemImage: String {
         switch self {
-        case .scenario: "slider.horizontal.3"
+        case .experiment: "flask"
         case .simulation: "play.circle"
         case .results: "chart.line.uptrend.xyaxis"
         }

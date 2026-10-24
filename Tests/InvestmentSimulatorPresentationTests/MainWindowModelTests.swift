@@ -3,20 +3,20 @@ import Testing
 
 @MainActor
 struct MainWindowModelTests {
-    @Test func `sections are scenario, simulation, results in order`() {
+    @Test func `sections are experiment, simulation, results in order`() {
         let model = MainWindowModel()
 
-        #expect(model.sections == [.scenario, .simulation, .results])
+        #expect(model.sections == [.experiment, .simulation, .results])
     }
 
     @Test func `initial selection is the first section`() {
         let model = MainWindowModel()
 
-        #expect(model.selection == .scenario)
+        #expect(model.selection == .experiment)
     }
 
     @Test(arguments: [
-        (NavigationSection.scenario, "Scenario"),
+        (NavigationSection.experiment, "Experiment"),
         (.simulation, "Simulation"),
         (.results, "Results"),
     ])

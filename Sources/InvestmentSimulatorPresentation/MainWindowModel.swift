@@ -4,7 +4,7 @@ import Observation
 @Observable
 public final class MainWindowModel {
     public let sections = NavigationSection.allCases
-    public var selection: NavigationSection? = .scenario
+    public var selection: NavigationSection? = .experiment
 
     public init() {}
 }
