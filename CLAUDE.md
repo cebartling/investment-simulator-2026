@@ -10,7 +10,7 @@ All tasks go through the `justfile`:
 
 - `just build`: debug build
 - `just test`: run all tests (Swift Testing)
-- `swift test --filter AppMetadataTests`: run a single suite (or `--filter <Suite>/<test>`)
+- `swift test --filter MoneyTests`: run a single suite (or `--filter <Suite>/<test>`)
 - `just run`: launch the app straight from SwiftPM
 - `just bundle`: release build wrapped into an ad-hoc signed `build/Investment Simulator.app`
 - `just open`: bundle, then open the `.app`
@@ -41,7 +41,7 @@ Rules from the accepted ADRs:
 
 `AppDelegate` sets the activation policy to `.regular` in `applicationWillFinishLaunching`. A bare SwiftPM executable otherwise launches as a background process with no Dock icon and an unresponsive menu bar. Setting it later, in `didFinishLaunching`, is too late.
 
-`just bundle` assembles the `.app` by hand from `Resources/Info.plist` plus the release binary. The app name and executable name are duplicated across `AppMetadata.displayName`, `Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleExecutable`) and the `justfile` (`app_name`, `app_bundle`). Change them together, or the bundle will not launch.
+`just bundle` assembles the `.app` by hand from `Resources/Info.plist` plus the release binary. The app name and executable name are duplicated across `Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleExecutable`) and the `justfile` (`app_name`, `app_bundle`). Change them together, or the bundle will not launch. ADR-0006 also lists `AppMetadata.displayName`; that type was removed once `DocumentGroup` took the app name from `Info.plist`.
 
 ## Formatting and lint
 
