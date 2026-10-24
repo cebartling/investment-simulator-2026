@@ -16,6 +16,7 @@ All tasks go through the `justfile`:
 - `just open`: bundle, then open the `.app`
 - `just format`: SwiftFormat in place
 - `just lint`: SwiftFormat in lint mode plus `swiftlint lint --strict`; CI fails on any violation
+- `just clean`: `swift package clean` plus removing `build/`
 
 ## Architecture
 
