@@ -1,4 +1,7 @@
 # investment-simulator-2026
+
+[![CI](https://github.com/cebartling/investment-simulator-2026/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cebartling/investment-simulator-2026/actions/workflows/ci.yml)
+
 Investments simulator built in Swift and SwiftUI
 
 ## Requirements
