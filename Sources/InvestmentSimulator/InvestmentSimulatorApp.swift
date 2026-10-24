@@ -1,14 +1,16 @@
 import AppKit
 import InvestmentSimulatorCore
+import InvestmentSimulatorPresentation
 import SwiftUI
 
 @main
 struct InvestmentSimulatorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var mainWindowModel = MainWindowModel()
 
     var body: some Scene {
         WindowGroup(AppMetadata.displayName) {
-            ContentView()
+            ContentView(model: mainWindowModel)
         }
     }
 }
