@@ -15,3 +15,11 @@ ADRs are not edited after acceptance except to change their status. To reverse a
 | ADR | Title | Status |
 | --- | ----- | ------ |
 | [0001](0001-hexagonal-architecture.md) | Adopt Hexagonal Architecture | Accepted |
+| [0002](0002-money-and-numeric-representation.md) | Represent Money as Decimal in a `Money` Value Type | Proposed |
+| [0003](0003-swift-6-concurrency-and-actor-isolation.md) | Swift 6 Concurrency and Actor Isolation | Proposed |
+| [0004](0004-observable-presentation-models-and-dependency-injection.md) | `@Observable` Presentation Models and Dependency Injection into SwiftUI | Proposed |
+| [0005](0005-scenario-persistence-and-document-based-app.md) | Persist Scenarios as Versioned JSON Documents in a Document-Based App | Proposed |
+| [0006](0006-swiftpm-only-build-and-hand-assembled-app-bundle.md) | SwiftPM-Only Build and Hand-Assembled App Bundle | Proposed |
+| [0007](0007-swift-testing-and-test-strategy.md) | Swift Testing and Core-Focused Test Strategy | Proposed |
+| [0008](0008-swiftformat-and-swiftlint-as-ci-gates.md) | SwiftFormat and SwiftLint as CI Gates | Proposed |
+| [0009](0009-github-actions-ci-on-pinned-xcode-runner.md) | GitHub Actions CI on a Pinned Xcode Runner | Proposed |
