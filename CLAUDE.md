@@ -10,7 +10,7 @@ All tasks go through the `justfile`:
 
 - `just build`: debug build
 - `just test`: run all tests (Swift Testing)
-- `swift test --filter AppMetadataTests`: run a single suite (or `--filter <Suite>/<test>`)
+- `swift test --filter MoneyTests`: run a single suite (or `--filter <Suite>/<test>`)
 - `just run`: launch the app straight from SwiftPM
 - `just bundle`: release build wrapped into an ad-hoc signed `build/Investment Simulator.app`
 - `just open`: bundle, then open the `.app`
@@ -25,21 +25,23 @@ The project follows Hexagonal Architecture ([ADR-0001](docs/adr/0001-hexagonal-a
 Targets (those marked *planned* don't exist yet; create each one with its test target when the first code needs it):
 
 - `InvestmentSimulatorCore` (library): the hexagon. Domain model, use cases, and ports as protocols. Imports only Foundation, never SwiftUI, AppKit, SwiftData or networking. Put anything testable here.
-- `InvestmentSimulatorPresentation` (library, ADR-0004): `@Observable` presentation models, one per screen. Imports only Foundation and Observation, never SwiftUI or AppKit.
-- `InvestmentSimulatorPersistence` (library, *planned*, ADR-0005): versioned JSON DTOs, the codec implementing Core's `ScenarioCoding` port, and schema migrations.
+- `InvestmentSimulatorPresentation` (library, ADR-0004): `@Observable` presentation models, one per screen. Depends on Core; imports only Foundation, Observation and Core, never SwiftUI or AppKit.
+- `InvestmentSimulatorPersistence` (library, ADR-0005): versioned JSON DTOs, the codec implementing Core's `ExperimentCoding` port, and schema migrations. Money is stored as a decimal string, never a JSON number.
 - `InvestmentSimulator` (executable): thin SwiftUI views and the composition root, which builds adapters and presentation models and passes them down through initializers. Adapters and services never go in `@Environment`. The app has no tests.
 - Every library target has a matching `…Tests` target using Swift Testing (ADR-0007). Driven ports are faked in memory; no test touches disk, network, the real clock or system randomness.
 
+**Terminology:** ADR-0005 says *scenario*; the code and UI say *experiment* (`Experiment`, `ExperimentCoding`). They are the same concept.
+
 Rules from the accepted ADRs:
 
-- **Money (ADR-0002):** amounts are Core's `Money` type wrapping `Decimal`, never `Double`, and `Money` is not `Codable`. Rates are `Decimal`; stochastic samples are `Double` only inside the engine. Round to cents with banker's rounding only at reporting boundaries, through `Money`. Core never formats display strings.
+- **Money (ADR-0002):** amounts are Core's `Money` type wrapping `Decimal`, never `Double`, and `Money` is not `Codable`. Rates are `Decimal`; stochastic samples are `Double` only inside the engine. Round to cents with banker's rounding only at reporting boundaries, through `Money`, plus when normalizing typed money input (the New Experiment cash balance), where validation checks the rounded value. Core never formats display strings.
 - **Concurrency (ADR-0003):** Swift 6 mode everywhere. Core is nonisolated with `Sendable` value types. The app and Presentation targets set `defaultIsolation(MainActor.self)` in `Package.swift`. Mark types SwiftUI calls off the main actor, like the `FileDocument`, `nonisolated`. Driven ports are `async` when they do I/O. Use structured concurrency for heavy simulation, with cancellation checks. No Combine, `ObservableObject`, `DispatchQueue` or global mutable state.
-- **Persistence (ADR-0005, *planned*: the app uses `WindowGroup` until the scenario document lands):** document-based app (`DocumentGroup`), one scenario per `.invsim` JSON file with a `schemaVersion`. No SwiftData or SQLite. Document types and the exported UTI go in `Resources/Info.plist`.
-- **Windows (ADR-0010):** each window's root view (`MainWindow`) is its own composition root and creates its own presentation model; windows share no UI state. SwiftUI persists window frames, keyed on the root view's type name, so renaming it resets users' saved frames once. Configure windows only through SwiftUI scene and view modifiers: no `NSWindow` access, autosave names or custom frame storage. Before planning window-state code, check what SwiftUI already does against the bundled app.
+- **Persistence (ADR-0005):** document-based app (`DocumentGroup`), one experiment per `.invsim` JSON file with a `schemaVersion`. No SwiftData or SQLite. Document types and the exported UTI (`com.cebartling.InvestmentSimulator.experiment`) go in `Resources/Info.plist`. `ExperimentDocument` reaches the codec through an immutable `static let`, because SwiftUI constructs `FileDocument`s itself; that is the one exception to initializer injection.
+- **Windows (ADR-0011, superseding ADR-0010):** each document window's root view (`MainWindow`) is its own composition root and creates its own presentation model from its document; windows share no UI state. Configure windows only through SwiftUI scene and view modifiers: no autosave names or custom frame storage, and no `NSWindow` access except `WindowCloser`, which closes a cancelled new document because SwiftUI's dismiss actions can't. `DocumentGroup` windows don't remember their frames (checked 2026-10-24); that regression from PIN-397 is tracked in PIN-399. Before planning window-state code, check what SwiftUI already does against the bundled app.
 
 `AppDelegate` sets the activation policy to `.regular` in `applicationWillFinishLaunching`. A bare SwiftPM executable otherwise launches as a background process with no Dock icon and an unresponsive menu bar. Setting it later, in `didFinishLaunching`, is too late.
 
-`just bundle` assembles the `.app` by hand from `Resources/Info.plist` plus the release binary. The app name and executable name are duplicated across `AppMetadata.displayName`, `Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleExecutable`) and the `justfile` (`app_name`, `app_bundle`). Change them together, or the bundle will not launch.
+`just bundle` assembles the `.app` by hand from `Resources/Info.plist` plus the release binary. The app name and executable name are duplicated across `Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleExecutable`) and the `justfile` (`app_name`, `app_bundle`). Change them together, or the bundle will not launch. ADR-0006 also lists `AppMetadata.displayName`; that type was removed once `DocumentGroup` took the app name from `Info.plist`.
 
 ## Formatting and lint
 

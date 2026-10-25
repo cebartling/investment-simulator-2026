@@ -1,5 +1,4 @@
 import AppKit
-import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
@@ -8,19 +7,39 @@ struct InvestmentSimulatorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        WindowGroup(AppMetadata.displayName) {
-            MainWindow()
+        DocumentGroup(newDocument: ExperimentDocument()) { file in
+            MainWindow(document: file.$document)
         }
     }
 }
 
-/// Composition root for one window. `@State` on the `App` would be shared by
-/// every window `WindowGroup` opens; here each window gets its own model.
+/// Composition root for one document window (ADR-0010). `@State` on the
+/// `App` would be shared by every window; here each window gets its own
+/// model, seeded from its document. Changes flow both ways.
 struct MainWindow: View {
-    @State private var model = MainWindowModel()
+    @Binding var document: ExperimentDocument
+    @State private var model: MainWindowModel
+
+    init(document: Binding<ExperimentDocument>) {
+        _document = document
+        _model = State(initialValue: MainWindowModel(
+            experiment: document.wrappedValue.experiment,
+            needsSetup: document.wrappedValue.needsSetup,
+        ))
+    }
 
     var body: some View {
-        ContentView(model: model)
+        // Writing on create, not on a change in value, marks even a $0
+        // experiment (equal to the new document's) as edited.
+        ContentView(model: model, onCreate: {
+            if let created = model.createExperiment() {
+                document.experiment = created
+            }
+        })
+        // Changes the document makes itself, like File › Revert To.
+        .onChange(of: document.experiment) { _, experiment in
+            model.replaceExperiment(with: experiment)
+        }
     }
 }
 

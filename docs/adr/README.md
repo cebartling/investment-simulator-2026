@@ -23,4 +23,5 @@ ADRs are not edited after acceptance except to change their status. To reverse a
 | [0007](0007-swift-testing-and-test-strategy.md) | Swift Testing and Core-Focused Test Strategy | Accepted |
 | [0008](0008-swiftformat-and-swiftlint-as-ci-gates.md) | SwiftFormat and SwiftLint as CI Gates | Accepted |
 | [0009](0009-github-actions-ci-on-pinned-xcode-runner.md) | GitHub Actions CI on a Pinned Xcode Runner | Accepted |
-| [0010](0010-native-swiftui-window-management.md) | Native SwiftUI Window Management, with `WindowGroup` Until `DocumentGroup` | Accepted |
+| [0010](0010-native-swiftui-window-management.md) | Native SwiftUI Window Management, with `WindowGroup` Until `DocumentGroup` | Superseded by ADR-0011 |
+| [0011](0011-document-window-management.md) | Document Window Management, with One AppKit Close | Accepted |

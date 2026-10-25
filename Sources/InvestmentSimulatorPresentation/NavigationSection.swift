@@ -1,6 +1,6 @@
 /// A destination in the main window's sidebar.
 public nonisolated enum NavigationSection: CaseIterable, Identifiable, Sendable {
-    case scenario
+    case experiment
     case simulation
     case results
 
@@ -10,7 +10,7 @@ public nonisolated enum NavigationSection: CaseIterable, Identifiable, Sendable 
 
     public var title: String {
         switch self {
-        case .scenario: "Scenario"
+        case .experiment: "Experiment"
         case .simulation: "Simulation"
         case .results: "Results"
         }
