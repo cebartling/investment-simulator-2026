@@ -1,14 +1,30 @@
 import AppKit
+import InvestmentSimulatorCore
+import InvestmentSimulatorMarketData
 import InvestmentSimulatorPresentation
 import SwiftUI
 
+/// The app-wide composition root: services built once here are passed to
+/// each window through its initializer (ADR-0011, ADR-0012).
 @main
 struct InvestmentSimulatorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
+    private let quotes: any QuoteProviding
+    @State private var settings: SettingsModel
+
+    init() {
+        let credentials = KeychainCredentialStore()
+        quotes = EquiblesQuoteProvider(transport: URLSessionTransport(), credentials: credentials)
+        _settings = State(initialValue: SettingsModel(credentials: credentials))
+    }
+
     var body: some Scene {
         DocumentGroup(newDocument: ExperimentDocument()) { file in
-            MainWindow(document: file.$document)
+            MainWindow(document: file.$document, quotes: quotes)
+        }
+        Settings {
+            SettingsView(model: settings)
         }
     }
 }
@@ -20,22 +36,31 @@ struct MainWindow: View {
     @Binding var document: ExperimentDocument
     @State private var model: MainWindowModel
 
-    init(document: Binding<ExperimentDocument>) {
+    init(document: Binding<ExperimentDocument>, quotes: any QuoteProviding) {
         _document = document
         _model = State(initialValue: MainWindowModel(
             experiment: document.wrappedValue.experiment,
             needsSetup: document.wrappedValue.needsSetup,
+            quotes: quotes,
         ))
     }
 
     var body: some View {
         // Writing on create, not on a change in value, marks even a $0
         // experiment (equal to the new document's) as edited.
-        ContentView(model: model, onCreate: {
-            if let created = model.createExperiment() {
-                document.experiment = created
-            }
-        })
+        ContentView(
+            model: model,
+            onCreate: {
+                if let created = model.createExperiment() {
+                    document.experiment = created
+                }
+            },
+            onPurchase: {
+                if let updated = model.completePurchase() {
+                    document.experiment = updated
+                }
+            },
+        )
         // Changes the document makes itself, like File › Revert To.
         .onChange(of: document.experiment) { _, experiment in
             model.replaceExperiment(with: experiment)
