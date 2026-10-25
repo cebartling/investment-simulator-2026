@@ -8,6 +8,16 @@ struct SettingsModelTests {
         #expect(SettingsModel(credentials: FakeCredentials("eq_old")).hasStoredKey)
     }
 
+    /// Reading the secret can make macOS ask for Keychain access, which
+    /// would block launch before any window opens.
+    @Test func `checks for a stored key without reading it`() {
+        let credentials = FakeCredentials("eq_old")
+
+        _ = SettingsModel(credentials: credentials)
+
+        #expect(credentials.keyReadCount == 0)
+    }
+
     @Test func `saving stores the trimmed key and clears the field`() throws {
         let credentials = FakeCredentials()
         let model = SettingsModel(credentials: credentials)

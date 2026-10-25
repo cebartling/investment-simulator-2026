@@ -35,6 +35,23 @@ struct KeychainCredentialStore: CredentialStoring {
         }
     }
 
+    /// Asks for the item's attributes only. Reading the secret can make macOS
+    /// prompt for access, for example after a rebuild changes the signature.
+    func hasAPIKey() throws -> Bool {
+        var query = baseQuery
+        query[kSecReturnAttributes as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        let status = SecItemCopyMatching(query as CFDictionary, nil)
+        switch status {
+        case errSecSuccess:
+            return true
+        case errSecItemNotFound:
+            return false
+        default:
+            throw KeychainError(status: status)
+        }
+    }
+
     func setAPIKey(_ key: String?) throws {
         let deleted = SecItemDelete(baseQuery as CFDictionary)
         guard deleted == errSecSuccess || deleted == errSecItemNotFound else {

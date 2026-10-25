@@ -43,6 +43,10 @@ final class FakeCredentials: CredentialStoring {
         key.withLock { $0 }
     }
 
+    func hasAPIKey() throws -> Bool {
+        key.withLock { $0 != nil }
+    }
+
     func setAPIKey(_ newKey: String?) throws {
         key.withLock { $0 = newKey }
     }

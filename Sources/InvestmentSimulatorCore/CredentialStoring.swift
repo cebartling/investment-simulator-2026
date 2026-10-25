@@ -2,6 +2,8 @@
 /// Keychain answers immediately.
 public protocol CredentialStoring: Sendable {
     func apiKey() throws -> String?
+    /// Whether a key is stored, without reading the secret.
+    func hasAPIKey() throws -> Bool
     /// Saves `key`, or removes the stored key when it is nil.
     func setAPIKey(_ key: String?) throws
 }

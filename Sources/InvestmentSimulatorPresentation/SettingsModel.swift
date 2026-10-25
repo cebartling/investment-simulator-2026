@@ -14,7 +14,7 @@ public final class SettingsModel {
 
     public init(credentials: any CredentialStoring) {
         self.credentials = credentials
-        hasStoredKey = (try? credentials.apiKey()) != nil
+        hasStoredKey = (try? credentials.hasAPIKey()) == true
     }
 
     private var trimmedKey: String {
