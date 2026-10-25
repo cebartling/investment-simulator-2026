@@ -14,6 +14,11 @@ struct PurchaseSheet: View {
                 .font(.title2.bold())
             Form {
                 TextField("Ticker", text: $model.tickerText, prompt: Text("VTI"))
+                    .onSubmit {
+                        if model.canGetPrice {
+                            Task { await model.getPrice() }
+                        }
+                    }
                 if let message = model.tickerMessage {
                     Text(message)
                         .foregroundStyle(.red)
