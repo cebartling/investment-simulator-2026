@@ -19,6 +19,25 @@ struct MoneyTests {
         #expect(Money(amount) == Money(amount))
     }
 
+    @Test func `adding and subtracting money`() throws {
+        let a = try Money(#require(Decimal(string: "100.25")))
+        let b = try Money(#require(Decimal(string: "0.75")))
+
+        #expect(a + b == Money(101))
+        #expect(try a - b == Money(#require(Decimal(string: "99.5"))))
+    }
+
+    @Test func `money is ordered by amount`() {
+        #expect(Money(5) < Money(10))
+        #expect(!(Money(10) < Money(10)))
+    }
+
+    @Test func `multiplying a price by a share count`() throws {
+        let price = try Money(#require(Decimal(string: "316.9961")))
+
+        #expect(try price.times(3) == Money(#require(Decimal(string: "950.9883"))))
+    }
+
     @Test(arguments: [
         ("10.004", "10"),
         ("10.005", "10"),
