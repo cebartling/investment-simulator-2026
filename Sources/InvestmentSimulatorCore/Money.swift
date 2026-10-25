@@ -30,12 +30,15 @@ extension Money: Comparable {
     public static func < (lhs: Money, rhs: Money) -> Bool {
         lhs.amount < rhs.amount
     }
+}
 
-    public static func + (lhs: Money, rhs: Money) -> Money {
+/// Arithmetic. Results are not rounded.
+public extension Money {
+    static func + (lhs: Money, rhs: Money) -> Money {
         Money(lhs.amount + rhs.amount)
     }
 
-    public static func - (lhs: Money, rhs: Money) -> Money {
+    static func - (lhs: Money, rhs: Money) -> Money {
         Money(lhs.amount - rhs.amount)
     }
 }
