@@ -16,10 +16,15 @@ let package = Package(
             name: "InvestmentSimulatorPersistence",
             dependencies: ["InvestmentSimulatorCore"],
         ),
+        .target(
+            name: "InvestmentSimulatorMarketData",
+            dependencies: ["InvestmentSimulatorCore"],
+        ),
         .executableTarget(
             name: "InvestmentSimulator",
             dependencies: [
                 "InvestmentSimulatorCore",
+                "InvestmentSimulatorMarketData",
                 "InvestmentSimulatorPersistence",
                 "InvestmentSimulatorPresentation",
             ],
@@ -29,6 +34,10 @@ let package = Package(
         .testTarget(
             name: "InvestmentSimulatorCoreTests",
             dependencies: ["InvestmentSimulatorCore"],
+        ),
+        .testTarget(
+            name: "InvestmentSimulatorMarketDataTests",
+            dependencies: ["InvestmentSimulatorCore", "InvestmentSimulatorMarketData"],
         ),
         .testTarget(
             name: "InvestmentSimulatorPersistenceTests",
