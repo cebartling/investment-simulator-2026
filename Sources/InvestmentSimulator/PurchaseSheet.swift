@@ -54,7 +54,7 @@ struct PurchaseSheet: View {
             EmptyView()
         case let .priced(quote):
             LabeledContent("Price") {
-                VStack(alignment: .trailing) {
+                VStack(alignment: .leading) {
                     Text(quote.price, format: .currency(code: "USD").precision(.fractionLength(2 ... 4)))
                     Text(sourceLabel(for: quote))
                         .font(.caption)
