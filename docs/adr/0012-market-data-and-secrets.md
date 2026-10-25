@@ -1,6 +1,6 @@
 # ADR-0012: Market Data from Equibles, with the API Key in the Keychain
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-25
 **Deciders:** Christopher Bartling
 
