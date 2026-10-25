@@ -11,14 +11,20 @@ struct InvestmentSimulatorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     private let quotes: any QuoteProviding
+    @State private var settings: SettingsModel
 
     init() {
-        quotes = EquiblesQuoteProvider(transport: URLSessionTransport(), credentials: KeychainCredentialStore())
+        let credentials = KeychainCredentialStore()
+        quotes = EquiblesQuoteProvider(transport: URLSessionTransport(), credentials: credentials)
+        _settings = State(initialValue: SettingsModel(credentials: credentials))
     }
 
     var body: some Scene {
         DocumentGroup(newDocument: ExperimentDocument()) { file in
             MainWindow(document: file.$document, quotes: quotes)
+        }
+        Settings {
+            SettingsView(model: settings)
         }
     }
 }
@@ -42,11 +48,19 @@ struct MainWindow: View {
     var body: some View {
         // Writing on create, not on a change in value, marks even a $0
         // experiment (equal to the new document's) as edited.
-        ContentView(model: model, onCreate: {
-            if let created = model.createExperiment() {
-                document.experiment = created
-            }
-        })
+        ContentView(
+            model: model,
+            onCreate: {
+                if let created = model.createExperiment() {
+                    document.experiment = created
+                }
+            },
+            onPurchase: {
+                if let updated = model.completePurchase() {
+                    document.experiment = updated
+                }
+            },
+        )
         // Changes the document makes itself, like File › Revert To.
         .onChange(of: document.experiment) { _, experiment in
             model.replaceExperiment(with: experiment)
