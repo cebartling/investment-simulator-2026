@@ -23,12 +23,18 @@ struct PurchaseSheet: View {
                     Text(message)
                         .foregroundStyle(.red)
                 }
-                TextField("Shares", value: $model.shares, format: .number)
+                // The label sits outside the field so only the number is
+                // monospaced.
+                LabeledContent("Shares") {
+                    TextField("Shares", value: $model.shares, format: .number)
+                        .labelsHidden()
+                        .monospaced()
+                }
                 if let message = model.sharesMessage {
                     Text(message)
                         .foregroundStyle(.red)
                 }
-                LabeledContent("Cash", value: model.availableCash.amount, format: .currency(code: "USD"))
+                amountRow("Cash", model.availableCash.amount)
                 price
             }
             HStack {
@@ -61,14 +67,15 @@ struct PurchaseSheet: View {
             LabeledContent("Price") {
                 VStack(alignment: .leading) {
                     Text(quote.price, format: .currency(code: "USD").precision(.fractionLength(2 ... 4)))
+                        .monospaced()
                     Text(PriceDateFormatter().label(for: quote))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
             if let cost = model.cost, let remaining = model.remainingCash {
-                LabeledContent("Cost", value: cost.amount, format: .currency(code: "USD"))
-                LabeledContent("Cash after", value: remaining.amount, format: .currency(code: "USD"))
+                amountRow("Cost", cost.amount)
+                amountRow("Cash after", remaining.amount)
             }
             if let message = model.shortfallMessage {
                 Text(message)
@@ -82,6 +89,15 @@ struct PurchaseSheet: View {
                     Text("Open Settings…")
                 }
             }
+        }
+    }
+
+    /// A dollar amount, monospaced so its digits line up with the rows
+    /// around it.
+    private func amountRow(_ title: LocalizedStringKey, _ amount: Decimal) -> some View {
+        LabeledContent(title) {
+            Text(amount, format: .currency(code: "USD"))
+                .monospaced()
         }
     }
 }
