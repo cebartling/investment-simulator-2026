@@ -1,14 +1,24 @@
 import AppKit
+import InvestmentSimulatorCore
+import InvestmentSimulatorMarketData
 import InvestmentSimulatorPresentation
 import SwiftUI
 
+/// The app-wide composition root: services built once here are passed to
+/// each window through its initializer (ADR-0011, ADR-0012).
 @main
 struct InvestmentSimulatorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
+    private let quotes: any QuoteProviding
+
+    init() {
+        quotes = EquiblesQuoteProvider(transport: URLSessionTransport(), credentials: KeychainCredentialStore())
+    }
+
     var body: some Scene {
         DocumentGroup(newDocument: ExperimentDocument()) { file in
-            MainWindow(document: file.$document)
+            MainWindow(document: file.$document, quotes: quotes)
         }
     }
 }
@@ -20,11 +30,12 @@ struct MainWindow: View {
     @Binding var document: ExperimentDocument
     @State private var model: MainWindowModel
 
-    init(document: Binding<ExperimentDocument>) {
+    init(document: Binding<ExperimentDocument>, quotes: any QuoteProviding) {
         _document = document
         _model = State(initialValue: MainWindowModel(
             experiment: document.wrappedValue.experiment,
             needsSetup: document.wrappedValue.needsSetup,
+            quotes: quotes,
         ))
     }
 

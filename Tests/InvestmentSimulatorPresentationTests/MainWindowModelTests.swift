@@ -94,10 +94,78 @@ struct MainWindowModelTests {
         #expect(model.shouldCloseWindow)
     }
 
-    private func makeModel(cashBalance: Decimal = 0, needsSetup: Bool = false) throws -> MainWindowModel {
+    @Test func `purchases come from the experiment`() throws {
+        let purchase = try Purchase(
+            id: fixedPurchaseID,
+            ticker: Ticker("VTI"),
+            shares: 1,
+            pricePerShare: 10,
+            pricedAt: Date(timeIntervalSince1970: 0),
+            priceSource: .liveQuote(delayed: false),
+        )
+        let model = try MainWindowModel(
+            experiment: Experiment(cashBalance: Money(5), purchases: [purchase]),
+            needsSetup: false,
+            quotes: FakeQuotes(.failure(.missingAPIKey)),
+        )
+
+        #expect(model.purchases == [purchase])
+    }
+
+    @Test func `beginning a purchase shows the purchase sheet with the cash balance`() throws {
+        let model = try makeModel(cashBalance: 500)
+
+        model.beginPurchase()
+
+        #expect(model.isShowingPurchase)
+        #expect(model.purchase?.availableCash == Money(500))
+    }
+
+    @Test func `completing a purchase updates the experiment and hides the sheet`() async throws {
+        let model = try makeModel(cashBalance: 500, quotes: FakeQuotes(.success(makeQuote(price: "100"))))
+        model.beginPurchase()
+        let purchase = try #require(model.purchase)
+        purchase.tickerText = "VTI"
+        purchase.shares = 2
+        await purchase.getPrice()
+
+        let updated = try #require(model.completePurchase())
+
+        #expect(updated.cashBalance == Money(300))
+        #expect(model.experiment == updated)
+        #expect(model.purchases.count == 1)
+        #expect(!model.isShowingPurchase)
+        #expect(model.purchase == nil)
+    }
+
+    @Test func `completing a purchase that can't be bought changes nothing`() throws {
+        let model = try makeModel(cashBalance: 500)
+        model.beginPurchase()
+
+        #expect(model.completePurchase() == nil)
+        #expect(model.isShowingPurchase)
+        #expect(model.cashBalance == 500)
+    }
+
+    @Test func `cancelling a purchase hides the sheet`() throws {
+        let model = try makeModel(cashBalance: 500)
+        model.beginPurchase()
+
+        model.cancelPurchase()
+
+        #expect(!model.isShowingPurchase)
+        #expect(model.purchase == nil)
+    }
+
+    private func makeModel(
+        cashBalance: Decimal = 0,
+        needsSetup: Bool = false,
+        quotes: FakeQuotes = FakeQuotes(.failure(.missingAPIKey)),
+    ) throws -> MainWindowModel {
         try MainWindowModel(
             experiment: Experiment(cashBalance: Money(cashBalance)),
             needsSetup: needsSetup,
+            quotes: quotes,
         )
     }
 }
