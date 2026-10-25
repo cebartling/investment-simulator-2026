@@ -13,7 +13,7 @@ struct InvestmentSimulatorApp: App {
     }
 }
 
-/// Composition root for one document window (ADR-0010). `@State` on the
+/// Composition root for one document window (ADR-0011). `@State` on the
 /// `App` would be shared by every window; here each window gets its own
 /// model, seeded from its document. Changes flow both ways.
 struct MainWindow: View {

@@ -13,8 +13,9 @@ public final class MainWindowModel {
     public var isShowingNewExperiment: Bool
     public let newExperiment = NewExperimentModel()
 
-    /// Set when the user cancels a new document; the window closes once the
-    /// sheet has gone, since a window can't close with a sheet attached.
+    /// Set when the user cancels a new document. The app's `WindowCloser`
+    /// then ends the sheet, since a window can't close with one attached,
+    /// and closes the window.
     public private(set) var shouldCloseWindow = false
 
     /// `needsSetup` is true for a new, untitled document, which opens the
