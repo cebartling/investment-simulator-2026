@@ -20,11 +20,11 @@ struct MoneyTests {
     }
 
     @Test func `adding and subtracting money`() throws {
-        let a = try Money(#require(Decimal(string: "100.25")))
-        let b = try Money(#require(Decimal(string: "0.75")))
+        let balance = try Money(#require(Decimal(string: "100.25")))
+        let cost = try Money(#require(Decimal(string: "0.75")))
 
-        #expect(a + b == Money(101))
-        #expect(try a - b == Money(#require(Decimal(string: "99.5"))))
+        #expect(balance + cost == Money(101))
+        #expect(try balance - cost == Money(#require(Decimal(string: "99.5"))))
     }
 
     @Test func `money is ordered by amount`() {
