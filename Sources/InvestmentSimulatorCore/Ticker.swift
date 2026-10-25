@@ -5,10 +5,11 @@ public struct Ticker: Sendable, Hashable {
     public let symbol: String
 
     /// Trims and uppercases `text`, then accepts 1–32 ASCII letters, digits,
-    /// dots or dashes, the same symbols the market data source accepts.
+    /// dots or dashes, starting with a letter or digit. The symbol goes into
+    /// a URL path, so it can never be `.` or `..`.
     public init(_ text: String) throws(TickerError) {
         let symbol = text.trimmingCharacters(in: .whitespaces).uppercased()
-        guard symbol.wholeMatch(of: /[A-Z0-9.\-]{1,32}/) != nil else {
+        guard symbol.wholeMatch(of: /[A-Z0-9][A-Z0-9.\-]{0,31}/) != nil else {
             throw .invalid(text)
         }
         self.symbol = symbol

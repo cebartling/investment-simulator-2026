@@ -13,7 +13,9 @@ struct TickerTests {
         #expect(try Ticker(entered).symbol == symbol)
     }
 
-    @Test(arguments: ["", "   ", "VT I", "VTI$", "ÅAPL", String(repeating: "A", count: 33)])
+    @Test(arguments: [
+        "", "   ", "VT I", "VTI$", "ÅAPL", ".", "..", "-", ".VTI", "-A", String(repeating: "A", count: 33),
+    ])
     func `invalid ticker is rejected`(entered: String) {
         #expect(throws: TickerError.invalid(entered)) {
             try Ticker(entered)
