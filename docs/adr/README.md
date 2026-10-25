@@ -25,3 +25,4 @@ ADRs are not edited after acceptance except to change their status. To reverse a
 | [0009](0009-github-actions-ci-on-pinned-xcode-runner.md) | GitHub Actions CI on a Pinned Xcode Runner | Accepted |
 | [0010](0010-native-swiftui-window-management.md) | Native SwiftUI Window Management, with `WindowGroup` Until `DocumentGroup` | Superseded by ADR-0011 |
 | [0011](0011-document-window-management.md) | Document Window Management, with One AppKit Close | Accepted |
+| [0012](0012-market-data-and-secrets.md) | Market Data from Equibles, with the API Key in the Keychain | Proposed |
