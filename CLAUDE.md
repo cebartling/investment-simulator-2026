@@ -52,3 +52,5 @@ Rules from the accepted ADRs:
 ## CI
 
 `.github/workflows/ci.yml` runs `just lint`, `just test` and `just bundle` on pushes to `main` and on pull requests. It uses the `xcode-27` runner, a GitHub public-preview image, and selects `/Applications/Xcode_27.1.app` to match the local toolchain. When that Xcode is removed from the image, update the path.
+
+CI pins SwiftFormat and SwiftLint by version and SHA-256 in `ci.yml`. When you upgrade either tool locally, update the version and checksum there to match, or CI and local lint can disagree.
