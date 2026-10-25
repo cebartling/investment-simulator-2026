@@ -53,19 +53,29 @@ struct KeychainCredentialStore: CredentialStoring {
     }
 
     func setAPIKey(_ key: String?) throws {
-        let deleted = SecItemDelete(baseQuery as CFDictionary)
-        guard deleted == errSecSuccess || deleted == errSecItemNotFound else {
-            throw KeychainError(status: deleted)
-        }
         guard let key else {
+            let deleted = SecItemDelete(baseQuery as CFDictionary)
+            guard deleted == errSecSuccess || deleted == errSecItemNotFound else {
+                throw KeychainError(status: deleted)
+            }
             return
         }
-        var item = baseQuery
-        item[kSecValueData as String] = Data(key.utf8)
-        item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlocked
-        let added = SecItemAdd(item as CFDictionary, nil)
-        guard added == errSecSuccess else {
-            throw KeychainError(status: added)
+        // Replace the key in place, so a failed save keeps the old one.
+        let data = Data(key.utf8)
+        let updated = SecItemUpdate(baseQuery as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        switch updated {
+        case errSecSuccess:
+            return
+        case errSecItemNotFound:
+            var item = baseQuery
+            item[kSecValueData as String] = data
+            item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlocked
+            let added = SecItemAdd(item as CFDictionary, nil)
+            guard added == errSecSuccess else {
+                throw KeychainError(status: added)
+            }
+        default:
+            throw KeychainError(status: updated)
         }
     }
 }
