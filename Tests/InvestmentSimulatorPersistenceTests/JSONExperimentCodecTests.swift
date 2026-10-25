@@ -22,16 +22,17 @@ struct JSONExperimentCodecTests {
         #expect(decoded.cashBalance == experiment.cashBalance)
     }
 
-    @Test func `encoded file is schema version 1 with the cash balance as a string`() throws {
+    @Test func `encoded file is schema version 2 with the cash balance as a string`() throws {
         let data = try codec.encode(makeExperiment(cashBalance: "10000.5"))
 
         let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
 
-        #expect(json["schemaVersion"] as? Int == 1)
+        #expect(json["schemaVersion"] as? Int == 2)
         #expect(json["cashBalance"] as? String == "10000.5")
+        #expect((json["purchases"] as? [Any])?.isEmpty == true)
     }
 
-    @Test func `version 1 file decodes`() throws {
+    @Test func `version 1 file migrates to an experiment with no purchases`() throws {
         let data = Data(#"{"schemaVersion": 1, "cashBalance": "250.75"}"#.utf8)
 
         let experiment = try codec.decode(data)
@@ -40,9 +41,9 @@ struct JSONExperimentCodecTests {
     }
 
     @Test func `unknown schema version is rejected`() {
-        let data = Data(#"{"schemaVersion": 2, "cashBalance": "1"}"#.utf8)
+        let data = Data(#"{"schemaVersion": 3, "cashBalance": "1"}"#.utf8)
 
-        #expect(throws: ExperimentCodingError.unsupportedSchemaVersion(2)) {
+        #expect(throws: ExperimentCodingError.unsupportedSchemaVersion(3)) {
             try codec.decode(data)
         }
     }
@@ -100,13 +101,17 @@ struct JSONExperimentCodecTests {
 
     @Test(arguments: [
         (
-            ExperimentCodingError.unsupportedSchemaVersion(2),
-            "The experiment uses file format version 2, which this version of Investment Simulator can't read.",
+            ExperimentCodingError.unsupportedSchemaVersion(3),
+            "The experiment uses file format version 3, which this version of Investment Simulator can't read.",
         ),
         (
             .invalidCashBalance("abc"),
             "The experiment's cash balance \"abc\" isn't a valid amount.",
         ),
+        (.invalidTicker("VT I"), "A purchase's ticker \"VT I\" isn't a valid symbol."),
+        (.invalidPrice("x"), "A purchase's price \"x\" isn't a valid amount."),
+        (.invalidDate("x"), "A purchase's date \"x\" isn't a valid date."),
+        (.invalidPriceSource("x"), "A purchase's price source \"x\" isn't recognized."),
     ])
     func `coding errors describe the problem`(error: ExperimentCodingError, description: String) {
         #expect(error.localizedDescription == description)
