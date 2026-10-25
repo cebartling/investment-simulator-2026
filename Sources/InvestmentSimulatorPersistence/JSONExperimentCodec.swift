@@ -82,6 +82,8 @@ extension ExperimentError: LocalizedError {
         switch self {
         case .negativeCashBalance:
             "The experiment's cash balance can't be negative."
+        case .insufficientCash:
+            "The purchase costs more than the experiment's cash balance."
         }
     }
 
