@@ -9,6 +9,7 @@ Investments simulator built in Swift and SwiftUI
 - macOS 26+
 - Xcode installed and selected (`xcode-select -p`); it supplies the Swift 6.2+ toolchain and the Swift Testing module. The Xcode IDE itself is never opened. Command Line Tools alone are not enough: `swift test` fails with `no such module 'Testing'`.
 - [just](https://github.com/casey/just), [SwiftFormat](https://github.com/nicklockwood/SwiftFormat), [SwiftLint](https://github.com/realm/SwiftLint): `brew install just swiftformat swiftlint`
+- An [Equibles API key](https://www.equibles.com/dashboard/apikeys) to price purchases; a free key works, priced at the latest close. Enter it in the app's Settings (⌘,); it is stored in your Keychain.
 
 ## Commands
 
@@ -28,9 +29,11 @@ Investments simulator built in Swift and SwiftUI
 - `Sources/InvestmentSimulatorCore`: UI-free logic, covered by tests
 - `Sources/InvestmentSimulatorPresentation`: UI-free `@Observable` presentation models, covered by tests
 - `Sources/InvestmentSimulatorPersistence`: versioned `.invsim` JSON DTOs and the codec, covered by tests
-- `Sources/InvestmentSimulator`: SwiftUI app entry point, document and views
+- `Sources/InvestmentSimulatorMarketData`: the Equibles quote adapter, covered by tests with a fake HTTP transport
+- `Sources/InvestmentSimulator`: SwiftUI app entry point, document, views, and the Keychain store for the API key
 - `Tests/InvestmentSimulatorCoreTests`: Swift Testing suites for Core
 - `Tests/InvestmentSimulatorPresentationTests`: Swift Testing suites for Presentation
 - `Tests/InvestmentSimulatorPersistenceTests`: Swift Testing suites for Persistence
+- `Tests/InvestmentSimulatorMarketDataTests`: Swift Testing suites for MarketData
 - `Resources/Info.plist`: bundle metadata and the `.invsim` document type, used by `just bundle`
 - `docs/adr/`: Architecture Decision Records, starting with [ADR-0001: Hexagonal Architecture](docs/adr/0001-hexagonal-architecture.md)
