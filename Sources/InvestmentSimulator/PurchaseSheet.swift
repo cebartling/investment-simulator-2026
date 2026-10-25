@@ -56,7 +56,7 @@ struct PurchaseSheet: View {
             LabeledContent("Price") {
                 VStack(alignment: .leading) {
                     Text(quote.price, format: .currency(code: "USD").precision(.fractionLength(2 ... 4)))
-                    Text(sourceLabel(for: quote))
+                    Text(PriceDateFormatter().label(for: quote))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -77,17 +77,6 @@ struct PurchaseSheet: View {
                     Text("Open Settings…")
                 }
             }
-        }
-    }
-
-    private func sourceLabel(for quote: Quote) -> String {
-        switch quote.source {
-        case .liveQuote(delayed: true):
-            "15-minute delayed quote, \(quote.asOf.formatted(date: .abbreviated, time: .shortened))"
-        case .liveQuote(delayed: false):
-            "Live quote, \(quote.asOf.formatted(date: .abbreviated, time: .shortened))"
-        case .close:
-            "Close on \(quote.asOf.formatted(date: .abbreviated, time: .omitted))"
         }
     }
 }

@@ -1,4 +1,5 @@
 import InvestmentSimulatorCore
+import InvestmentSimulatorPresentation
 import SwiftUI
 
 /// The Experiment section's detail: the cash balance, shown large, and the
@@ -27,7 +28,7 @@ struct ExperimentDetailView: View {
             } else {
                 Table(purchases) {
                     TableColumn("Date") { purchase in
-                        Text(purchase.pricedAt, format: .dateTime.year().month().day())
+                        Text(PriceDateFormatter().day(of: purchase.pricedAt, source: purchase.priceSource))
                     }
                     TableColumn("Ticker", value: \.ticker.symbol)
                     TableColumn("Shares") { purchase in
