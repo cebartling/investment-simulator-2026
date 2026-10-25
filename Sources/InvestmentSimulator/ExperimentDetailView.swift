@@ -31,18 +31,23 @@ struct ExperimentDetailView: View {
                         Text(PriceDateFormatter().day(of: purchase.pricedAt, source: purchase.priceSource))
                     }
                     TableColumn("Ticker", value: \.ticker.symbol)
+                    // Amounts are right-aligned and monospaced, so digits line up
+                    // down each column.
                     TableColumn("Shares") { purchase in
                         Text(purchase.shares, format: .number)
-                            .monospacedDigit()
+                            .monospaced()
                     }
+                    .alignment(.numeric)
                     TableColumn("Price") { purchase in
                         Text(purchase.pricePerShare, format: .currency(code: "USD").precision(.fractionLength(2 ... 4)))
-                            .monospacedDigit()
+                            .monospaced()
                     }
+                    .alignment(.numeric)
                     TableColumn("Cost") { purchase in
                         Text(purchase.cost.amount, format: .currency(code: "USD"))
-                            .monospacedDigit()
+                            .monospaced()
                     }
+                    .alignment(.numeric)
                 }
             }
         }
