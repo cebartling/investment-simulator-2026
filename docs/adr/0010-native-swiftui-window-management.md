@@ -1,6 +1,6 @@
 # ADR-0010: Native SwiftUI Window Management, with `WindowGroup` Until `DocumentGroup`
 
-**Status:** Accepted; amended by ADR-0011
+**Status:** Superseded by ADR-0011
 **Date:** 2026-10-24
 **Deciders:** Christopher Bartling
 
