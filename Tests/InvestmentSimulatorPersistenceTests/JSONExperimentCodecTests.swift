@@ -22,14 +22,15 @@ struct JSONExperimentCodecTests {
         #expect(decoded.cashBalance == experiment.cashBalance)
     }
 
-    @Test func `encoded file is schema version 2 with the cash balance as a string`() throws {
+    @Test func `encoded file is schema version 3 with the cash balance as a string`() throws {
         let data = try codec.encode(makeExperiment(cashBalance: "10000.5"))
 
         let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
 
-        #expect(json["schemaVersion"] as? Int == 2)
+        #expect(json["schemaVersion"] as? Int == 3)
         #expect(json["cashBalance"] as? String == "10000.5")
         #expect((json["purchases"] as? [Any])?.isEmpty == true)
+        #expect((json["limitOrders"] as? [Any])?.isEmpty == true)
     }
 
     @Test func `version 1 file migrates to an experiment with no purchases`() throws {
@@ -41,9 +42,9 @@ struct JSONExperimentCodecTests {
     }
 
     @Test func `unknown schema version is rejected`() {
-        let data = Data(#"{"schemaVersion": 3, "cashBalance": "1"}"#.utf8)
+        let data = Data(#"{"schemaVersion": 4, "cashBalance": "1"}"#.utf8)
 
-        #expect(throws: ExperimentCodingError.unsupportedSchemaVersion(3)) {
+        #expect(throws: ExperimentCodingError.unsupportedSchemaVersion(4)) {
             try codec.decode(data)
         }
     }
@@ -112,6 +113,8 @@ struct JSONExperimentCodecTests {
         (.invalidPrice("x"), "A purchase's price \"x\" isn't a valid amount."),
         (.invalidDate("x"), "A purchase's date \"x\" isn't a valid date."),
         (.invalidPriceSource("x"), "A purchase's price source \"x\" isn't recognized."),
+        (.invalidLimitPrice("x"), "A limit order's price \"x\" isn't a valid amount."),
+        (.invalidOrderDate("x"), "A limit order's date \"x\" isn't a valid date."),
     ])
     func `coding errors describe the problem`(error: ExperimentCodingError, description: String) {
         #expect(error.localizedDescription == description)

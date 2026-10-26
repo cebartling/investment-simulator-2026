@@ -9,10 +9,11 @@ public struct JSONExperimentCodec: ExperimentCoding {
     private static let dateFormat = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
     public func encode(_ experiment: Experiment) throws -> Data {
-        let document = ExperimentDocumentV2(
-            schemaVersion: ExperimentDocumentV2.schemaVersion,
+        let document = ExperimentDocumentV3(
+            schemaVersion: ExperimentDocumentV3.schemaVersion,
             cashBalance: experiment.cashBalance.amount.description,
             purchases: experiment.purchases.map(encode),
+            limitOrders: experiment.limitOrders.map(encode),
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -28,10 +29,18 @@ public struct JSONExperimentCodec: ExperimentCoding {
             let document = try decoder.decode(ExperimentDocumentV1.self, from: data)
             return try Experiment(cashBalance: cashBalance(from: document.cashBalance))
         case ExperimentDocumentV2.schemaVersion:
+            // Migration: version 2 predates limit orders.
             let document = try decoder.decode(ExperimentDocumentV2.self, from: data)
             return try Experiment(
                 cashBalance: cashBalance(from: document.cashBalance),
                 purchases: document.purchases.map(decode),
+            )
+        case ExperimentDocumentV3.schemaVersion:
+            let document = try decoder.decode(ExperimentDocumentV3.self, from: data)
+            return try Experiment(
+                cashBalance: cashBalance(from: document.cashBalance),
+                purchases: document.purchases.map(decode),
+                limitOrders: document.limitOrders.map(decode),
             )
         default:
             throw ExperimentCodingError.unsupportedSchemaVersion(version)
@@ -90,6 +99,34 @@ public struct JSONExperimentCodec: ExperimentCoding {
         }
     }
 
+    private func encode(_ order: LimitOrder) -> LimitOrderV3 {
+        LimitOrderV3(
+            id: order.id,
+            purchaseID: order.purchaseID,
+            shares: order.shares,
+            limitPrice: order.limitPrice.amount.description,
+            placedAt: order.placedAt.formatted(Self.dateFormat),
+            expiresAt: order.expiresAt.formatted(Self.dateFormat),
+        )
+    }
+
+    private func decode(_ order: LimitOrderV3) throws -> LimitOrder {
+        guard let placedAt = try? Self.dateFormat.parse(order.placedAt) else {
+            throw ExperimentCodingError.invalidOrderDate(order.placedAt)
+        }
+        guard let expiresAt = try? Self.dateFormat.parse(order.expiresAt) else {
+            throw ExperimentCodingError.invalidOrderDate(order.expiresAt)
+        }
+        return try LimitOrder(
+            id: order.id,
+            purchaseID: order.purchaseID,
+            shares: order.shares,
+            limitPrice: Money(decimal(from: order.limitPrice, invalid: ExperimentCodingError.invalidLimitPrice)),
+            placedAt: placedAt,
+            expiresAt: expiresAt,
+        )
+    }
+
     private func cashBalance(from string: String) throws -> Money {
         try Money(decimal(from: string, invalid: ExperimentCodingError.invalidCashBalance))
     }
@@ -133,6 +170,8 @@ public enum ExperimentCodingError: Error, Equatable {
     case invalidPrice(String)
     case invalidDate(String)
     case invalidPriceSource(String)
+    case invalidLimitPrice(String)
+    case invalidOrderDate(String)
 }
 
 /// Shown by the document system when a file can't be opened.
@@ -151,6 +190,10 @@ extension ExperimentCodingError: LocalizedError {
             "A purchase's date \"\(date)\" isn't a valid date."
         case let .invalidPriceSource(source):
             "A purchase's price source \"\(source)\" isn't recognized."
+        case let .invalidLimitPrice(price):
+            "A limit order's price \"\(price)\" isn't a valid amount."
+        case let .invalidOrderDate(date):
+            "A limit order's date \"\(date)\" isn't a valid date."
         }
     }
 
@@ -188,6 +231,24 @@ extension PurchaseError: LocalizedError {
             "A purchase must be for at least one share."
         case .nonPositivePrice:
             "A purchase's price must be more than zero."
+        }
+    }
+
+    public var failureReason: String? {
+        errorDescription
+    }
+}
+
+/// Domain errors a limit order in a file can trigger.
+extension LimitOrderError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .nonPositiveShares:
+            "A limit order must be for at least one share."
+        case .nonPositivePrice:
+            "A limit order's price must be more than zero."
+        case .negativeProfitPercent:
+            "A limit order's profit can't be negative."
         }
     }
 
