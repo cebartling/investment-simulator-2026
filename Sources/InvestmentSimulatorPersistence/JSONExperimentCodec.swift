@@ -168,6 +168,10 @@ extension ExperimentError: LocalizedError {
             "The experiment's cash balance can't be negative."
         case .insufficientCash:
             "The purchase costs more than the experiment's cash balance."
+        case .unknownPurchase:
+            "A limit order sells shares of a purchase the experiment doesn't have."
+        case .insufficientShares:
+            "A limit order sells more shares than the purchase has free."
         }
     }
 
