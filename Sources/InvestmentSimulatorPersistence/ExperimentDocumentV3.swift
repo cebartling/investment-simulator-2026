@@ -20,3 +20,18 @@ struct LimitOrderV3: Codable {
     /// Stored, so a later change to how long orders last leaves this one alone.
     let expiresAt: String
 }
+
+extension LimitOrderV3 {
+    /// The order in version 4, which adds fills, as an unfilled order.
+    var unfilled: LimitOrderV4 {
+        LimitOrderV4(
+            id: id,
+            purchaseID: purchaseID,
+            shares: shares,
+            limitPrice: limitPrice,
+            placedAt: placedAt,
+            expiresAt: expiresAt,
+            filledOn: nil,
+        )
+    }
+}

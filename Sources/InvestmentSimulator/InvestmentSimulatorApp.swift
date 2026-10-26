@@ -11,17 +11,20 @@ struct InvestmentSimulatorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     private let quotes: any QuoteProviding
+    private let dailyPrices: any DailyPriceProviding
     @State private var settings: SettingsModel
 
     init() {
         let credentials = KeychainCredentialStore()
-        quotes = EquiblesQuoteProvider(transport: URLSessionTransport(), credentials: credentials)
+        let equibles = EquiblesQuoteProvider(transport: URLSessionTransport(), credentials: credentials)
+        quotes = equibles
+        dailyPrices = equibles
         _settings = State(initialValue: SettingsModel(credentials: credentials))
     }
 
     var body: some Scene {
         DocumentGroup(newDocument: ExperimentDocument()) { file in
-            MainWindow(document: file.$document, quotes: quotes)
+            MainWindow(document: file.$document, quotes: quotes, dailyPrices: dailyPrices)
         }
         Settings {
             SettingsView(model: settings)
@@ -36,12 +39,13 @@ struct MainWindow: View {
     @Binding var document: ExperimentDocument
     @State private var model: MainWindowModel
 
-    init(document: Binding<ExperimentDocument>, quotes: any QuoteProviding) {
+    init(document: Binding<ExperimentDocument>, quotes: any QuoteProviding, dailyPrices: any DailyPriceProviding) {
         _document = document
         _model = State(initialValue: MainWindowModel(
             experiment: document.wrappedValue.experiment,
             needsSetup: document.wrappedValue.needsSetup,
             quotes: quotes,
+            dailyPrices: dailyPrices,
         ))
     }
 
@@ -62,6 +66,11 @@ struct MainWindow: View {
             },
             onPlaceLimitOrder: {
                 if let updated = model.completeLimitOrder() {
+                    document.experiment = updated
+                }
+            },
+            onCheckOrders: {
+                if let updated = await model.checkLimitOrders() {
                     document.experiment = updated
                 }
             },

@@ -37,6 +37,10 @@ struct PriceDateFormatterTests {
         #expect(formatter.label(for: quote).hasPrefix(prefix))
     }
 
+    @Test func `a session is dated as itself wherever the user is`() {
+        #expect(formatter.day(ofSession: "2026-10-23") == "Oct 23, 2026")
+    }
+
     private func makeQuote(at date: Date, source: PriceSource) throws -> Quote {
         try Quote(ticker: Ticker("VTI"), price: 373.01, asOf: date, source: source)
     }

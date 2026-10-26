@@ -20,6 +20,21 @@ public struct PriceDateFormatter {
         date.formatted(style(date: .abbreviated, time: .omitted, source: source))
     }
 
+    /// A New York session's day, such as "Oct 23, 2026" for `2026-10-23`.
+    /// Text that isn't a `yyyy-MM-dd` date comes back as it is.
+    public func day(ofSession sessionDate: String) -> String {
+        let parts = sessionDate.split(separator: "-").compactMap { Int($0) }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = Self.marketTimeZone
+        // Noon, so no daylight saving change moves it to another day.
+        guard parts.count == 3,
+              let noon = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2], hour: 12))
+        else {
+            return sessionDate
+        }
+        return noon.formatted(style(date: .abbreviated, time: .omitted, source: .close(sessionDate: sessionDate)))
+    }
+
     /// Where a quote's price came from and when.
     public func label(for quote: Quote) -> String {
         let when = quote.asOf.formatted(style(date: .abbreviated, time: .shortened, source: quote.source))

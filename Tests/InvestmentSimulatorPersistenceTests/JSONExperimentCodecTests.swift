@@ -22,12 +22,12 @@ struct JSONExperimentCodecTests {
         #expect(decoded.cashBalance == experiment.cashBalance)
     }
 
-    @Test func `encoded file is schema version 3 with the cash balance as a string`() throws {
+    @Test func `encoded file is schema version 4 with the cash balance as a string`() throws {
         let data = try codec.encode(makeExperiment(cashBalance: "10000.5"))
 
         let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
 
-        #expect(json["schemaVersion"] as? Int == 3)
+        #expect(json["schemaVersion"] as? Int == 4)
         #expect(json["cashBalance"] as? String == "10000.5")
         #expect((json["purchases"] as? [Any])?.isEmpty == true)
         #expect((json["limitOrders"] as? [Any])?.isEmpty == true)
@@ -42,9 +42,9 @@ struct JSONExperimentCodecTests {
     }
 
     @Test func `unknown schema version is rejected`() {
-        let data = Data(#"{"schemaVersion": 4, "cashBalance": "1"}"#.utf8)
+        let data = Data(#"{"schemaVersion": 5, "cashBalance": "1"}"#.utf8)
 
-        #expect(throws: ExperimentCodingError.unsupportedSchemaVersion(4)) {
+        #expect(throws: ExperimentCodingError.unsupportedSchemaVersion(5)) {
             try codec.decode(data)
         }
     }

@@ -4,8 +4,9 @@ import InvestmentSimulatorMarketData
 import Synchronization
 import Testing
 
-/// Answers each request from canned responses keyed by URL path, and
-/// records the requests it was sent.
+/// Answers each request from canned responses keyed by URL path plus query,
+/// such as `/v1/x?offset=2`, or else by path alone, and records the
+/// requests it was sent.
 final class FakeTransport: HTTPTransport {
     private let responses: [String: (status: Int, body: String)]
     private let sent = Mutex<[URLRequest]>([])
@@ -26,7 +27,8 @@ final class FakeTransport: HTTPTransport {
             throw failure
         }
         let url = try #require(request.url)
-        let (status, body) = responses[url.path()] ?? (500, "")
+        let pathAndQuery = url.query().map { "\(url.path())?\($0)" }
+        let (status, body) = pathAndQuery.flatMap { responses[$0] } ?? responses[url.path()] ?? (500, "")
         let response = try #require(HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: nil))
         return (Data(body.utf8), response)
     }

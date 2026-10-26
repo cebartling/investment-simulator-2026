@@ -9,8 +9,8 @@ public struct JSONExperimentCodec: ExperimentCoding {
     private static let dateFormat = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
     public func encode(_ experiment: Experiment) throws -> Data {
-        let document = ExperimentDocumentV3(
-            schemaVersion: ExperimentDocumentV3.schemaVersion,
+        let document = ExperimentDocumentV4(
+            schemaVersion: ExperimentDocumentV4.schemaVersion,
             cashBalance: experiment.cashBalance.amount.description,
             purchases: experiment.purchases.map(encode),
             limitOrders: experiment.limitOrders.map(encode),
@@ -36,7 +36,15 @@ public struct JSONExperimentCodec: ExperimentCoding {
                 purchases: document.purchases.map(decode),
             )
         case ExperimentDocumentV3.schemaVersion:
+            // Migration: version 3 predates fills, so its orders are unfilled.
             let document = try decoder.decode(ExperimentDocumentV3.self, from: data)
+            return try Experiment(
+                cashBalance: cashBalance(from: document.cashBalance),
+                purchases: document.purchases.map(decode),
+                limitOrders: document.limitOrders.map(\.unfilled).map(decode),
+            )
+        case ExperimentDocumentV4.schemaVersion:
+            let document = try decoder.decode(ExperimentDocumentV4.self, from: data)
             return try Experiment(
                 cashBalance: cashBalance(from: document.cashBalance),
                 purchases: document.purchases.map(decode),
@@ -99,18 +107,19 @@ public struct JSONExperimentCodec: ExperimentCoding {
         }
     }
 
-    private func encode(_ order: LimitOrder) -> LimitOrderV3 {
-        LimitOrderV3(
+    private func encode(_ order: LimitOrder) -> LimitOrderV4 {
+        LimitOrderV4(
             id: order.id,
             purchaseID: order.purchaseID,
             shares: order.shares,
             limitPrice: order.limitPrice.amount.description,
             placedAt: order.placedAt.formatted(Self.dateFormat),
             expiresAt: order.expiresAt.formatted(Self.dateFormat),
+            filledOn: order.filledOn,
         )
     }
 
-    private func decode(_ order: LimitOrderV3) throws -> LimitOrder {
+    private func decode(_ order: LimitOrderV4) throws -> LimitOrder {
         guard let placedAt = try? Self.dateFormat.parse(order.placedAt) else {
             throw ExperimentCodingError.invalidOrderDate(order.placedAt)
         }
@@ -124,6 +133,7 @@ public struct JSONExperimentCodec: ExperimentCoding {
             limitPrice: Money(decimal(from: order.limitPrice, invalid: ExperimentCodingError.invalidLimitPrice)),
             placedAt: placedAt,
             expiresAt: expiresAt,
+            filledOn: order.filledOn,
         )
     }
 
@@ -215,6 +225,12 @@ extension ExperimentError: LocalizedError {
             "A limit order sells shares of a purchase the experiment doesn't have."
         case .insufficientShares:
             "A limit order sells more shares than the purchase has free."
+        case .unknownOrder:
+            "The experiment has no such limit order."
+        case .orderAlreadyFilled:
+            "The limit order has already filled."
+        case .invalidSessionDate:
+            "A limit order's fill date must be written yyyy-MM-dd."
         }
     }
 
@@ -249,6 +265,8 @@ extension LimitOrderError: LocalizedError {
             "A limit order's price must be more than zero."
         case .negativeProfitPercent:
             "A limit order's profit can't be negative."
+        case .invalidSessionDate:
+            "A limit order's fill date must be written yyyy-MM-dd."
         }
     }
 
