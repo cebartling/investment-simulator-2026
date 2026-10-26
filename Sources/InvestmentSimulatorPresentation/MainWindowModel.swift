@@ -17,7 +17,12 @@ public final class MainWindowModel {
     /// The Buy sheet's model while it is shown.
     public private(set) var purchase: PurchaseModel?
 
+    public var isShowingLimitOrder = false
+    /// The Sell Limit sheet's model while it is shown.
+    public private(set) var limitOrder: LimitOrderModel?
+
     private let quotes: any QuoteProviding
+    private let clock: () -> Date
 
     /// Set when the user cancels a new document. The app's `WindowCloser`
     /// then ends the sheet, since a window can't close with one attached,
@@ -25,11 +30,17 @@ public final class MainWindowModel {
     public private(set) var shouldCloseWindow = false
 
     /// `needsSetup` is true for a new, untitled document, which opens the
-    /// New Experiment sheet.
-    public init(experiment: Experiment, needsSetup: Bool, quotes: any QuoteProviding) {
+    /// New Experiment sheet. `clock` tells the time orders are placed.
+    public init(
+        experiment: Experiment,
+        needsSetup: Bool,
+        quotes: any QuoteProviding,
+        clock: @escaping () -> Date = Date.init,
+    ) {
         self.experiment = experiment
         isShowingNewExperiment = needsSetup
         self.quotes = quotes
+        self.clock = clock
     }
 
     public var cashBalance: Decimal {
@@ -78,6 +89,43 @@ public final class MainWindowModel {
     public func cancelPurchase() {
         isShowingPurchase = false
         purchase = nil
+    }
+
+    /// The limit orders as they stand at `date`, so a view can redraw them
+    /// as orders expire.
+    public func limitOrderRows(at date: Date) -> [LimitOrderRow] {
+        let tickers = Dictionary(uniqueKeysWithValues: experiment.purchases.map { ($0.id, $0.ticker) })
+        return experiment.limitOrders.compactMap { order in
+            // Experiment rejects an order whose purchase it doesn't have.
+            tickers[order.purchaseID].map { LimitOrderRow(order: order, ticker: $0, isOpen: order.isOpen(at: date)) }
+        }
+    }
+
+    public func beginLimitOrder(for purchase: Purchase) {
+        limitOrder = LimitOrderModel(
+            purchase: purchase,
+            availableShares: experiment.availableShares(of: purchase, at: clock()),
+            clock: clock,
+        )
+        isShowingLimitOrder = true
+    }
+
+    /// Returns the experiment with the order placed, for the document to
+    /// save. Returns nil while the order can't be placed, leaving the sheet
+    /// open.
+    @discardableResult
+    public func completeLimitOrder() -> Experiment? {
+        guard let order = limitOrder?.place(), let updated = try? experiment.placing(order) else {
+            return nil
+        }
+        experiment = updated
+        cancelLimitOrder()
+        return updated
+    }
+
+    public func cancelLimitOrder() {
+        isShowingLimitOrder = false
+        limitOrder = nil
     }
 
     public func cancelNewExperiment() {

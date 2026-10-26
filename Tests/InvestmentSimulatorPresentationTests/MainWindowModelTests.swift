@@ -157,6 +157,106 @@ struct MainWindowModelTests {
         #expect(model.purchase == nil)
     }
 
+    @Test func `beginning a limit order shows the sheet with the purchase's free shares`() throws {
+        let model = try makeModelWithPurchase(orders: [makeOrder(shares: 3)])
+
+        try model.beginLimitOrder(for: #require(model.purchases.first))
+
+        #expect(model.isShowingLimitOrder)
+        #expect(model.limitOrder?.purchase.id == fixedPurchaseID)
+        #expect(model.limitOrder?.availableShares == 7)
+        #expect(model.limitOrder?.expiresAt == LimitOrder.expiry(forPlacedAt: fixedNow))
+    }
+
+    @Test func `completing a limit order places it and hides the sheet`() throws {
+        let model = try makeModelWithPurchase()
+        try model.beginLimitOrder(for: #require(model.purchases.first))
+        model.limitOrder?.profitPercent = 10
+        model.limitOrder?.shares = 4
+
+        let updated = try #require(model.completeLimitOrder())
+
+        #expect(updated.limitOrders.count == 1)
+        #expect(updated.limitOrders.first?.shares == 4)
+        #expect(updated.limitOrders.first?.placedAt == fixedNow)
+        #expect(updated.cashBalance == Money(100))
+        #expect(model.experiment == updated)
+        #expect(!model.isShowingLimitOrder)
+        #expect(model.limitOrder == nil)
+    }
+
+    @Test func `completing a limit order that can't be placed changes nothing`() throws {
+        let model = try makeModelWithPurchase()
+        try model.beginLimitOrder(for: #require(model.purchases.first))
+        model.limitOrder?.profitPercent = -1
+
+        #expect(model.completeLimitOrder() == nil)
+        #expect(model.isShowingLimitOrder)
+        #expect(model.experiment.limitOrders.isEmpty)
+    }
+
+    @Test func `cancelling a limit order hides the sheet`() throws {
+        let model = try makeModelWithPurchase()
+        try model.beginLimitOrder(for: #require(model.purchases.first))
+
+        model.cancelLimitOrder()
+
+        #expect(!model.isShowingLimitOrder)
+        #expect(model.limitOrder == nil)
+    }
+
+    @Test func `limit order rows show the ticker and whether each order is open`() throws {
+        let expired = try makeOrder(
+            id: #require(UUID(uuidString: "00000000-0000-0000-0000-0000000000A2")),
+            shares: 1,
+            placedAt: fixedNow.addingTimeInterval(-100 * 86400),
+        )
+        let open = try makeOrder(shares: 2)
+        let model = try makeModelWithPurchase(orders: [expired, open])
+
+        let rows = model.limitOrderRows(at: fixedNow)
+
+        #expect(rows.map(\.order) == [expired, open])
+        #expect(rows.map(\.ticker.symbol) == ["VTI", "VTI"])
+        #expect(rows.map(\.isOpen) == [false, true])
+        #expect(model.limitOrderRows(at: open.expiresAt).map(\.isOpen) == [false, false])
+    }
+
+    @Test func `limit order is placed at the time Place Order is chosen`() throws {
+        var now = fixedNow
+        let model = try makeModelWithPurchase(clock: { now })
+        try model.beginLimitOrder(for: #require(model.purchases.first))
+        now = fixedNow.addingTimeInterval(3600)
+
+        let updated = try #require(model.completeLimitOrder())
+
+        #expect(updated.limitOrders.first?.placedAt == now)
+    }
+
+    private func makeModelWithPurchase(
+        orders: [LimitOrder] = [],
+        clock: @escaping () -> Date = { fixedNow },
+    ) throws -> MainWindowModel {
+        let purchase = try Purchase(
+            id: fixedPurchaseID,
+            ticker: Ticker("VTI"),
+            shares: 10,
+            pricePerShare: 10,
+            pricedAt: Date(timeIntervalSince1970: 0),
+            priceSource: .liveQuote(delayed: false),
+        )
+        return try MainWindowModel(
+            experiment: Experiment(cashBalance: Money(100), purchases: [purchase], limitOrders: orders),
+            needsSetup: false,
+            quotes: FakeQuotes(.failure(.missingAPIKey)),
+            clock: clock,
+        )
+    }
+
+    private func makeOrder(id: UUID = fixedOrderID, shares: Int, placedAt: Date = fixedNow) throws -> LimitOrder {
+        try LimitOrder.placed(id: id, purchaseID: fixedPurchaseID, shares: shares, limitPrice: Money(12), at: placedAt)
+    }
+
     private func makeModel(
         cashBalance: Decimal = 0,
         needsSetup: Bool = false,

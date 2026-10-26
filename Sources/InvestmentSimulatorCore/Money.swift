@@ -24,6 +24,14 @@ public struct Money: Sendable, Hashable {
         NSDecimalRound(&rounded, &source, 2, .bankers)
         return Money(rounded)
     }
+
+    /// Rounds up to whole cents, for a target price that must not fall short.
+    public func roundedUpToCents() -> Money {
+        var source = amount
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &source, 2, .up)
+        return Money(rounded)
+    }
 }
 
 extension Money: Comparable {

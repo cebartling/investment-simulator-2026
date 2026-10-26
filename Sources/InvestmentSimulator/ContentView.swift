@@ -5,6 +5,7 @@ struct ContentView: View {
     @Bindable var model: MainWindowModel
     let onCreate: () -> Void
     let onPurchase: () -> Void
+    let onPlaceLimitOrder: () -> Void
 
     var body: some View {
         NavigationSplitView {
@@ -15,17 +16,32 @@ struct ContentView: View {
         } detail: {
             switch model.selection {
             case .experiment:
-                ExperimentDetailView(cashBalance: model.cashBalance, purchases: model.purchases)
-                    .toolbar {
-                        Button("Buy…", systemImage: "cart.badge.plus", action: model.beginPurchase)
+                ExperimentDetailView(
+                    cashBalance: model.cashBalance,
+                    purchases: model.purchases,
+                    hasLimitOrders: !model.experiment.limitOrders.isEmpty,
+                    limitOrderRows: model.limitOrderRows(at:),
+                    onSellLimit: model.beginLimitOrder,
+                )
+                .toolbar {
+                    Button("Buy…", systemImage: "cart.badge.plus", action: model.beginPurchase)
+                }
+                // On the detail, not beside the New Experiment sheet, so
+                // each sheet has its own view.
+                .sheet(isPresented: $model.isShowingPurchase) {
+                    if let purchase = model.purchase {
+                        PurchaseSheet(model: purchase, onBuy: onPurchase, onCancel: model.cancelPurchase)
                     }
-                    // On the detail, not beside the New Experiment sheet, so
-                    // each sheet has its own view.
-                    .sheet(isPresented: $model.isShowingPurchase) {
-                        if let purchase = model.purchase {
-                            PurchaseSheet(model: purchase, onBuy: onPurchase, onCancel: model.cancelPurchase)
-                        }
+                }
+                .sheet(isPresented: $model.isShowingLimitOrder) {
+                    if let limitOrder = model.limitOrder {
+                        LimitOrderSheet(
+                            model: limitOrder,
+                            onPlace: onPlaceLimitOrder,
+                            onCancel: model.cancelLimitOrder,
+                        )
                     }
+                }
             case let section?:
                 ContentUnavailableView(section.title, systemImage: section.systemImage)
             case nil:

@@ -60,6 +60,11 @@ struct MainWindow: View {
                     document.experiment = updated
                 }
             },
+            onPlaceLimitOrder: {
+                if let updated = model.completeLimitOrder() {
+                    document.experiment = updated
+                }
+            },
         )
         // Changes the document makes itself, like File › Revert To.
         .onChange(of: document.experiment) { _, experiment in
