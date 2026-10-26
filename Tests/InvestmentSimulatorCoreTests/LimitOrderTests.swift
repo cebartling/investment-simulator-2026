@@ -21,6 +21,12 @@ struct LimitOrderTests {
         #expect(order.expiresAt == placedAt.addingTimeInterval(90 * 86400 + 3600))
     }
 
+    @Test func `expiry can be shown before an order is placed`() throws {
+        let placedAt = Date(timeIntervalSince1970: 1_790_870_400)
+
+        #expect(try LimitOrder.expiry(forPlacedAt: placedAt) == makeLimitOrder(placedAt: placedAt).expiresAt)
+    }
+
     @Test func `order is open until it expires`() throws {
         let order = try makeLimitOrder()
 

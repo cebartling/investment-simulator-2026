@@ -54,8 +54,13 @@ public struct LimitOrder: Sendable, Hashable, Identifiable {
             shares: shares,
             limitPrice: limitPrice,
             placedAt: placedAt,
-            expiresAt: marketCalendar.date(byAdding: .day, value: lifetimeInDays, to: placedAt)!,
+            expiresAt: expiry(forPlacedAt: placedAt),
         )
+    }
+
+    /// When an order placed at `placedAt` expires.
+    public static func expiry(forPlacedAt placedAt: Date) -> Date {
+        marketCalendar.date(byAdding: .day, value: lifetimeInDays, to: placedAt)!
     }
 
     private static let marketCalendar: Calendar = {
