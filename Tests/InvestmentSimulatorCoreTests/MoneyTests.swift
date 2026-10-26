@@ -52,4 +52,17 @@ struct MoneyTests {
 
         #expect(try money.roundedToCents().amount == #require(Decimal(string: expected)))
     }
+
+    @Test(arguments: [
+        ("348.69571", "348.7"),
+        ("10.001", "10.01"),
+        ("10.009", "10.01"),
+        ("10.01", "10.01"),
+        ("10", "10"),
+    ])
+    func `rounding up to cents never rounds down`(input: String, expected: String) throws {
+        let money = try Money(#require(Decimal(string: input)))
+
+        #expect(try money.roundedUpToCents().amount == #require(Decimal(string: expected)))
+    }
 }
