@@ -66,15 +66,56 @@ struct LimitOrderReplayTests {
         #expect(replayed == experiment)
     }
 
-    @Test func `sessions from the expiry date on can't fill the order`() throws {
+    @Test func `an order that expired before the check is left alone`() throws {
         let experiment = try experimentWithOrder(limitPrice: "12")
-        let later = Self.date("2027-02-01T15:00:00Z")
 
-        let atExpiry = try experiment.fillingLimitOrders(from: bars(("2027-01-17", "20")), at: later)
-        let beforeExpiry = try experiment.fillingLimitOrders(from: bars(("2027-01-15", "20")), at: later)
+        let replayed = try experiment.fillingLimitOrders(
+            from: bars(("2027-01-15", "20")),
+            at: Self.date("2027-02-01T15:00:00Z"),
+        )
 
-        #expect(atExpiry == experiment)
-        #expect(beforeExpiry.limitOrders.map(\.filledOn) == ["2027-01-15"])
+        #expect(replayed == experiment)
+    }
+
+    @Test func `an order checked on its last morning fills from earlier sessions`() throws {
+        let experiment = try experimentWithOrder(limitPrice: "12")
+        // 10 AM in New York on 2027-01-17, two hours before the order expires.
+        let lastMorning = Self.date("2027-01-17T15:00:00Z")
+
+        let today = try experiment.fillingLimitOrders(from: bars(("2027-01-17", "20")), at: lastMorning)
+        let earlier = try experiment.fillingLimitOrders(from: bars(("2027-01-15", "20")), at: lastMorning)
+
+        #expect(today == experiment)
+        #expect(earlier.limitOrders.map(\.filledOn) == ["2027-01-15"])
+    }
+
+    @Test func `shares sold again after an order expired are never sold twice`() throws {
+        let expired = try makeLimitOrder(shares: 10, limitPrice: "12", placedAt: Self.date("2026-01-05T16:00:00Z"))
+        let resold = try makeLimitOrder(
+            id: Self.secondOrderID,
+            shares: 10,
+            limitPrice: "12",
+            placedAt: Self.date("2026-04-10T16:00:00Z"),
+        )
+        let experiment = try Experiment(cashBalance: Money(1000))
+            .purchasing(makePurchase(shares: 10, price: "10"))
+            .placing(expired)
+            .placing(resold)
+
+        let replayed = try experiment.fillingLimitOrders(
+            from: bars(("2026-02-10", "13"), ("2026-04-15", "13")),
+            at: Self.date("2026-05-01T15:00:00Z"),
+        )
+
+        #expect(replayed.limitOrders.map(\.filledOn) == [nil, "2026-04-15"])
+        #expect(replayed.cashBalance == experiment.cashBalance + Money(120))
+        // A saved experiment is rebuilt this way when its file is opened.
+        let reopened = try Experiment(
+            cashBalance: replayed.cashBalance,
+            purchases: replayed.purchases,
+            limitOrders: replayed.limitOrders,
+        )
+        #expect(reopened == replayed)
     }
 
     @Test func `bars are read in session order whatever order they arrive in`() throws {
@@ -126,22 +167,29 @@ struct LimitOrderReplayTests {
         #expect(try experiment.sessionsToReplay(at: Self.now) == [Ticker("VTI"): "2026-10-19" ... "2026-10-26"])
     }
 
-    @Test func `sessions to replay stop at the latest expiry before today`() throws {
+    @Test func `an expired order needs no sessions`() throws {
         let experiment = try experimentWithOrder(limitPrice: "12")
 
-        let ranges = experiment.sessionsToReplay(at: Self.date("2027-02-01T15:00:00Z"))
-
-        #expect(try ranges == [Ticker("VTI"): "2026-10-19" ... "2027-01-17"])
+        #expect(experiment.sessionsToReplay(at: Self.date("2027-02-01T15:00:00Z")).isEmpty)
     }
 
-    @Test func `sessions to replay span every unfilled order on a ticker`() throws {
+    @Test func `sessions to replay span every open order on a ticker`() throws {
         let later = Self.date("2026-10-21T16:00:00Z")
         let experiment = try experimentWithOrder(limitPrice: "12")
             .placing(makeLimitOrder(id: Self.secondOrderID, limitPrice: "13", placedAt: later))
 
+        #expect(try experiment.sessionsToReplay(at: Self.now) == [Ticker("VTI"): "2026-10-19" ... "2026-10-26"])
+    }
+
+    @Test func `sessions to replay leave out an expired order on the same ticker`() throws {
+        let later = Self.date("2026-10-21T16:00:00Z")
+        let experiment = try experimentWithOrder(limitPrice: "12")
+            .placing(makeLimitOrder(id: Self.secondOrderID, limitPrice: "13", placedAt: later))
+
+        // The first order expired at noon on 2027-01-17; the second is open.
         let ranges = experiment.sessionsToReplay(at: Self.date("2027-01-19T15:00:00Z"))
 
-        #expect(try ranges == [Ticker("VTI"): "2026-10-19" ... "2027-01-19"])
+        #expect(try ranges == [Ticker("VTI"): "2026-10-21" ... "2027-01-19"])
     }
 
     @Test func `filled orders need no sessions`() throws {

@@ -22,9 +22,9 @@ A daily bar shows that a price was reached during a session, but not when.
 - **Fills come from daily bars,** through a Core port, `DailyPriceProviding`, which the Equibles adapter implements.
 - **A sell limit order fills in the first eligible session whose high is at or above its limit price.**
 - **It fills at exactly the limit price,** even when the session opens above it. Cash gains the limit price times the shares, rounded to cents through `Money`.
-- **A session is eligible when it is after the session the order was placed in, before the date the order expires, and before today in New York.** The placement session is skipped because its high may have come before the order was placed. The expiry date is skipped because its high may have come after the order expired. Today is skipped because its bar isn't settled.
-- **The user starts a check** with a Check Orders button. It makes one request per ticker with an unfilled order that an eligible session could fill. Nothing checks automatically.
-- **Orders that expired unfilled are still checked** for the sessions before they expired, so a fill missed while the app was closed is found later.
+- **Only orders still open when the check runs can fill.** For such an order, a session is eligible when it is after the session the order was placed in and before today in New York. The placement session is skipped because its high may have come before the order was placed. Today is skipped because its bar isn't settled. An open order hasn't reached its expiry date, so every eligible session is before it expires.
+- **The user starts a check** with a Check Orders button. It makes one request per ticker with an open order that an eligible session could fill. Nothing checks automatically.
+- **An order that expires before anyone checks it never fills,** even if a session before its expiry reached the limit. Its shares are free again once it expires, and a later order may already have sold them. Filling it after the fact would sell those shares twice, and the saved file would no longer open.
 - **A fill is stored as the session it happened in** (`filledOn`, `yyyy-MM-dd`) in schema version 4 (ADR-0005). No price is stored, since a fill is always at the limit price.
 - **The replay rule lives in Core,** as `Experiment.fillingLimitOrders(from:at:)` and `Experiment.sessionsToReplay(at:)`, and is tested without I/O.
 
@@ -35,6 +35,7 @@ A daily bar shows that a price was reached during a session, but not when.
 **Pros:**
 - Works on every Equibles plan and can replay any past session, whether or not the app was running then.
 - Conservative: the order never fills on a price that may have come before it was placed or after it expired, and never fills above its limit.
+- Share accounting stays simple: shares are reserved while an order is open and sold once it fills.
 
 **Cons:**
 - Coarse. An order placed during a session whose later high reaches the limit waits for the next session.
@@ -74,7 +75,9 @@ Poll `/v1/quotes`, or the `/v1/stream` WebSocket once it is served, while the ap
   - A finer source later only needs a new adapter or port. The fill rule and the file format stay.
 - **Harder:**
   - Results are coarser and more conservative than a real market would give.
+  - A fill is lost if nobody checks before its order expires.
 - **Revisit:**
   - Intraday fills if Equibles serves the stream or intraday history.
   - Counting the placement session when an order was placed before that session opened.
   - When Plus publishes a session's bar, if fills should come sooner.
+  - Filling an expired order if its shares haven't been reserved since, if lost fills turn out to matter.
