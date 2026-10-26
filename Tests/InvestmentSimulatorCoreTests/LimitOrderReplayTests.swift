@@ -120,6 +120,43 @@ struct LimitOrderReplayTests {
         #expect(replayed == experiment)
     }
 
+    @Test func `sessions to replay run from an unfilled order's placement through today`() throws {
+        let experiment = try experimentWithOrder(limitPrice: "12")
+
+        #expect(try experiment.sessionsToReplay(at: Self.now) == [Ticker("VTI"): "2026-10-19" ... "2026-10-26"])
+    }
+
+    @Test func `sessions to replay stop at the latest expiry before today`() throws {
+        let experiment = try experimentWithOrder(limitPrice: "12")
+
+        let ranges = experiment.sessionsToReplay(at: Self.date("2027-02-01T15:00:00Z"))
+
+        #expect(try ranges == [Ticker("VTI"): "2026-10-19" ... "2027-01-17"])
+    }
+
+    @Test func `sessions to replay span every unfilled order on a ticker`() throws {
+        let later = Self.date("2026-10-21T16:00:00Z")
+        let experiment = try experimentWithOrder(limitPrice: "12")
+            .placing(makeLimitOrder(id: Self.secondOrderID, limitPrice: "13", placedAt: later))
+
+        let ranges = experiment.sessionsToReplay(at: Self.date("2027-01-19T15:00:00Z"))
+
+        #expect(try ranges == [Ticker("VTI"): "2026-10-19" ... "2027-01-19"])
+    }
+
+    @Test func `filled orders need no sessions`() throws {
+        let experiment = try experimentWithOrder(limitPrice: "12")
+            .filling(orderID: makeLimitOrder().id, on: "2026-10-20")
+
+        #expect(experiment.sessionsToReplay(at: Self.now).isEmpty)
+    }
+
+    @Test func `an order placed today needs no sessions`() throws {
+        let experiment = try experimentWithOrder(limitPrice: "12")
+
+        #expect(experiment.sessionsToReplay(at: Self.date("2026-10-19T20:00:00Z")).isEmpty)
+    }
+
     private func experimentWithOrder(shares: Int = 1, limitPrice: String) throws -> Experiment {
         try Experiment(cashBalance: Money(1000))
             .purchasing(makePurchase(shares: 10, price: "10"))

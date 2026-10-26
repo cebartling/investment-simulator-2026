@@ -27,4 +27,28 @@ public extension Experiment {
         }
         return experiment
     }
+
+    /// For each ticker with an unfilled order that a settled session could
+    /// still fill, the sessions to fetch bars for: from the earliest such
+    /// order's placement through the latest one's expiry or today, whichever
+    /// comes first. The sessions at both ends can't fill an order; they keep
+    /// the range simple, and `fillingLimitOrders(from:at:)` skips them.
+    func sessionsToReplay(at now: Date) -> [Ticker: ClosedRange<String>] {
+        let today = sessionDate(at: now)
+        let tickers = Dictionary(uniqueKeysWithValues: purchases.map { ($0.id, $0.ticker) })
+        var ranges: [Ticker: ClosedRange<String>] = [:]
+        for order in limitOrders where order.filledOn == nil {
+            guard let ticker = tickers[order.purchaseID] else {
+                continue
+            }
+            let placed = sessionDate(at: order.placedAt)
+            let end = min(sessionDate(at: order.expiresAt), today)
+            guard placed < end else {
+                continue
+            }
+            ranges[ticker] = ranges[ticker].map { min($0.lowerBound, placed) ... max($0.upperBound, end) }
+                ?? placed ... end
+        }
+        return ranges
+    }
 }
