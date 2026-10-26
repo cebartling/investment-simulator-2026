@@ -23,7 +23,7 @@ struct ContentView: View {
                     hasLimitOrders: !model.experiment.limitOrders.isEmpty,
                     limitOrderRows: model.limitOrderRows(at:),
                     onSellLimit: model.beginLimitOrder,
-                    canCheckOrders: model.canCheckOrders,
+                    canCheckOrders: model.canCheckOrders(at:),
                     isCheckingOrders: model.isCheckingOrders,
                     orderCheckMessage: model.orderCheckMessage,
                     onCheckOrders: onCheckOrders,

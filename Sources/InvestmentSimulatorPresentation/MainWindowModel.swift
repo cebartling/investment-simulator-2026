@@ -122,10 +122,11 @@ public final class MainWindowModel {
         }
     }
 
-    /// True when a settled session could fill an unfilled order, and no
-    /// check is running.
-    public var canCheckOrders: Bool {
-        !isCheckingOrders && !experiment.sessionsToReplay(at: clock()).isEmpty
+    /// True when a settled session could fill an order open at `date`, and
+    /// no check is running. Takes the date, so a view can redraw it as days
+    /// pass.
+    public func canCheckOrders(at date: Date) -> Bool {
+        !isCheckingOrders && !experiment.sessionsToReplay(at: date).isEmpty
     }
 
     /// Fetches each ticker's daily bars and fills the orders they reach

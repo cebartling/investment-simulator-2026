@@ -346,11 +346,16 @@ extension MainWindowModelTests {
     @Test func `orders can be checked only when a settled session could fill one`() throws {
         let order = try makeOrder(shares: 4)
 
-        #expect(try !makeModelWithPurchase(orders: []).canCheckOrders)
-        #expect(try !makeModelWithPurchase(orders: [order]).canCheckOrders)
-        #expect(try makeModelWithPurchase(orders: [order], clock: { threeDaysLater }).canCheckOrders)
-        #expect(try !makeModelWithPurchase(orders: [order.filled(on: "2026-10-28")], clock: { threeDaysLater })
-            .canCheckOrders)
+        #expect(try !makeModelWithPurchase(orders: []).canCheckOrders(at: threeDaysLater))
+        #expect(try makeModelWithPurchase(orders: [order]).canCheckOrders(at: threeDaysLater))
+        #expect(try !makeModelWithPurchase(orders: [order.filled(on: "2026-10-28")]).canCheckOrders(at: threeDaysLater))
+    }
+
+    @Test func `orders placed today can be checked from tomorrow`() throws {
+        let model = try makeModelWithPurchase(orders: [makeOrder(shares: 4)])
+
+        #expect(!model.canCheckOrders(at: fixedNow))
+        #expect(model.canCheckOrders(at: fixedNow.addingTimeInterval(86400)))
     }
 }
 

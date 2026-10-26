@@ -11,7 +11,8 @@ struct ExperimentDetailView: View {
     /// The limit orders as they stand at a date.
     let limitOrderRows: (Date) -> [LimitOrderRow]
     let onSellLimit: (Purchase) -> Void
-    let canCheckOrders: Bool
+    /// Whether Check Orders can run at a date.
+    let canCheckOrders: (Date) -> Bool
     let isCheckingOrders: Bool
     /// What the last Check Orders found, or why it failed.
     let orderCheckMessage: String?
@@ -88,6 +89,14 @@ struct ExperimentDetailView: View {
     }
 
     private var limitOrdersTable: some View {
+        // Redrawn every minute, so an order shows Expired once it expires
+        // and Check Orders enables once a new day starts.
+        TimelineView(.everyMinute) { context in
+            limitOrdersSection(at: context.date)
+        }
+    }
+
+    private func limitOrdersSection(at date: Date) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Limit Orders")
@@ -105,13 +114,10 @@ struct ExperimentDetailView: View {
                     Task { await onCheckOrders() }
                 }
                 .help("Fill orders whose limit a past session's high reached")
-                .disabled(!canCheckOrders)
+                .disabled(!canCheckOrders(date))
             }
             .padding(.horizontal)
-            // Redrawn every minute, so an order shows Expired once it expires.
-            TimelineView(.everyMinute) { context in
-                limitOrdersTable(at: context.date)
-            }
+            limitOrdersTable(at: date)
         }
     }
 
