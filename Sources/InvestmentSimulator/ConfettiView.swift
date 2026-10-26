@@ -69,7 +69,7 @@ private struct Piece {
         let left = startX * size.width + velocity.dx * elapsed
         let top = -height - startHeight + velocity.dy * elapsed + Self.gravity * elapsed * elapsed / 2
         var piece = canvas
-        piece.opacity = min(1, (Burst.duration - elapsed) / 0.5)
+        piece.opacity = min(1, max(0, (Burst.duration - elapsed) / 0.5))
         piece.translateBy(x: left, y: top)
         piece.rotate(by: .radians(spin * elapsed))
         // Squashing the height as it turns makes the piece look like it flips.
