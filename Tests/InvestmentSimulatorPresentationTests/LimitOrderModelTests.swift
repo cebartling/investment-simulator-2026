@@ -97,6 +97,28 @@ struct LimitOrderModelTests {
         #expect(!model.canPlace)
     }
 
+    @Test func `order is placed when Place Order is chosen, not when the sheet opens`() throws {
+        var now = fixedNow
+        let model = try makeModel(price: "10", available: 4, clock: { now })
+        now = fixedNow.addingTimeInterval(3600)
+
+        let order = try #require(model.place())
+
+        #expect(order.placedAt == now)
+        #expect(order.expiresAt == LimitOrder.expiry(forPlacedAt: now))
+        #expect(model.expiresAt == order.expiresAt)
+    }
+
+    @Test(arguments: [0, 5])
+    func `profit isn't shown while the shares can't be placed`(shares: Int) throws {
+        let model = try makeModel(price: "10", available: 4)
+        model.profitPercent = 10
+
+        model.shares = shares
+
+        #expect(model.profit == nil)
+    }
+
     @Test func `expiry is 90 calendar days from now`() throws {
         let model = try makeModel(price: "10", available: 4)
 
@@ -118,7 +140,11 @@ struct LimitOrderModelTests {
         #expect(order.expiresAt == model.expiresAt)
     }
 
-    private func makeModel(price: String, available: Int) throws -> LimitOrderModel {
+    private func makeModel(
+        price: String,
+        available: Int,
+        clock: @escaping () -> Date = { fixedNow },
+    ) throws -> LimitOrderModel {
         try LimitOrderModel(
             purchase: Purchase(
                 id: fixedPurchaseID,
@@ -129,7 +155,7 @@ struct LimitOrderModelTests {
                 priceSource: .liveQuote(delayed: false),
             ),
             availableShares: available,
-            now: fixedNow,
+            clock: clock,
             orderID: fixedOrderID,
         )
     }

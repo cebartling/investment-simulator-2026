@@ -19,7 +19,8 @@ struct ContentView: View {
                 ExperimentDetailView(
                     cashBalance: model.cashBalance,
                     purchases: model.purchases,
-                    limitOrderRows: model.limitOrderRows,
+                    hasLimitOrders: !model.experiment.limitOrders.isEmpty,
+                    limitOrderRows: model.limitOrderRows(at:),
                     onSellLimit: model.beginLimitOrder,
                 )
                 .toolbar {

@@ -7,7 +7,9 @@ import SwiftUI
 struct ExperimentDetailView: View {
     let cashBalance: Decimal
     let purchases: [Purchase]
-    let limitOrderRows: [LimitOrderRow]
+    let hasLimitOrders: Bool
+    /// The limit orders as they stand at a date.
+    let limitOrderRows: (Date) -> [LimitOrderRow]
     let onSellLimit: (Purchase) -> Void
 
     @State private var selectedPurchase: Purchase.ID?
@@ -31,7 +33,7 @@ struct ExperimentDetailView: View {
                 )
             } else {
                 purchasesTable
-                if !limitOrderRows.isEmpty {
+                if hasLimitOrders {
                     limitOrdersTable
                 }
             }
@@ -44,7 +46,8 @@ struct ExperimentDetailView: View {
                 }
             }
             .help("Place a sell limit order on the selected purchase")
-            .disabled(selectedPurchase == nil)
+            // The selection can outlive its purchase, as after File › Revert To.
+            .disabled(purchase(withID: selectedPurchase) == nil)
         }
     }
 
@@ -84,28 +87,35 @@ struct ExperimentDetailView: View {
             Text("Limit Orders")
                 .font(.headline)
                 .padding(.horizontal)
-            Table(limitOrderRows) {
-                TableColumn("Ticker", value: \.ticker.symbol)
-                TableColumn("Shares") { row in
-                    Text(row.order.shares, format: .number)
-                        .monospaced()
-                }
-                .alignment(.numeric)
-                TableColumn("Limit") { row in
-                    Text(row.order.limitPrice.amount, format: .currency(code: "USD"))
-                        .monospaced()
-                }
-                .alignment(.numeric)
-                TableColumn("Placed") { row in
-                    Text(row.order.placedAt.formatted(date: .abbreviated, time: .shortened))
-                }
-                TableColumn("Expires") { row in
-                    Text(row.order.expiresAt.formatted(date: .abbreviated, time: .shortened))
-                }
-                TableColumn("Status") { row in
-                    Text(row.isOpen ? "Open" : "Expired")
-                        .foregroundStyle(row.isOpen ? .primary : .secondary)
-                }
+            // Redrawn every minute, so an order shows Expired once it expires.
+            TimelineView(.everyMinute) { context in
+                limitOrdersTable(at: context.date)
+            }
+        }
+    }
+
+    private func limitOrdersTable(at date: Date) -> some View {
+        Table(limitOrderRows(date)) {
+            TableColumn("Ticker", value: \.ticker.symbol)
+            TableColumn("Shares") { row in
+                Text(row.order.shares, format: .number)
+                    .monospaced()
+            }
+            .alignment(.numeric)
+            TableColumn("Limit") { row in
+                Text(row.order.limitPrice.amount, format: .currency(code: "USD"))
+                    .monospaced()
+            }
+            .alignment(.numeric)
+            TableColumn("Placed") { row in
+                Text(row.order.placedAt.formatted(date: .abbreviated, time: .shortened))
+            }
+            TableColumn("Expires") { row in
+                Text(row.order.expiresAt.formatted(date: .abbreviated, time: .shortened))
+            }
+            TableColumn("Status") { row in
+                Text(row.isOpen ? "Open" : "Expired")
+                    .foregroundStyle(row.isOpen ? .primary : .secondary)
             }
         }
     }

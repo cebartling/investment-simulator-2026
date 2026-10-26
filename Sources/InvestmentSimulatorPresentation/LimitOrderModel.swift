@@ -20,20 +20,29 @@ public final class LimitOrderModel {
     public let purchase: Purchase
     /// Shares of the purchase not already in an open order.
     public let availableShares: Int
-    public let expiresAt: Date
 
-    private let now: Date
+    private let clock: () -> Date
     private let orderID: UUID
 
-    /// `now` is when the order is placed; `orderID` identifies it.
-    public init(purchase: Purchase, availableShares: Int, now: Date = Date(), orderID: UUID = UUID()) {
+    /// `clock` tells the time; the order is placed when `place()` is
+    /// called. `orderID` identifies it.
+    public init(
+        purchase: Purchase,
+        availableShares: Int,
+        clock: @escaping () -> Date = Date.init,
+        orderID: UUID = UUID(),
+    ) {
         self.purchase = purchase
         self.availableShares = availableShares
-        self.now = now
+        self.clock = clock
         self.orderID = orderID
         enteredPrice = Money(purchase.pricePerShare).roundedToCents().amount
         shares = availableShares
-        expiresAt = LimitOrder.expiry(forPlacedAt: now)
+    }
+
+    /// When the order would expire if it were placed now.
+    public var expiresAt: Date {
+        LimitOrder.expiry(forPlacedAt: clock())
     }
 
     /// The order's price in whole cents, or nil while the input is invalid.
@@ -50,9 +59,12 @@ public final class LimitOrderModel {
     }
 
     /// What selling the shares at the limit price makes over the purchase
-    /// price, rounded to cents.
+    /// price, rounded to cents. Nil while the order can't be placed.
     public var profit: Money? {
-        limitPrice.map { Money($0.amount - purchase.pricePerShare).times(shares).roundedToCents() }
+        guard sharesMessage == nil else {
+            return nil
+        }
+        return limitPrice.map { Money($0.amount - purchase.pricePerShare).times(shares).roundedToCents() }
     }
 
     public var priceMessage: String? {
@@ -87,7 +99,7 @@ public final class LimitOrderModel {
                 purchaseID: purchase.id,
                 shares: shares,
                 limitPrice: limitPrice,
-                at: now,
+                at: clock(),
             )
         } catch {
             preconditionFailure("canPlace allowed an invalid limit order: \(error)")

@@ -22,7 +22,7 @@ public final class MainWindowModel {
     public private(set) var limitOrder: LimitOrderModel?
 
     private let quotes: any QuoteProviding
-    private let now: () -> Date
+    private let clock: () -> Date
 
     /// Set when the user cancels a new document. The app's `WindowCloser`
     /// then ends the sheet, since a window can't close with one attached,
@@ -30,18 +30,17 @@ public final class MainWindowModel {
     public private(set) var shouldCloseWindow = false
 
     /// `needsSetup` is true for a new, untitled document, which opens the
-    /// New Experiment sheet. `now` tells the time, for placing orders and
-    /// showing whether they are open.
+    /// New Experiment sheet. `clock` tells the time orders are placed.
     public init(
         experiment: Experiment,
         needsSetup: Bool,
         quotes: any QuoteProviding,
-        now: @escaping () -> Date = Date.init,
+        clock: @escaping () -> Date = Date.init,
     ) {
         self.experiment = experiment
         isShowingNewExperiment = needsSetup
         self.quotes = quotes
-        self.now = now
+        self.clock = clock
     }
 
     public var cashBalance: Decimal {
@@ -92,8 +91,9 @@ public final class MainWindowModel {
         purchase = nil
     }
 
-    public var limitOrderRows: [LimitOrderRow] {
-        let date = now()
+    /// The limit orders as they stand at `date`, so a view can redraw them
+    /// as orders expire.
+    public func limitOrderRows(at date: Date) -> [LimitOrderRow] {
         let tickers = Dictionary(uniqueKeysWithValues: experiment.purchases.map { ($0.id, $0.ticker) })
         return experiment.limitOrders.compactMap { order in
             // Experiment rejects an order whose purchase it doesn't have.
@@ -102,11 +102,10 @@ public final class MainWindowModel {
     }
 
     public func beginLimitOrder(for purchase: Purchase) {
-        let date = now()
         limitOrder = LimitOrderModel(
             purchase: purchase,
-            availableShares: experiment.availableShares(of: purchase, at: date),
-            now: date,
+            availableShares: experiment.availableShares(of: purchase, at: clock()),
+            clock: clock,
         )
         isShowingLimitOrder = true
     }

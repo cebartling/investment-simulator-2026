@@ -214,14 +214,29 @@ struct MainWindowModelTests {
         let open = try makeOrder(shares: 2)
         let model = try makeModelWithPurchase(orders: [expired, open])
 
-        let rows = model.limitOrderRows
+        let rows = model.limitOrderRows(at: fixedNow)
 
         #expect(rows.map(\.order) == [expired, open])
         #expect(rows.map(\.ticker.symbol) == ["VTI", "VTI"])
         #expect(rows.map(\.isOpen) == [false, true])
+        #expect(model.limitOrderRows(at: open.expiresAt).map(\.isOpen) == [false, false])
     }
 
-    private func makeModelWithPurchase(orders: [LimitOrder] = []) throws -> MainWindowModel {
+    @Test func `limit order is placed at the time Place Order is chosen`() throws {
+        var now = fixedNow
+        let model = try makeModelWithPurchase(clock: { now })
+        try model.beginLimitOrder(for: #require(model.purchases.first))
+        now = fixedNow.addingTimeInterval(3600)
+
+        let updated = try #require(model.completeLimitOrder())
+
+        #expect(updated.limitOrders.first?.placedAt == now)
+    }
+
+    private func makeModelWithPurchase(
+        orders: [LimitOrder] = [],
+        clock: @escaping () -> Date = { fixedNow },
+    ) throws -> MainWindowModel {
         let purchase = try Purchase(
             id: fixedPurchaseID,
             ticker: Ticker("VTI"),
@@ -234,7 +249,7 @@ struct MainWindowModelTests {
             experiment: Experiment(cashBalance: Money(100), purchases: [purchase], limitOrders: orders),
             needsSetup: false,
             quotes: FakeQuotes(.failure(.missingAPIKey)),
-            now: { fixedNow },
+            clock: clock,
         )
     }
 
