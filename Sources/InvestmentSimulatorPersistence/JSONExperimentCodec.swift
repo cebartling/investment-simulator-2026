@@ -215,6 +215,12 @@ extension ExperimentError: LocalizedError {
             "A limit order sells shares of a purchase the experiment doesn't have."
         case .insufficientShares:
             "A limit order sells more shares than the purchase has free."
+        case .unknownOrder:
+            "The experiment has no such limit order."
+        case .orderAlreadyFilled:
+            "The limit order has already filled."
+        case .invalidSessionDate:
+            "A limit order's fill date must be written yyyy-MM-dd."
         }
     }
 
@@ -249,6 +255,8 @@ extension LimitOrderError: LocalizedError {
             "A limit order's price must be more than zero."
         case .negativeProfitPercent:
             "A limit order's profit can't be negative."
+        case .invalidSessionDate:
+            "A limit order's fill date must be written yyyy-MM-dd."
         }
     }
 

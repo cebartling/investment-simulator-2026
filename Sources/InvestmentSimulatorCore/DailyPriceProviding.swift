@@ -17,7 +17,7 @@ public struct DailyBar: Sendable, Hashable {
         low: Decimal,
         close: Decimal,
     ) throws(DailyBarError) {
-        guard sessionDate.wholeMatch(of: /\d{4}-\d{2}-\d{2}/) != nil else {
+        guard isSessionDate(sessionDate) else {
             throw .invalidSessionDate(sessionDate)
         }
         guard low > 0 else {

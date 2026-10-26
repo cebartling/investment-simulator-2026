@@ -97,8 +97,19 @@ struct LimitOrderCodingTests {
         (LimitOrderError.nonPositiveShares(0), "A limit order must be for at least one share."),
         (.nonPositivePrice(.zero), "A limit order's price must be more than zero."),
         (.negativeProfitPercent(-1), "A limit order's profit can't be negative."),
+        (.invalidSessionDate("10/23/2026"), "A limit order's fill date must be written yyyy-MM-dd."),
     ])
     func `limit order errors describe the problem`(error: LimitOrderError, description: String) {
+        #expect(error.localizedDescription == description)
+        #expect((error as NSError).localizedFailureReason == description)
+    }
+
+    @Test(arguments: [
+        (ExperimentError.unknownOrder(UUID()), "The experiment has no such limit order."),
+        (.orderAlreadyFilled(UUID()), "The limit order has already filled."),
+        (.invalidSessionDate("10/23/2026"), "A limit order's fill date must be written yyyy-MM-dd."),
+    ])
+    func `fill errors describe the problem`(error: ExperimentError, description: String) {
         #expect(error.localizedDescription == description)
         #expect((error as NSError).localizedFailureReason == description)
     }

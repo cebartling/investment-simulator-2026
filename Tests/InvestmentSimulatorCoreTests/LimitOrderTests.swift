@@ -80,6 +80,45 @@ struct LimitOrderTests {
             try LimitOrder.limitPrice(forProfitPercent: percent, on: purchase)
         }
     }
+
+    @Test func `new order is unfilled`() throws {
+        #expect(try makeLimitOrder().filledOn == nil)
+    }
+
+    @Test func `filled order keeps its terms and records the session`() throws {
+        let order = try makeLimitOrder(shares: 3, limitPrice: "348.7")
+
+        let filled = try order.filled(on: "2026-10-23")
+
+        #expect(filled.filledOn == "2026-10-23")
+        #expect(filled.id == order.id)
+        #expect(filled.purchaseID == order.purchaseID)
+        #expect(filled.shares == order.shares)
+        #expect(filled.limitPrice == order.limitPrice)
+        #expect(filled.placedAt == order.placedAt)
+        #expect(filled.expiresAt == order.expiresAt)
+    }
+
+    @Test func `filled order is no longer open`() throws {
+        let filled = try makeLimitOrder().filled(on: "2026-10-23")
+
+        #expect(!filled.isOpen(at: filled.placedAt))
+    }
+
+    @Test(arguments: ["", "2026-10-2", "10/23/2026"])
+    func `fill session date must be yyyy-MM-dd`(session: String) throws {
+        let order = try makeLimitOrder()
+
+        #expect(throws: LimitOrderError.invalidSessionDate(session)) {
+            try order.filled(on: session)
+        }
+    }
+
+    @Test func `proceeds are the limit price times the shares`() throws {
+        let order = try makeLimitOrder(shares: 3, limitPrice: "348.7")
+
+        #expect(try order.proceeds == Money(#require(Decimal(string: "1046.10"))))
+    }
 }
 
 func makeLimitOrder(
