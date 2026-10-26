@@ -70,12 +70,6 @@ public struct LimitOrder: Sendable, Hashable, Identifiable {
         marketCalendar.date(byAdding: .day, value: lifetimeInDays, to: placedAt)!
     }
 
-    private static let marketCalendar: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "America/New_York")!
-        return calendar
-    }()
-
     /// True until the order fills or expires.
     public func isOpen(at date: Date) -> Bool {
         filledOn == nil && date < expiresAt
