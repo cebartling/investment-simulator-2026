@@ -27,7 +27,8 @@ final class FakeQuotes: QuoteProviding {
 }
 
 /// Answers each ticker's daily bars from `bars`, or every request with
-/// `failure`, and records the requests it was sent.
+/// `failure`, and records the requests it was sent. `whileAnswering` runs
+/// on the main actor during each request, as a change made mid-check.
 final class FakeDailyPrices: DailyPriceProviding {
     struct Request: Equatable {
         let ticker: String
@@ -38,6 +39,7 @@ final class FakeDailyPrices: DailyPriceProviding {
     private let bars: [String: [DailyBar]]
     private let failure: QuoteError?
     private let sent = Mutex<[Request]>([])
+    private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
 
     init(_ bars: [String: [DailyBar]] = [:], failure: QuoteError? = nil) {
         self.bars = bars
@@ -48,12 +50,19 @@ final class FakeDailyPrices: DailyPriceProviding {
         sent.withLock { $0 }
     }
 
+    func whileAnswering(_ action: @escaping @MainActor @Sendable () -> Void) {
+        hook.withLock { $0 = action }
+    }
+
     func dailyBars(
         for ticker: Ticker,
         from startDate: String,
         through endDate: String,
     ) async throws(QuoteError) -> [DailyBar] {
         sent.withLock { $0.append(Request(ticker: ticker.symbol, startDate: startDate, endDate: endDate)) }
+        if let action = hook.withLock({ $0 }) {
+            await action()
+        }
         if let failure {
             throw failure
         }

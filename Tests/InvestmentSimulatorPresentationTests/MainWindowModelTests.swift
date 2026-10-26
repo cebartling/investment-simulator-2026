@@ -318,6 +318,17 @@ extension MainWindowModelTests {
         #expect(model.orderCheckMessage == "No orders filled.")
     }
 
+    @Test func `a check whose experiment changed while prices loaded changes nothing`() async throws {
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-28", high: 13)]])
+        let model = try makeModelWithPurchase(orders: [makeOrder(shares: 4)], clock: { threeDaysLater }, prices: prices)
+        let reverted = try Experiment(cashBalance: Money(100), purchases: model.purchases)
+        prices.whileAnswering { model.replaceExperiment(with: reverted) }
+
+        #expect(await model.checkLimitOrders() == nil)
+        #expect(model.experiment == reverted)
+        #expect(model.orderCheckMessage == "The experiment changed during the check. Check again.")
+    }
+
     @Test func `a failed check shows the error and changes nothing`() async throws {
         let model = try makeModelWithPurchase(
             orders: [makeOrder(shares: 4)],

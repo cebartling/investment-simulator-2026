@@ -138,13 +138,14 @@ public final class MainWindowModel {
             return nil
         }
         let now = clock()
+        let checked = experiment
         isCheckingOrders = true
         orderCheckMessage = nil
         defer { isCheckingOrders = false }
 
         var bars: [Ticker: [DailyBar]] = [:]
         do throws(QuoteError) {
-            for (ticker, sessions) in experiment.sessionsToReplay(at: now) {
+            for (ticker, sessions) in checked.sessionsToReplay(at: now) {
                 bars[ticker] = try await dailyPrices.dailyBars(
                     for: ticker,
                     from: sessions.lowerBound,
@@ -156,18 +157,22 @@ public final class MainWindowModel {
             return nil
         }
 
-        // The experiment may have changed while prices were fetched; fill
-        // the one shown now.
-        let before = experiment
+        // The bars cover the orders of the experiment checked. If it changed
+        // while they loaded, as after File › Revert To, they may not cover
+        // the orders shown now.
+        guard experiment == checked else {
+            orderCheckMessage = "The experiment changed during the check. Check again."
+            return nil
+        }
         let updated: Experiment
         do {
-            updated = try before.fillingLimitOrders(from: bars, at: now)
+            updated = try checked.fillingLimitOrders(from: bars, at: now)
         } catch {
             orderCheckMessage = "Couldn't fill the orders: \(error.localizedDescription)"
             return nil
         }
         let filledCount = updated.limitOrders.count { $0.filledOn != nil }
-            - before.limitOrders.count { $0.filledOn != nil }
+            - checked.limitOrders.count { $0.filledOn != nil }
         guard filledCount > 0 else {
             orderCheckMessage = "No orders filled."
             return nil
