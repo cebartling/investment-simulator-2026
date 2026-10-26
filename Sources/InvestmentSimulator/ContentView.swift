@@ -6,6 +6,7 @@ struct ContentView: View {
     let onCreate: () -> Void
     let onPurchase: () -> Void
     let onPlaceLimitOrder: () -> Void
+    let onCheckOrders: () async -> Void
 
     var body: some View {
         NavigationSplitView {
@@ -22,6 +23,10 @@ struct ContentView: View {
                     hasLimitOrders: !model.experiment.limitOrders.isEmpty,
                     limitOrderRows: model.limitOrderRows(at:),
                     onSellLimit: model.beginLimitOrder,
+                    canCheckOrders: model.canCheckOrders,
+                    isCheckingOrders: model.isCheckingOrders,
+                    orderCheckMessage: model.orderCheckMessage,
+                    onCheckOrders: onCheckOrders,
                 )
                 .toolbar {
                     Button("Buy…", systemImage: "cart.badge.plus", action: model.beginPurchase)
