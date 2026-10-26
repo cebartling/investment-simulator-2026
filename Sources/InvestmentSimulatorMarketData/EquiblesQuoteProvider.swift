@@ -2,8 +2,12 @@ import Foundation
 import InvestmentSimulatorCore
 
 /// Prices a ticker from Equibles (ADR-0012): the live quote when the plan
-/// includes it and it is current, otherwise the latest settled close.
-public struct EquiblesQuoteProvider: QuoteProviding {
+/// includes it and it is current, otherwise the latest settled close. Also
+/// serves the daily bars every plan gets.
+public struct EquiblesQuoteProvider: QuoteProviding, DailyPriceProviding {
+    /// The most rows Equibles returns in one page of daily prices.
+    private static let pageLimit = 500
+
     private let transport: any HTTPTransport
     private let credentials: any CredentialStoring
     private let baseURL: URL
@@ -64,6 +68,48 @@ public struct EquiblesQuoteProvider: QuoteProviding {
             asOf: closeTime(onSession: row.date),
             source: .close(sessionDate: row.date),
         )
+    }
+
+    public func dailyBars(
+        for ticker: Ticker,
+        from startDate: String,
+        through endDate: String,
+    ) async throws(QuoteError) -> [DailyBar] {
+        let key = try apiKey()
+        var bars: [DailyBar] = []
+        var hasMore = true
+        while hasMore {
+            let url = baseURL.appending(path: "stocks/\(ticker.symbol)/prices").appending(queryItems: [
+                URLQueryItem(name: "startDate", value: startDate),
+                URLQueryItem(name: "endDate", value: endDate),
+                URLQueryItem(name: "limit", value: String(Self.pageLimit)),
+                URLQueryItem(name: "offset", value: String(bars.count)),
+            ])
+            let (status, data) = try await get(url, key: key)
+            guard status == 200 else {
+                throw error(for: status, ticker: ticker)
+            }
+            let page = try decode(DailyPricesResponse.self, from: data)
+            // An empty page that claims more would never end.
+            guard !page.meta.hasMore || !page.data.isEmpty else {
+                throw .unreadableResponse
+            }
+            bars += try page.data.map { row throws(QuoteError) in try bar(from: row) }
+            hasMore = page.meta.hasMore
+        }
+        return bars
+    }
+
+    private func bar(from row: DailyPricesResponse.Row) throws(QuoteError) -> DailyBar {
+        let open = try decimal(from: row.open)
+        let high = try decimal(from: row.high)
+        let low = try decimal(from: row.low)
+        let close = try decimal(from: row.close)
+        do {
+            return try DailyBar(sessionDate: row.date, open: open, high: high, low: low, close: close)
+        } catch {
+            throw .unreadableResponse
+        }
     }
 
     private func apiKey() throws(QuoteError) -> String {
@@ -160,6 +206,23 @@ private struct LatestClosesResponse: Decodable {
     }
 
     let data: [Row]
+}
+
+private struct DailyPricesResponse: Decodable {
+    struct Row: Decodable {
+        let date: String
+        let open: Double
+        let high: Double
+        let low: Double
+        let close: Double
+    }
+
+    struct Meta: Decodable {
+        let hasMore: Bool
+    }
+
+    let data: [Row]
+    let meta: Meta
 }
 
 /// Core doesn't format display strings, so the adapter describes the
