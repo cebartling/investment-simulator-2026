@@ -239,7 +239,7 @@ struct MainWindowModelTests {
         #expect(updated.limitOrders.first?.placedAt == now)
     }
 
-    private func makeModelWithPurchase(
+    func makeModelWithPurchase(
         orders: [LimitOrder] = [],
         clock: @escaping () -> Date = { fixedNow },
         prices: FakeDailyPrices = FakeDailyPrices(),
@@ -261,11 +261,11 @@ struct MainWindowModelTests {
         )
     }
 
-    private func makeOrder(id: UUID = fixedOrderID, shares: Int, placedAt: Date = fixedNow) throws -> LimitOrder {
+    func makeOrder(id: UUID = fixedOrderID, shares: Int, placedAt: Date = fixedNow) throws -> LimitOrder {
         try LimitOrder.placed(id: id, purchaseID: fixedPurchaseID, shares: shares, limitPrice: Money(12), at: placedAt)
     }
 
-    private func makeModel(
+    func makeModel(
         cashBalance: Decimal = 0,
         needsSetup: Bool = false,
         quotes: FakeQuotes = FakeQuotes(.failure(.missingAPIKey)),
@@ -360,4 +360,4 @@ extension MainWindowModelTests {
 }
 
 /// 7:20 AM in New York on Friday 2026-10-30, three days after `fixedNow`.
-private let threeDaysLater = fixedNow.addingTimeInterval(3 * 86400)
+let threeDaysLater = fixedNow.addingTimeInterval(3 * 86400)

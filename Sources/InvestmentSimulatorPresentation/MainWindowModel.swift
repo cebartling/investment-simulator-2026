@@ -26,6 +26,10 @@ public final class MainWindowModel {
     /// What the last Check Orders found, or why it failed.
     public private(set) var orderCheckMessage: String?
 
+    /// Counts the buys and the checks that filled orders, so the window can
+    /// celebrate each one.
+    public private(set) var celebrationCount = 0
+
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
     private let clock: () -> Date
@@ -91,6 +95,7 @@ public final class MainWindowModel {
             return nil
         }
         experiment = updated
+        celebrationCount += 1
         cancelPurchase()
         return updated
     }
@@ -179,6 +184,7 @@ public final class MainWindowModel {
             return nil
         }
         experiment = updated
+        celebrationCount += 1
         orderCheckMessage = filledCount == 1 ? "1 order filled." : "\(filledCount) orders filled."
         return updated
     }
