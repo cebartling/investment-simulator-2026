@@ -7,6 +7,9 @@ import InvestmentSimulatorCore
 public struct EquiblesQuoteProvider: QuoteProviding, DailyPriceProviding {
     /// The most rows Equibles returns in one page of daily prices.
     private static let pageLimit = 500
+    /// 10,000 sessions, about 40 years. More pages than this means the
+    /// paging has gone wrong, not a long history.
+    private static let maxPages = 20
 
     private let transport: any HTTPTransport
     private let credentials: any CredentialStoring
@@ -78,7 +81,12 @@ public struct EquiblesQuoteProvider: QuoteProviding, DailyPriceProviding {
         let key = try apiKey()
         var bars: [DailyBar] = []
         var hasMore = true
+        var pages = 0
         while hasMore {
+            guard pages < Self.maxPages else {
+                throw .unreadableResponse
+            }
+            pages += 1
             let url = baseURL.appending(path: "stocks/\(ticker.symbol)/prices").appending(queryItems: [
                 URLQueryItem(name: "startDate", value: startDate),
                 URLQueryItem(name: "endDate", value: endDate),

@@ -72,6 +72,17 @@ struct EquiblesDailyPricesTests {
         #expect(transport.requests.count == 1)
     }
 
+    @Test func `paging stops after 20 pages that all claim more`() async {
+        // As if Equibles ignored offset and sent the same page forever.
+        let endless = Self.twoSessions.replacingOccurrences(of: #""hasMore": false"#, with: #""hasMore": true"#)
+        let transport = FakeTransport([Self.path: (200, endless)])
+
+        await #expect(throws: QuoteError.unavailable("Equibles sent a response the app couldn't read.")) {
+            try await bars(transport)
+        }
+        #expect(transport.requests.count == 20)
+    }
+
     @Test func `a bar outside its own range is unreadable`() async {
         let body = Self.twoSessions.replacingOccurrences(of: #""high": 351.7300"#, with: #""high": 340.0"#)
         let transport = FakeTransport([Self.path: (200, body)])
