@@ -90,6 +90,13 @@ struct LimitOrderModelTests {
         #expect(!model.canPlace)
     }
 
+    @Test func `negative free shares can't be placed`() throws {
+        let model = try makeModel(price: "10", available: -1)
+
+        #expect(model.sharesMessage == "Every share of this purchase is in an open order.")
+        #expect(!model.canPlace)
+    }
+
     @Test func `expiry is 90 calendar days from now`() throws {
         let model = try makeModel(price: "10", available: 4)
 

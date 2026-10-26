@@ -66,7 +66,7 @@ public final class LimitOrderModel {
     }
 
     public var sharesMessage: String? {
-        if availableShares == 0 {
+        if availableShares <= 0 {
             return "Every share of this purchase is in an open order."
         }
         return (1 ... availableShares).contains(shares) ? nil : "Sell between 1 and \(availableShares) shares."

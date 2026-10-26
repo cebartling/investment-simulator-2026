@@ -22,11 +22,13 @@ public struct Experiment: Sendable, Hashable {
         guard cashBalance.amount >= 0 else {
             throw .negativeCashBalance(cashBalance)
         }
-        let purchaseIDs = Set(purchases.map(\.id))
-        if let order = limitOrders.first(where: { !purchaseIDs.contains($0.purchaseID) }) {
-            throw .unknownPurchase(order.purchaseID)
+        // Orders are placed again in their saved order, so each one passes
+        // the same checks it passed when it was first placed.
+        var experiment = Experiment(validCashBalance: cashBalance, purchases: purchases, limitOrders: [])
+        for order in limitOrders {
+            experiment = try experiment.placing(order)
         }
-        self.init(validCashBalance: cashBalance, purchases: purchases, limitOrders: limitOrders)
+        self = experiment
     }
 
     private init(validCashBalance cashBalance: Money, purchases: [Purchase], limitOrders: [LimitOrder]) {

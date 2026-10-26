@@ -79,6 +79,20 @@ struct LimitOrderCodingTests {
         }
     }
 
+    @Test func `limit order for more shares than the purchase has is rejected by the domain`() {
+        #expect(throws: ExperimentError.insufficientShares(requested: 6, available: 5)) {
+            try codec.decode(versionThreeFile(replacing: #""shares": 6"#))
+        }
+    }
+
+    @Test func `insufficient shares error describes the problem`() {
+        let error: any Error = ExperimentError.insufficientShares(requested: 6, available: 5)
+        let description = "A limit order sells more shares than the purchase has free."
+
+        #expect(error.localizedDescription == description)
+        #expect((error as NSError).localizedFailureReason == description)
+    }
+
     @Test(arguments: [
         (LimitOrderError.nonPositiveShares(0), "A limit order must be for at least one share."),
         (.nonPositivePrice(.zero), "A limit order's price must be more than zero."),

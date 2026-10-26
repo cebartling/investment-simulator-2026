@@ -147,6 +147,26 @@ struct ExperimentLimitOrderTests {
         }
     }
 
+    @Test func `experiment created with orders over-reserving a purchase is rejected`() throws {
+        let purchase = try makePurchase(shares: 10, price: "10")
+        let first = try makeLimitOrder(shares: 6)
+        let second = try makeLimitOrder(id: Self.secondOrderID, shares: 5)
+
+        #expect(throws: ExperimentError.insufficientShares(requested: 5, available: 4)) {
+            try Experiment(cashBalance: .zero, purchases: [purchase], limitOrders: [first, second])
+        }
+    }
+
+    @Test func `experiment created with orders reusing expired shares is accepted`() throws {
+        let purchase = try makePurchase(shares: 10, price: "10")
+        let first = try makeLimitOrder(shares: 10)
+        let second = try makeLimitOrder(id: Self.secondOrderID, shares: 10, placedAt: first.expiresAt)
+
+        let experiment = try Experiment(cashBalance: .zero, purchases: [purchase], limitOrders: [first, second])
+
+        #expect(experiment.limitOrders == [first, second])
+    }
+
     @Test func `purchasing keeps the limit orders`() throws {
         let order = try makeLimitOrder()
         let experiment = try experimentWithPurchase(shares: 10).placing(order)
