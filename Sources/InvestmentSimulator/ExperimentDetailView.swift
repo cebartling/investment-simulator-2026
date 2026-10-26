@@ -114,8 +114,15 @@ struct ExperimentDetailView: View {
                 Text(row.order.expiresAt.formatted(date: .abbreviated, time: .shortened))
             }
             TableColumn("Status") { row in
-                Text(row.isOpen ? "Open" : "Expired")
-                    .foregroundStyle(row.isOpen ? .primary : .secondary)
+                switch row.status {
+                case .open:
+                    Text("Open")
+                case let .filled(sessionDate):
+                    Text("Filled \(PriceDateFormatter().day(ofSession: sessionDate))")
+                case .expired:
+                    Text("Expired")
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }

@@ -26,6 +26,46 @@ final class FakeQuotes: QuoteProviding {
     }
 }
 
+/// Answers each ticker's daily bars from `bars`, or every request with
+/// `failure`, and records the requests it was sent.
+final class FakeDailyPrices: DailyPriceProviding {
+    struct Request: Equatable {
+        let ticker: String
+        let startDate: String
+        let endDate: String
+    }
+
+    private let bars: [String: [DailyBar]]
+    private let failure: QuoteError?
+    private let sent = Mutex<[Request]>([])
+
+    init(_ bars: [String: [DailyBar]] = [:], failure: QuoteError? = nil) {
+        self.bars = bars
+        self.failure = failure
+    }
+
+    var requests: [Request] {
+        sent.withLock { $0 }
+    }
+
+    func dailyBars(
+        for ticker: Ticker,
+        from startDate: String,
+        through endDate: String,
+    ) async throws(QuoteError) -> [DailyBar] {
+        sent.withLock { $0.append(Request(ticker: ticker.symbol, startDate: startDate, endDate: endDate)) }
+        if let failure {
+            throw failure
+        }
+        return bars[ticker.symbol] ?? []
+    }
+}
+
+/// A bar for `session` whose high is `high`, with the low, open and close at 1.
+func makeDailyBar(session: String, high: Decimal) throws -> DailyBar {
+    try DailyBar(sessionDate: session, open: 1, high: high, low: 1, close: 1)
+}
+
 final class FakeCredentials: CredentialStoring {
     struct StoreError: Error {}
 

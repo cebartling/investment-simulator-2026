@@ -107,6 +107,7 @@ struct MainWindowModelTests {
             experiment: Experiment(cashBalance: Money(5), purchases: [purchase]),
             needsSetup: false,
             quotes: FakeQuotes(.failure(.missingAPIKey)),
+            dailyPrices: FakeDailyPrices(),
         )
 
         #expect(model.purchases == [purchase])
@@ -205,21 +206,26 @@ struct MainWindowModelTests {
         #expect(model.limitOrder == nil)
     }
 
-    @Test func `limit order rows show the ticker and whether each order is open`() throws {
+    @Test func `limit order rows show the ticker and each order's status`() throws {
         let expired = try makeOrder(
             id: #require(UUID(uuidString: "00000000-0000-0000-0000-0000000000A2")),
             shares: 1,
             placedAt: fixedNow.addingTimeInterval(-100 * 86400),
         )
+        let filled = try makeOrder(id: #require(UUID(uuidString: "00000000-0000-0000-0000-0000000000A3")), shares: 3)
+            .filled(on: "2026-10-28")
         let open = try makeOrder(shares: 2)
-        let model = try makeModelWithPurchase(orders: [expired, open])
+        let model = try makeModelWithPurchase(orders: [expired, filled, open])
 
         let rows = model.limitOrderRows(at: fixedNow)
 
-        #expect(rows.map(\.order) == [expired, open])
-        #expect(rows.map(\.ticker.symbol) == ["VTI", "VTI"])
-        #expect(rows.map(\.isOpen) == [false, true])
-        #expect(model.limitOrderRows(at: open.expiresAt).map(\.isOpen) == [false, false])
+        #expect(rows.map(\.order) == [expired, filled, open])
+        #expect(rows.map(\.ticker.symbol) == ["VTI", "VTI", "VTI"])
+        #expect(rows.map(\.status) == [.expired, .filled(sessionDate: "2026-10-28"), .open])
+        #expect(
+            model.limitOrderRows(at: open.expiresAt).map(\.status)
+                == [.expired, .filled(sessionDate: "2026-10-28"), .expired],
+        )
     }
 
     @Test func `limit order is placed at the time Place Order is chosen`() throws {
@@ -236,6 +242,7 @@ struct MainWindowModelTests {
     private func makeModelWithPurchase(
         orders: [LimitOrder] = [],
         clock: @escaping () -> Date = { fixedNow },
+        prices: FakeDailyPrices = FakeDailyPrices(),
     ) throws -> MainWindowModel {
         let purchase = try Purchase(
             id: fixedPurchaseID,
@@ -249,6 +256,7 @@ struct MainWindowModelTests {
             experiment: Experiment(cashBalance: Money(100), purchases: [purchase], limitOrders: orders),
             needsSetup: false,
             quotes: FakeQuotes(.failure(.missingAPIKey)),
+            dailyPrices: prices,
             clock: clock,
         )
     }
@@ -266,6 +274,74 @@ struct MainWindowModelTests {
             experiment: Experiment(cashBalance: Money(cashBalance)),
             needsSetup: needsSetup,
             quotes: quotes,
+            dailyPrices: FakeDailyPrices(),
         )
     }
 }
+
+/// Check Orders.
+extension MainWindowModelTests {
+    @Test func `checking orders fills those the bars reach and returns the experiment`() async throws {
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-28", high: 13)]])
+        let model = try makeModelWithPurchase(orders: [makeOrder(shares: 4)], clock: { threeDaysLater }, prices: prices)
+
+        let updated = try #require(await model.checkLimitOrders())
+
+        #expect(updated.limitOrders.map(\.filledOn) == ["2026-10-28"])
+        #expect(updated.cashBalance == Money(148))
+        #expect(model.experiment == updated)
+        #expect(model.orderCheckMessage == "1 order filled.")
+        #expect(prices.requests == [.init(ticker: "VTI", startDate: "2026-10-27", endDate: "2026-10-30")])
+    }
+
+    @Test func `checking says how many orders filled`() async throws {
+        let second = try #require(UUID(uuidString: "00000000-0000-0000-0000-0000000000A2"))
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-28", high: 13)]])
+        let model = try makeModelWithPurchase(
+            orders: [makeOrder(shares: 4), makeOrder(id: second, shares: 6)],
+            clock: { threeDaysLater },
+            prices: prices,
+        )
+
+        _ = await model.checkLimitOrders()
+
+        #expect(model.orderCheckMessage == "2 orders filled.")
+    }
+
+    @Test func `checking with nothing to fill changes nothing`() async throws {
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-28", high: 11)]])
+        let model = try makeModelWithPurchase(orders: [makeOrder(shares: 4)], clock: { threeDaysLater }, prices: prices)
+        let before = model.experiment
+
+        #expect(await model.checkLimitOrders() == nil)
+        #expect(model.experiment == before)
+        #expect(model.orderCheckMessage == "No orders filled.")
+    }
+
+    @Test func `a failed check shows the error and changes nothing`() async throws {
+        let model = try makeModelWithPurchase(
+            orders: [makeOrder(shares: 4)],
+            clock: { threeDaysLater },
+            prices: FakeDailyPrices(failure: .dailyLimitReached),
+        )
+        let before = model.experiment
+
+        #expect(await model.checkLimitOrders() == nil)
+        #expect(model.experiment == before)
+        #expect(model.orderCheckMessage == QuoteError.dailyLimitReached.localizedDescription)
+        #expect(!model.isCheckingOrders)
+    }
+
+    @Test func `orders can be checked only when a settled session could fill one`() throws {
+        let order = try makeOrder(shares: 4)
+
+        #expect(try !makeModelWithPurchase(orders: []).canCheckOrders)
+        #expect(try !makeModelWithPurchase(orders: [order]).canCheckOrders)
+        #expect(try makeModelWithPurchase(orders: [order], clock: { threeDaysLater }).canCheckOrders)
+        #expect(try !makeModelWithPurchase(orders: [order.filled(on: "2026-10-28")], clock: { threeDaysLater })
+            .canCheckOrders)
+    }
+}
+
+/// 7:20 AM in New York on Friday 2026-10-30, three days after `fixedNow`.
+private let threeDaysLater = fixedNow.addingTimeInterval(3 * 86400)

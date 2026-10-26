@@ -21,7 +21,13 @@ public final class MainWindowModel {
     /// The Sell Limit sheet's model while it is shown.
     public private(set) var limitOrder: LimitOrderModel?
 
+    /// True while Check Orders fetches prices.
+    public private(set) var isCheckingOrders = false
+    /// What the last Check Orders found, or why it failed.
+    public private(set) var orderCheckMessage: String?
+
     private let quotes: any QuoteProviding
+    private let dailyPrices: any DailyPriceProviding
     private let clock: () -> Date
 
     /// Set when the user cancels a new document. The app's `WindowCloser`
@@ -30,16 +36,19 @@ public final class MainWindowModel {
     public private(set) var shouldCloseWindow = false
 
     /// `needsSetup` is true for a new, untitled document, which opens the
-    /// New Experiment sheet. `clock` tells the time orders are placed.
+    /// New Experiment sheet. `clock` tells the time orders are placed and
+    /// checked.
     public init(
         experiment: Experiment,
         needsSetup: Bool,
         quotes: any QuoteProviding,
+        dailyPrices: any DailyPriceProviding,
         clock: @escaping () -> Date = Date.init,
     ) {
         self.experiment = experiment
         isShowingNewExperiment = needsSetup
         self.quotes = quotes
+        self.dailyPrices = dailyPrices
         self.clock = clock
     }
 
@@ -97,8 +106,75 @@ public final class MainWindowModel {
         let tickers = Dictionary(uniqueKeysWithValues: experiment.purchases.map { ($0.id, $0.ticker) })
         return experiment.limitOrders.compactMap { order in
             // Experiment rejects an order whose purchase it doesn't have.
-            tickers[order.purchaseID].map { LimitOrderRow(order: order, ticker: $0, isOpen: order.isOpen(at: date)) }
+            tickers[order.purchaseID].map {
+                LimitOrderRow(order: order, ticker: $0, status: status(of: order, at: date))
+            }
         }
+    }
+
+    private func status(of order: LimitOrder, at date: Date) -> LimitOrderRow.Status {
+        if let filledOn = order.filledOn {
+            .filled(sessionDate: filledOn)
+        } else if order.isOpen(at: date) {
+            .open
+        } else {
+            .expired
+        }
+    }
+
+    /// True when a settled session could fill an unfilled order, and no
+    /// check is running.
+    public var canCheckOrders: Bool {
+        !isCheckingOrders && !experiment.sessionsToReplay(at: clock()).isEmpty
+    }
+
+    /// Fetches each ticker's daily bars and fills the orders they reach
+    /// (ADR-0013). Returns the experiment after the fills, for the document
+    /// to save, or nil when nothing filled or the check failed;
+    /// `orderCheckMessage` says which.
+    @discardableResult
+    public func checkLimitOrders() async -> Experiment? {
+        guard !isCheckingOrders else {
+            return nil
+        }
+        let now = clock()
+        isCheckingOrders = true
+        orderCheckMessage = nil
+        defer { isCheckingOrders = false }
+
+        var bars: [Ticker: [DailyBar]] = [:]
+        do throws(QuoteError) {
+            for (ticker, sessions) in experiment.sessionsToReplay(at: now) {
+                bars[ticker] = try await dailyPrices.dailyBars(
+                    for: ticker,
+                    from: sessions.lowerBound,
+                    through: sessions.upperBound,
+                )
+            }
+        } catch {
+            orderCheckMessage = error.localizedDescription
+            return nil
+        }
+
+        // The experiment may have changed while prices were fetched; fill
+        // the one shown now.
+        let before = experiment
+        let updated: Experiment
+        do {
+            updated = try before.fillingLimitOrders(from: bars, at: now)
+        } catch {
+            orderCheckMessage = "Couldn't fill the orders: \(error.localizedDescription)"
+            return nil
+        }
+        let filledCount = updated.limitOrders.count { $0.filledOn != nil }
+            - before.limitOrders.count { $0.filledOn != nil }
+        guard filledCount > 0 else {
+            orderCheckMessage = "No orders filled."
+            return nil
+        }
+        experiment = updated
+        orderCheckMessage = filledCount == 1 ? "1 order filled." : "\(filledCount) orders filled."
+        return updated
     }
 
     public func beginLimitOrder(for purchase: Purchase) {
