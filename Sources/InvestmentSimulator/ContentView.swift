@@ -54,6 +54,8 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 640, minHeight: 400)
+        // Over the whole window, so it shows once the Buy sheet closes.
+        .overlay(ConfettiView(trigger: model.celebrationCount))
         // Cancelling the new experiment closes the new, untitled document.
         .background(WindowCloser(isClosing: model.shouldCloseWindow))
         .sheet(isPresented: $model.isShowingNewExperiment) {
