@@ -200,6 +200,36 @@ struct ExperimentBuyLimitOrderTests {
         }
     }
 
+    @Test func `experiment created with two purchases sharing an id is rejected`() throws {
+        let purchase = try makePurchase(shares: 1, price: "10")
+
+        #expect(throws: ExperimentError.duplicateID(purchase.id)) {
+            try Experiment(cashBalance: Money(64), purchases: [purchase, purchase])
+        }
+    }
+
+    @Test func `experiment created with a buy order sharing a sell order's id is rejected`() throws {
+        let sell = try makeLimitOrder()
+        let buy = try makeBuyLimitOrder(id: sell.id)
+
+        #expect(throws: ExperimentError.duplicateID(sell.id)) {
+            try Experiment(
+                cashBalance: Money(64),
+                purchases: [makePurchase(shares: 1, price: "10")],
+                limitOrders: [sell],
+                buyLimitOrders: [buy],
+            )
+        }
+    }
+
+    @Test func `experiment created with two buy orders sharing an id is rejected`() throws {
+        let order = try makeBuyLimitOrder()
+
+        #expect(throws: ExperimentError.duplicateID(order.id)) {
+            try Experiment(cashBalance: Money(64), buyLimitOrders: [order, order])
+        }
+    }
+
     private static let now = Date(timeIntervalSince1970: 1_793_000_000)
     private static let secondOrderID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
 }

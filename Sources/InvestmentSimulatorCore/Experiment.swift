@@ -34,6 +34,7 @@ public struct Experiment: Sendable, Hashable {
             throw .negativeCashBalance(cashBalance)
         }
         try Self.checkFillPurchases(purchases: purchases, buyLimitOrders: buyLimitOrders)
+        try Self.checkUniqueIDs(purchases: purchases, limitOrders: limitOrders, buyLimitOrders: buyLimitOrders)
         // Sell orders are placed again in their saved order, so each one
         // passes the same checks it passed when it was first placed. Buy
         // orders can't be: the balance is the one after every fill, not the
@@ -60,6 +61,28 @@ public struct Experiment: Sendable, Hashable {
         self.purchases = purchases
         self.limitOrders = limitOrders
         self.buyLimitOrders = buyLimitOrders
+    }
+
+    /// No two purchases or orders share an id, apart from a filled buy order
+    /// and the purchase its fill made, which checkFillPurchases pairs.
+    private static func checkUniqueIDs(
+        purchases: [Purchase],
+        limitOrders: [LimitOrder],
+        buyLimitOrders: [BuyLimitOrder],
+    ) throws(ExperimentError) {
+        let unfilledBuyIDs = buyLimitOrders.filter { $0.filledOn == nil }.map(\.id)
+        var seen = Set<UUID>()
+        var seenBuy = Set<UUID>()
+        for id in purchases.map(\.id) + limitOrders.map(\.id) + unfilledBuyIDs {
+            guard seen.insert(id).inserted else {
+                throw .duplicateID(id)
+            }
+        }
+        for id in buyLimitOrders.map(\.id) {
+            guard seenBuy.insert(id).inserted else {
+                throw .duplicateID(id)
+            }
+        }
     }
 
     /// Each filled buy order has its purchase, exactly the one its fill
@@ -294,4 +317,7 @@ public enum ExperimentError: Error, Equatable {
     /// A filled buy order without its purchase, or a purchase marked as a
     /// fill without its filled buy order.
     case mismatchedFillPurchase(UUID)
+    /// Two purchases or orders share an id. A filled buy order and its
+    /// purchase are the one pair that shares one.
+    case duplicateID(UUID)
 }

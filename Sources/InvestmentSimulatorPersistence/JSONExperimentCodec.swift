@@ -286,6 +286,8 @@ extension ExperimentError: LocalizedError {
             "The limit order is no longer open."
         case .mismatchedFillPurchase:
             "A buy limit order's fill doesn't match the experiment's purchases."
+        case .duplicateID:
+            "Two purchases or orders share an ID."
         case .invalidSessionDate:
             "A limit order's fill date must be written yyyy-MM-dd."
         }
