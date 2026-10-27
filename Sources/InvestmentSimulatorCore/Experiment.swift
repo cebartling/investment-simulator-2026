@@ -18,7 +18,8 @@ public struct Experiment: Sendable, Hashable {
     public let cashBalance: Money
     /// In the order they were made.
     public let purchases: [Purchase]
-    /// In the order they were placed, including filled and expired ones.
+    /// In the order they were placed, including filled, expired and
+    /// cancelled ones (ADR-0014).
     public let limitOrders: [LimitOrder]
     /// In the order they were placed, including filled, expired and
     /// cancelled ones (ADR-0014).
