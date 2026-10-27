@@ -10,9 +10,12 @@ struct LimitOrderSheet: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        // The grouped form insets its rows by 20 points, so only the title
+        // and buttons carry their own padding to line up with them.
+        VStack(alignment: .leading, spacing: 0) {
             Text("Sell Limit: \(model.purchase.ticker.symbol)")
                 .font(.title2.bold())
+                .padding([.horizontal, .top], 20)
             Form {
                 LabeledContent("Purchase price") {
                     Text(
@@ -52,6 +55,7 @@ struct LimitOrderSheet: View {
                     Text(model.expiresAt.formatted(date: .abbreviated, time: .shortened))
                 }
             }
+            .formStyle(.grouped)
             HStack {
                 Spacer()
                 Button("Cancel", role: .cancel, action: onCancel)
@@ -60,8 +64,8 @@ struct LimitOrderSheet: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(!model.canPlace)
             }
+            .padding([.horizontal, .bottom], 20)
         }
-        .padding(20)
         .frame(width: 420)
         .interactiveDismissDisabled()
     }
