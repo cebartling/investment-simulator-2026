@@ -26,6 +26,7 @@ struct ContentView: View {
                     hasLimitOrders: !model.experiment.limitOrders.isEmpty
                         || !model.experiment.buyLimitOrders.isEmpty,
                     limitOrderRows: model.limitOrderRows(at:),
+                    showsExpiredAndCancelledOrders: $model.showsExpiredAndCancelledOrders,
                     onSellLimit: model.beginLimitOrder,
                     onCancelOrder: onCancelOrder,
                     canCheckOrders: model.canCheckOrders(at:),
