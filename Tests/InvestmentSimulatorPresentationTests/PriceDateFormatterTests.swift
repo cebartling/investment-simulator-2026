@@ -17,6 +17,10 @@ struct PriceDateFormatterTests {
         #expect(formatter.day(of: closeTime, source: .close(sessionDate: "2026-10-23")) == "Oct 23, 2026")
     }
 
+    @Test func `a limit order fill is dated by its New York session`() {
+        #expect(formatter.day(of: closeTime, source: .limitOrderFill(sessionDate: "2026-10-23")) == "Oct 23, 2026")
+    }
+
     @Test func `a live quote is dated in the user's time zone`() {
         #expect(formatter.day(of: closeTime, source: .liveQuote(delayed: false)) == "Oct 24, 2026")
     }

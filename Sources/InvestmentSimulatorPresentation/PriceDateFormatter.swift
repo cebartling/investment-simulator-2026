@@ -1,8 +1,8 @@
 import Foundation
 import InvestmentSimulatorCore
 
-/// Words for when a price is from. A close is dated by its New York
-/// session, so it reads as the same day wherever the user is; a live quote
+/// Words for when a price is from. A close or a limit order fill is dated
+/// by its New York session, so it reads as the same day wherever the user is; a live quote
 /// shows the user's own time.
 public struct PriceDateFormatter {
     private static let marketTimeZone = TimeZone(identifier: "America/New_York")!
@@ -45,6 +45,8 @@ public struct PriceDateFormatter {
             "Live quote, \(when)"
         case .close:
             "Close on \(day(of: quote.asOf, source: quote.source))"
+        case .limitOrderFill:
+            "Limit order filled on \(day(of: quote.asOf, source: quote.source))"
         }
     }
 
@@ -54,7 +56,7 @@ public struct PriceDateFormatter {
         source: PriceSource,
     ) -> Date.FormatStyle {
         let zone = switch source {
-        case .close: Self.marketTimeZone
+        case .close, .limitOrderFill: Self.marketTimeZone
         case .liveQuote: timeZone
         }
         return Date.FormatStyle(date: date, time: time, locale: locale, timeZone: zone)

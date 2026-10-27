@@ -91,7 +91,7 @@ public final class MainWindowModel {
     /// Returns nil while the purchase can't be bought, leaving the sheet open.
     @discardableResult
     public func completePurchase() -> Experiment? {
-        guard let bought = purchase?.buy(), let updated = try? experiment.purchasing(bought) else {
+        guard let bought = purchase?.buy(), let updated = try? experiment.purchasing(bought, at: clock()) else {
             return nil
         }
         experiment = updated

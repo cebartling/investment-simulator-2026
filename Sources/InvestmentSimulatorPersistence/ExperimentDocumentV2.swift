@@ -16,7 +16,8 @@ struct PurchaseV2: Codable {
     let shares: Int
     let pricePerShare: String
     let pricedAt: String
-    /// `liveQuote`, with `delayed`, or `close`, with `sessionDate`.
+    /// `liveQuote`, with `delayed`, or `close`, with `sessionDate`. From
+    /// version 5 also `limitOrderFill`, with `sessionDate`.
     let priceSource: String
     let delayed: Bool?
     let sessionDate: String?

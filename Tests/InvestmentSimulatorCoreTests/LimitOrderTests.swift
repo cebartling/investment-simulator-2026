@@ -114,6 +114,48 @@ struct LimitOrderTests {
         }
     }
 
+    @Test func `new order is not cancelled`() throws {
+        #expect(try makeLimitOrder().cancelledAt == nil)
+    }
+
+    @Test func `cancelled order keeps its terms and records the time`() throws {
+        let order = try makeLimitOrder(shares: 3, limitPrice: "348.7")
+        let cancelledAt = order.placedAt.addingTimeInterval(3600)
+
+        let cancelled = try order.cancelled(at: cancelledAt)
+
+        #expect(cancelled.cancelledAt == cancelledAt)
+        #expect(cancelled.id == order.id)
+        #expect(cancelled.purchaseID == order.purchaseID)
+        #expect(cancelled.shares == order.shares)
+        #expect(cancelled.limitPrice == order.limitPrice)
+        #expect(cancelled.placedAt == order.placedAt)
+        #expect(cancelled.expiresAt == order.expiresAt)
+        #expect(cancelled.filledOn == nil)
+    }
+
+    @Test func `cancelled order is open until it is cancelled`() throws {
+        let order = try makeLimitOrder()
+        let cancelledAt = order.placedAt.addingTimeInterval(3600)
+
+        let cancelled = try order.cancelled(at: cancelledAt)
+
+        #expect(cancelled.isOpen(at: order.placedAt))
+        #expect(cancelled.isOpen(at: cancelledAt.addingTimeInterval(-1)))
+        #expect(!cancelled.isOpen(at: cancelledAt))
+    }
+
+    @Test func `order can't be both filled and cancelled`() throws {
+        let order = try makeLimitOrder()
+
+        #expect(throws: LimitOrderError.filledAndCancelled) {
+            try order.filled(on: "2026-10-23").cancelled(at: order.placedAt)
+        }
+        #expect(throws: LimitOrderError.filledAndCancelled) {
+            try order.cancelled(at: order.placedAt).filled(on: "2026-10-23")
+        }
+    }
+
     @Test func `proceeds are the limit price times the shares`() throws {
         let order = try makeLimitOrder(shares: 3, limitPrice: "348.7")
 
