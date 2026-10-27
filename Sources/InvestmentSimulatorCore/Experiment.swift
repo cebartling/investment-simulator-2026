@@ -62,25 +62,25 @@ public struct Experiment: Sendable, Hashable {
         self.buyLimitOrders = buyLimitOrders
     }
 
-    /// Each filled buy order has its purchase, a fill from the same session,
-    /// and every other buy order and purchase has none.
+    /// Each filled buy order has its purchase, exactly the one its fill
+    /// makes, and every other buy order and purchase has none.
     private static func checkFillPurchases(
         purchases: [Purchase],
         buyLimitOrders: [BuyLimitOrder],
     ) throws(ExperimentError) {
         let fills = Dictionary(
-            purchases.compactMap { purchase -> (UUID, String)? in
-                guard case let .limitOrderFill(sessionDate) = purchase.priceSource else {
+            purchases.compactMap { purchase -> (UUID, Purchase)? in
+                guard case .limitOrderFill = purchase.priceSource else {
                     return nil
                 }
-                return (purchase.id, sessionDate)
+                return (purchase.id, purchase)
             },
             uniquingKeysWith: { first, _ in first },
         )
         let purchaseIDs = Set(purchases.map(\.id))
         for order in buyLimitOrders {
             let matches = if let filledOn = order.filledOn {
-                fills[order.id] == filledOn
+                fills[order.id] == (try? order.purchase(filledOn: filledOn))
             } else {
                 !purchaseIDs.contains(order.id)
             }

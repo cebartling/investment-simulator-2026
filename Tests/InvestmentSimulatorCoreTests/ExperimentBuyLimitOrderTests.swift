@@ -159,6 +159,27 @@ struct ExperimentBuyLimitOrderTests {
         }
     }
 
+    @Test func `experiment created with a fill purchase its order couldn't make is rejected`() throws {
+        let order = try makeBuyLimitOrder(shares: 4, limitPrice: "9")
+        let made = try order.purchase(filledOn: "2026-10-23")
+        let altered = try Purchase(
+            id: made.id,
+            ticker: Ticker("MSFT"),
+            shares: 1000,
+            pricePerShare: 1,
+            pricedAt: made.pricedAt,
+            priceSource: made.priceSource,
+        )
+
+        #expect(throws: ExperimentError.mismatchedFillPurchase(order.id)) {
+            try Experiment(
+                cashBalance: Money(64),
+                purchases: [altered],
+                buyLimitOrders: [order.filled(on: "2026-10-23")],
+            )
+        }
+    }
+
     @Test func `experiment created with an unfilled buy order that has a purchase is rejected`() throws {
         let order = try makeBuyLimitOrder()
 
