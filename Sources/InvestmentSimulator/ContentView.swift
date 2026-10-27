@@ -69,7 +69,9 @@ struct ContentView: View {
                 ContentUnavailableView("No Selection", systemImage: "sidebar.left")
             }
         }
-        .frame(minWidth: 640, minHeight: 400)
+        // Tall enough for the fullest grouped-form sheet (about nine rows)
+        // to fit without scrolling.
+        .frame(minWidth: 640, minHeight: 480)
         // Over the whole window, so it shows once the Buy sheet closes.
         .overlay(ConfettiView(trigger: model.celebrationCount))
         // Cancelling the new experiment closes the new, untitled document.

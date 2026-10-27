@@ -9,9 +9,12 @@ struct PurchaseSheet: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        // The grouped form insets its section by 20 points, so only the title
+        // and buttons carry their own padding, to line up with its edges.
+        VStack(alignment: .leading, spacing: 0) {
             Text("Buy Investment")
                 .font(.title2.bold())
+                .padding([.horizontal, .top], 20)
             Form {
                 TextField("Ticker", text: $model.tickerText, prompt: Text("VTI"))
                     .onSubmit {
@@ -37,6 +40,7 @@ struct PurchaseSheet: View {
                 amountRow("Cash", model.availableCash.amount)
                 price
             }
+            .formStyle(.grouped)
             HStack {
                 Button("Get Price") {
                     Task { await model.getPrice() }
@@ -53,8 +57,8 @@ struct PurchaseSheet: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(!model.canBuy)
             }
+            .padding([.horizontal, .bottom], 20)
         }
-        .padding(20)
         .frame(width: 420)
         .interactiveDismissDisabled()
     }
