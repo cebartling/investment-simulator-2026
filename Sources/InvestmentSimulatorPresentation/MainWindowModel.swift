@@ -71,7 +71,13 @@ public final class MainWindowModel {
     /// The cash held by buy orders open at `date`. Takes the date, so a view
     /// can redraw it as orders expire.
     public func reservedCash(at date: Date) -> Decimal {
-        experiment.reservedCash(at: date).amount
+        experiment.reservedCash(at: readingDate(date)).amount
+    }
+
+    /// The later of `date` and now. A minute timeline passes the start of
+    /// the minute, which is before an order cancelled during it.
+    private func readingDate(_ date: Date) -> Date {
+        max(date, clock())
     }
 
     /// Returns the created experiment, for the document to save. Returns nil
@@ -118,6 +124,7 @@ public final class MainWindowModel {
     /// The buy and sell limit orders as they stand at `date`, in the order
     /// they were placed, so a view can redraw them as orders expire.
     public func limitOrderRows(at date: Date) -> [LimitOrderRow] {
+        let date = readingDate(date)
         let tickers = Dictionary(uniqueKeysWithValues: experiment.purchases.map { ($0.id, $0.ticker) })
         let sellRows = experiment.limitOrders.compactMap { order in
             // Experiment rejects an order whose purchase it doesn't have.

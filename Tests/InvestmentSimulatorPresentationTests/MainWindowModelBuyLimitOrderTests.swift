@@ -107,6 +107,21 @@ extension MainWindowModelTests {
         #expect(model.limitOrderRows(at: now).map(\.status) == [.cancelled, .cancelled])
     }
 
+    /// A view's minute timeline reads the orders at the start of the minute,
+    /// before an order cancelled during it.
+    @Test func `an order cancelled during the minute reads as cancelled from the minute's start`() throws {
+        let minuteStart = fixedNow.addingTimeInterval(3600)
+        var now = minuteStart
+        let buy = try makeBuyOrder(shares: 4)
+        let model = try makeModelWithBuyOrders([buy], clock: { now })
+        now = minuteStart.addingTimeInterval(37)
+
+        _ = try #require(model.cancelOrder(id: buy.id))
+
+        #expect(model.limitOrderRows(at: minuteStart).map(\.status) == [.cancelled])
+        #expect(model.reservedCash(at: minuteStart) == 0)
+    }
+
     @Test func `cancelling an order that isn't open changes nothing`() throws {
         let sell = try makeOrder(shares: 2).filled(on: "2026-10-28")
         let model = try makeModelWithBuyOrders(sellOrders: [sell])
