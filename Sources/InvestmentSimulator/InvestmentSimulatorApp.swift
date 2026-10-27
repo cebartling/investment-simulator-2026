@@ -69,6 +69,16 @@ struct MainWindow: View {
                     document.experiment = updated
                 }
             },
+            onPlaceBuyLimitOrder: {
+                if let updated = model.completeBuyLimitOrder() {
+                    document.experiment = updated
+                }
+            },
+            onCancelOrder: { id in
+                if let updated = model.cancelOrder(id: id) {
+                    document.experiment = updated
+                }
+            },
             onCheckOrders: {
                 if let updated = await model.checkLimitOrders() {
                     document.experiment = updated

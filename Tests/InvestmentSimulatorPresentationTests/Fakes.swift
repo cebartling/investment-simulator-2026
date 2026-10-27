@@ -3,10 +3,12 @@ import InvestmentSimulatorCore
 import Synchronization
 import Testing
 
-/// Answers every quote request with `result`.
+/// Answers every quote request with `result`. `whileAnswering` runs on the
+/// main actor during each request, as a change made while it waits.
 final class FakeQuotes: QuoteProviding {
     private let result: Mutex<Result<Quote, QuoteError>>
     private let count = Mutex(0)
+    private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
 
     init(_ result: Result<Quote, QuoteError>) {
         self.result = Mutex(result)
@@ -20,8 +22,15 @@ final class FakeQuotes: QuoteProviding {
         result.withLock { $0 = newResult }
     }
 
+    func whileAnswering(_ action: @escaping @MainActor @Sendable () -> Void) {
+        hook.withLock { $0 = action }
+    }
+
     func quote(for _: Ticker) async throws(QuoteError) -> Quote {
         count.withLock { $0 += 1 }
+        if let action = hook.withLock({ $0 }) {
+            await action()
+        }
         return try result.withLock { $0 }.get()
     }
 }

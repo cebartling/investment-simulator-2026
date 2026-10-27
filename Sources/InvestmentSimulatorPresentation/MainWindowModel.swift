@@ -21,12 +21,16 @@ public final class MainWindowModel {
     /// The Sell Limit sheet's model while it is shown.
     public private(set) var limitOrder: LimitOrderModel?
 
+    public var isShowingBuyLimitOrder = false
+    /// The Buy Limit sheet's model while it is shown.
+    public private(set) var buyLimitOrder: BuyLimitOrderModel?
+
     /// True while Check Orders fetches prices.
     public private(set) var isCheckingOrders = false
     /// What the last Check Orders found, or why it failed.
     public private(set) var orderCheckMessage: String?
 
-    /// Counts the buys and the checks that filled orders, so the window can
+    /// Counts the buys and the checks that filled orders, buy or sell, so the window can
     /// celebrate each one.
     public private(set) var celebrationCount = 0
 
@@ -64,6 +68,12 @@ public final class MainWindowModel {
         experiment.purchases
     }
 
+    /// The cash held by buy orders open at `date`. Takes the date, so a view
+    /// can redraw it as orders expire.
+    public func reservedCash(at date: Date) -> Decimal {
+        experiment.reservedCash(at: date).amount
+    }
+
     /// Returns the created experiment, for the document to save. Returns nil
     /// while the input is invalid, leaving the sheet open with its
     /// validation message.
@@ -83,7 +93,7 @@ public final class MainWindowModel {
     }
 
     public func beginPurchase() {
-        purchase = PurchaseModel(availableCash: experiment.cashBalance, quotes: quotes)
+        purchase = PurchaseModel(availableCash: experiment.availableCash(at: clock()), quotes: quotes)
         isShowingPurchase = true
     }
 
@@ -105,23 +115,57 @@ public final class MainWindowModel {
         purchase = nil
     }
 
-    /// The limit orders as they stand at `date`, so a view can redraw them
-    /// as orders expire.
+    /// The buy and sell limit orders as they stand at `date`, in the order
+    /// they were placed, so a view can redraw them as orders expire.
     public func limitOrderRows(at date: Date) -> [LimitOrderRow] {
         let tickers = Dictionary(uniqueKeysWithValues: experiment.purchases.map { ($0.id, $0.ticker) })
-        return experiment.limitOrders.compactMap { order in
+        let sellRows = experiment.limitOrders.compactMap { order in
             // Experiment rejects an order whose purchase it doesn't have.
             tickers[order.purchaseID].map {
-                LimitOrderRow(order: order, ticker: $0, status: status(of: order, at: date))
+                LimitOrderRow(
+                    id: order.id,
+                    side: .sell,
+                    ticker: $0,
+                    shares: order.shares,
+                    limitPrice: order.limitPrice,
+                    placedAt: order.placedAt,
+                    expiresAt: order.expiresAt,
+                    status: status(
+                        filledOn: order.filledOn,
+                        cancelledAt: order.cancelledAt,
+                        isOpen: order.isOpen(at: date),
+                    ),
+                )
             }
         }
+        let buyRows = experiment.buyLimitOrders.map { order in
+            LimitOrderRow(
+                id: order.id,
+                side: .buy,
+                ticker: order.ticker,
+                shares: order.shares,
+                limitPrice: order.limitPrice,
+                placedAt: order.placedAt,
+                expiresAt: order.expiresAt,
+                status: status(
+                    filledOn: order.filledOn,
+                    cancelledAt: order.cancelledAt,
+                    isOpen: order.isOpen(at: date),
+                ),
+            )
+        }
+        // Sorting is stable, so orders placed at the same time keep their
+        // order.
+        return (sellRows + buyRows).sorted { $0.placedAt < $1.placedAt }
     }
 
-    private func status(of order: LimitOrder, at date: Date) -> LimitOrderRow.Status {
-        if let filledOn = order.filledOn {
+    private func status(filledOn: String?, cancelledAt: Date?, isOpen: Bool) -> LimitOrderRow.Status {
+        if let filledOn {
             .filled(sessionDate: filledOn)
-        } else if order.isOpen(at: date) {
+        } else if isOpen {
             .open
+        } else if cancelledAt != nil {
+            .cancelled
         } else {
             .expired
         }
@@ -177,8 +221,7 @@ public final class MainWindowModel {
             orderCheckMessage = "Couldn't fill the orders: \(error.localizedDescription)"
             return nil
         }
-        let filledCount = updated.limitOrders.count { $0.filledOn != nil }
-            - checked.limitOrders.count { $0.filledOn != nil }
+        let filledCount = Self.filledCount(of: updated) - Self.filledCount(of: checked)
         guard filledCount > 0 else {
             orderCheckMessage = "No orders filled."
             return nil
@@ -187,6 +230,49 @@ public final class MainWindowModel {
         celebrationCount += 1
         orderCheckMessage = filledCount == 1 ? "1 order filled." : "\(filledCount) orders filled."
         return updated
+    }
+
+    private static func filledCount(of experiment: Experiment) -> Int {
+        experiment.limitOrders.count { $0.filledOn != nil } + experiment.buyLimitOrders.count { $0.filledOn != nil }
+    }
+
+    /// Returns the experiment with the order `id`, buy or sell, cancelled
+    /// now, for the document to save. Returns nil when no such order is
+    /// open.
+    @discardableResult
+    public func cancelOrder(id: UUID) -> Experiment? {
+        guard let updated = try? experiment.cancelling(orderID: id, at: clock()) else {
+            return nil
+        }
+        experiment = updated
+        return updated
+    }
+
+    public func beginBuyLimitOrder() {
+        buyLimitOrder = BuyLimitOrderModel(
+            availableCash: experiment.availableCash(at: clock()),
+            quotes: quotes,
+            clock: clock,
+        )
+        isShowingBuyLimitOrder = true
+    }
+
+    /// Returns the experiment with the buy order placed, for the document to
+    /// save. Returns nil while the order can't be placed, leaving the sheet
+    /// open.
+    @discardableResult
+    public func completeBuyLimitOrder() -> Experiment? {
+        guard let order = buyLimitOrder?.place(), let updated = try? experiment.placing(order) else {
+            return nil
+        }
+        experiment = updated
+        cancelBuyLimitOrder()
+        return updated
+    }
+
+    public func cancelBuyLimitOrder() {
+        isShowingBuyLimitOrder = false
+        buyLimitOrder = nil
     }
 
     public func beginLimitOrder(for purchase: Purchase) {

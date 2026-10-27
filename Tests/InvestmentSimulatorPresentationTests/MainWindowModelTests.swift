@@ -219,7 +219,8 @@ struct MainWindowModelTests {
 
         let rows = model.limitOrderRows(at: fixedNow)
 
-        #expect(rows.map(\.order) == [expired, filled, open])
+        #expect(rows.map(\.id) == [expired.id, filled.id, open.id])
+        #expect(rows.map(\.side) == [.sell, .sell, .sell])
         #expect(rows.map(\.ticker.symbol) == ["VTI", "VTI", "VTI"])
         #expect(rows.map(\.status) == [.expired, .filled(sessionDate: "2026-10-28"), .open])
         #expect(
