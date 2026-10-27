@@ -2,6 +2,9 @@ import Foundation
 import InvestmentSimulatorCore
 import Testing
 
+/// When purchases in these tests are made; no buy orders reserve cash then.
+private let testNow = Date(timeIntervalSince1970: 1_793_000_000)
+
 struct ExperimentTests {
     @Test(arguments: ["0", "0.01", "10000", "1234567.89"])
     func `experiment starts with a non-negative cash balance`(amount: String) throws {
@@ -33,7 +36,7 @@ struct ExperimentTests {
         let experiment = try Experiment(cashBalance: Money(1000))
         let purchase = try makePurchase(shares: 2, price: "250.10")
 
-        let updated = try experiment.purchasing(purchase)
+        let updated = try experiment.purchasing(purchase, at: testNow)
 
         #expect(try updated.cashBalance == Money(#require(Decimal(string: "499.80"))))
         #expect(updated.purchases == [purchase])
@@ -47,14 +50,17 @@ struct ExperimentTests {
             price: "12",
         )
 
-        let updated = try Experiment(cashBalance: Money(100)).purchasing(first).purchasing(second)
+        let updated = try Experiment(cashBalance: Money(100))
+            .purchasing(first, at: testNow)
+            .purchasing(second, at: testNow)
 
         #expect(updated.purchases == [first, second])
         #expect(updated.cashBalance == Money(78))
     }
 
     @Test func `purchase can spend all the cash`() throws {
-        let updated = try Experiment(cashBalance: Money(20)).purchasing(makePurchase(shares: 2, price: "10"))
+        let updated = try Experiment(cashBalance: Money(20))
+            .purchasing(makePurchase(shares: 2, price: "10"), at: testNow)
 
         #expect(updated.cashBalance == .zero)
     }
@@ -63,7 +69,7 @@ struct ExperimentTests {
         let experiment = try Experiment(cashBalance: Money(19))
 
         #expect(throws: ExperimentError.insufficientCash(cost: Money(20), available: Money(19))) {
-            try experiment.purchasing(makePurchase(shares: 2, price: "10"))
+            try experiment.purchasing(makePurchase(shares: 2, price: "10"), at: testNow)
         }
     }
 
@@ -171,7 +177,8 @@ struct ExperimentLimitOrderTests {
         let order = try makeLimitOrder()
         let experiment = try experimentWithPurchase(shares: 10).placing(order)
 
-        let updated = try experiment.purchasing(makePurchase(id: Self.secondPurchaseID, shares: 1, price: "1"))
+        let purchase = try makePurchase(id: Self.secondPurchaseID, shares: 1, price: "1")
+        let updated = try experiment.purchasing(purchase, at: Self.now)
 
         #expect(updated.limitOrders == [order])
     }
@@ -264,6 +271,6 @@ struct ExperimentLimitOrderTests {
     private static let secondPurchaseID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
 
     private func experimentWithPurchase(shares: Int) throws -> Experiment {
-        try Experiment(cashBalance: Money(1000)).purchasing(makePurchase(shares: shares, price: "10"))
+        try Experiment(cashBalance: Money(1000)).purchasing(makePurchase(shares: shares, price: "10"), at: Self.now)
     }
 }

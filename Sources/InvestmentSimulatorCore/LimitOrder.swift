@@ -1,7 +1,7 @@
 import Foundation
 
 /// An order to sell shares of one purchase once the price reaches
-/// `limitPrice`. It fills at exactly that price, or expires.
+/// `limitPrice`. It fills at exactly that price, expires, or is cancelled.
 public struct LimitOrder: Sendable, Hashable, Identifiable {
     /// Calendar days from placing an order to its expiry.
     public static let lifetimeInDays = 90
@@ -16,8 +16,11 @@ public struct LimitOrder: Sendable, Hashable, Identifiable {
     public let expiresAt: Date
     /// The session (`yyyy-MM-dd`) the order filled in, or nil while unfilled.
     public let filledOn: String?
+    /// When the order was cancelled, or nil if it wasn't.
+    public let cancelledAt: Date?
 
-    /// An order with a known expiry and fill, such as one read from a file.
+    /// An order with a known expiry, fill and cancellation, such as one read
+    /// from a file.
     /// New orders come from `placed(id:purchaseID:shares:limitPrice:at:)`.
     public init(
         id: UUID,
@@ -27,6 +30,7 @@ public struct LimitOrder: Sendable, Hashable, Identifiable {
         placedAt: Date,
         expiresAt: Date,
         filledOn: String? = nil,
+        cancelledAt: Date? = nil,
     ) throws(LimitOrderError) {
         guard shares > 0 else {
             throw .nonPositiveShares(shares)
@@ -37,6 +41,9 @@ public struct LimitOrder: Sendable, Hashable, Identifiable {
         if let filledOn, !isSessionDate(filledOn) {
             throw .invalidSessionDate(filledOn)
         }
+        guard filledOn == nil || cancelledAt == nil else {
+            throw .filledAndCancelled
+        }
         self.id = id
         self.purchaseID = purchaseID
         self.shares = shares
@@ -44,6 +51,7 @@ public struct LimitOrder: Sendable, Hashable, Identifiable {
         self.placedAt = placedAt
         self.expiresAt = expiresAt
         self.filledOn = filledOn
+        self.cancelledAt = cancelledAt
     }
 
     /// A new order placed at `placedAt`, expiring `lifetimeInDays` calendar
@@ -70,9 +78,9 @@ public struct LimitOrder: Sendable, Hashable, Identifiable {
         marketCalendar.date(byAdding: .day, value: lifetimeInDays, to: placedAt)!
     }
 
-    /// True until the order fills or expires.
+    /// True until the order fills, expires or is cancelled.
     public func isOpen(at date: Date) -> Bool {
-        filledOn == nil && date < expiresAt
+        filledOn == nil && date < expiresAt && cancelledAt.map { date < $0 } ?? true
     }
 
     /// The order filled at its limit price in the session on `sessionDate`.
@@ -85,6 +93,21 @@ public struct LimitOrder: Sendable, Hashable, Identifiable {
             placedAt: placedAt,
             expiresAt: expiresAt,
             filledOn: sessionDate,
+            cancelledAt: cancelledAt,
+        )
+    }
+
+    /// The order cancelled at `date`. Its shares are free again from then.
+    public func cancelled(at date: Date) throws(LimitOrderError) -> LimitOrder {
+        try LimitOrder(
+            id: id,
+            purchaseID: purchaseID,
+            shares: shares,
+            limitPrice: limitPrice,
+            placedAt: placedAt,
+            expiresAt: expiresAt,
+            filledOn: filledOn,
+            cancelledAt: date,
         )
     }
 
@@ -111,4 +134,5 @@ public enum LimitOrderError: Error, Equatable {
     case nonPositivePrice(Money)
     case negativeProfitPercent(Decimal)
     case invalidSessionDate(String)
+    case filledAndCancelled
 }

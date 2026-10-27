@@ -9,11 +9,12 @@ public struct JSONExperimentCodec: ExperimentCoding {
     private static let dateFormat = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
     public func encode(_ experiment: Experiment) throws -> Data {
-        let document = ExperimentDocumentV4(
-            schemaVersion: ExperimentDocumentV4.schemaVersion,
+        let document = ExperimentDocumentV5(
+            schemaVersion: ExperimentDocumentV5.schemaVersion,
             cashBalance: experiment.cashBalance.amount.description,
             purchases: experiment.purchases.map(encode),
             limitOrders: experiment.limitOrders.map(encode),
+            buyLimitOrders: experiment.buyLimitOrders.map(encode),
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -41,14 +42,23 @@ public struct JSONExperimentCodec: ExperimentCoding {
             return try Experiment(
                 cashBalance: cashBalance(from: document.cashBalance),
                 purchases: document.purchases.map(decode),
-                limitOrders: document.limitOrders.map(\.unfilled).map(decode),
+                limitOrders: document.limitOrders.map(\.unfilled.uncancelled).map(decode),
             )
         case ExperimentDocumentV4.schemaVersion:
+            // Migration: version 4 predates buy orders and cancellations.
             let document = try decoder.decode(ExperimentDocumentV4.self, from: data)
             return try Experiment(
                 cashBalance: cashBalance(from: document.cashBalance),
                 purchases: document.purchases.map(decode),
+                limitOrders: document.limitOrders.map(\.uncancelled).map(decode),
+            )
+        case ExperimentDocumentV5.schemaVersion:
+            let document = try decoder.decode(ExperimentDocumentV5.self, from: data)
+            return try Experiment(
+                cashBalance: cashBalance(from: document.cashBalance),
+                purchases: document.purchases.map(decode),
                 limitOrders: document.limitOrders.map(decode),
+                buyLimitOrders: document.buyLimitOrders.map(decode),
             )
         default:
             throw ExperimentCodingError.unsupportedSchemaVersion(version)
@@ -65,6 +75,9 @@ public struct JSONExperimentCodec: ExperimentCoding {
             delayed = isDelayed
         case let .close(date):
             source = "close"
+            sessionDate = date
+        case let .limitOrderFill(date):
+            source = "limitOrderFill"
             sessionDate = date
         }
         return PurchaseV2(
@@ -102,13 +115,15 @@ public struct JSONExperimentCodec: ExperimentCoding {
             .liveQuote(delayed: delayed)
         case let ("close", _, sessionDate?):
             .close(sessionDate: sessionDate)
+        case let ("limitOrderFill", _, sessionDate?):
+            .limitOrderFill(sessionDate: sessionDate)
         default:
             throw ExperimentCodingError.invalidPriceSource(purchase.priceSource)
         }
     }
 
-    private func encode(_ order: LimitOrder) -> LimitOrderV4 {
-        LimitOrderV4(
+    private func encode(_ order: LimitOrder) -> LimitOrderV5 {
+        LimitOrderV5(
             id: order.id,
             purchaseID: order.purchaseID,
             shares: order.shares,
@@ -116,25 +131,61 @@ public struct JSONExperimentCodec: ExperimentCoding {
             placedAt: order.placedAt.formatted(Self.dateFormat),
             expiresAt: order.expiresAt.formatted(Self.dateFormat),
             filledOn: order.filledOn,
+            cancelledAt: order.cancelledAt?.formatted(Self.dateFormat),
         )
     }
 
-    private func decode(_ order: LimitOrderV4) throws -> LimitOrder {
-        guard let placedAt = try? Self.dateFormat.parse(order.placedAt) else {
-            throw ExperimentCodingError.invalidOrderDate(order.placedAt)
-        }
-        guard let expiresAt = try? Self.dateFormat.parse(order.expiresAt) else {
-            throw ExperimentCodingError.invalidOrderDate(order.expiresAt)
-        }
-        return try LimitOrder(
+    private func decode(_ order: LimitOrderV5) throws -> LimitOrder {
+        try LimitOrder(
             id: order.id,
             purchaseID: order.purchaseID,
             shares: order.shares,
-            limitPrice: Money(decimal(from: order.limitPrice, invalid: ExperimentCodingError.invalidLimitPrice)),
-            placedAt: placedAt,
-            expiresAt: expiresAt,
+            limitPrice: limitPrice(from: order.limitPrice),
+            placedAt: orderDate(from: order.placedAt),
+            expiresAt: orderDate(from: order.expiresAt),
             filledOn: order.filledOn,
+            cancelledAt: order.cancelledAt.map(orderDate),
         )
+    }
+
+    private func encode(_ order: BuyLimitOrder) -> BuyLimitOrderV5 {
+        BuyLimitOrderV5(
+            id: order.id,
+            ticker: order.ticker.symbol,
+            shares: order.shares,
+            limitPrice: order.limitPrice.amount.description,
+            placedAt: order.placedAt.formatted(Self.dateFormat),
+            expiresAt: order.expiresAt.formatted(Self.dateFormat),
+            filledOn: order.filledOn,
+            cancelledAt: order.cancelledAt?.formatted(Self.dateFormat),
+        )
+    }
+
+    private func decode(_ order: BuyLimitOrderV5) throws -> BuyLimitOrder {
+        guard let ticker = try? Ticker(order.ticker) else {
+            throw ExperimentCodingError.invalidTicker(order.ticker)
+        }
+        return try BuyLimitOrder(
+            id: order.id,
+            ticker: ticker,
+            shares: order.shares,
+            limitPrice: limitPrice(from: order.limitPrice),
+            placedAt: orderDate(from: order.placedAt),
+            expiresAt: orderDate(from: order.expiresAt),
+            filledOn: order.filledOn,
+            cancelledAt: order.cancelledAt.map(orderDate),
+        )
+    }
+
+    private func orderDate(from string: String) throws -> Date {
+        guard let date = try? Self.dateFormat.parse(string) else {
+            throw ExperimentCodingError.invalidOrderDate(string)
+        }
+        return date
+    }
+
+    private func limitPrice(from string: String) throws -> Money {
+        try Money(decimal(from: string, invalid: ExperimentCodingError.invalidLimitPrice))
     }
 
     private func cashBalance(from string: String) throws -> Money {
@@ -220,7 +271,7 @@ extension ExperimentError: LocalizedError {
         case .negativeCashBalance:
             "The experiment's cash balance can't be negative."
         case .insufficientCash:
-            "The purchase costs more than the experiment's cash balance."
+            "The purchase costs more than the experiment's available cash."
         case .unknownPurchase:
             "A limit order sells shares of a purchase the experiment doesn't have."
         case .insufficientShares:
@@ -229,6 +280,14 @@ extension ExperimentError: LocalizedError {
             "The experiment has no such limit order."
         case .orderAlreadyFilled:
             "The limit order has already filled."
+        case .orderCancelled:
+            "The limit order was cancelled."
+        case .orderNotOpen:
+            "The limit order is no longer open."
+        case .mismatchedFillPurchase:
+            "A buy limit order's fill doesn't match the experiment's purchases."
+        case .duplicateID:
+            "Two purchases or orders share an ID."
         case .invalidSessionDate:
             "A limit order's fill date must be written yyyy-MM-dd."
         }
@@ -267,6 +326,8 @@ extension LimitOrderError: LocalizedError {
             "A limit order's profit can't be negative."
         case .invalidSessionDate:
             "A limit order's fill date must be written yyyy-MM-dd."
+        case .filledAndCancelled:
+            "A limit order can't be both filled and cancelled."
         }
     }
 

@@ -63,6 +63,52 @@ struct LimitOrderCodingTests {
         #expect(experiment.limitOrders.map(\.filledOn) == ["2026-10-27"])
     }
 
+    @Test func `cancelled order survives a round trip`() throws {
+        let order = try makeLimitOrder(id: 1, shares: 2, limitPrice: "348.7")
+        let experiment = try experimentWithPurchase()
+            .placing(order)
+            .cancelling(orderID: order.id, at: Date(timeIntervalSince1970: 1_793_003_600))
+
+        let decoded = try codec.decode(codec.encode(experiment))
+
+        #expect(decoded == experiment)
+    }
+
+    @Test func `cancellation is written as an ISO 8601 date, and an open order has none`() throws {
+        let cancelled = try makeLimitOrder(id: 1, shares: 2, limitPrice: "348.7")
+        let open = try makeLimitOrder(id: 2, shares: 3, limitPrice: "400")
+        let experiment = try experimentWithPurchase()
+            .placing(cancelled)
+            .placing(open)
+            .cancelling(orderID: cancelled.id, at: Date(timeIntervalSince1970: 1_793_003_600))
+
+        let data = try codec.encode(experiment)
+        let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let written = try #require(json["limitOrders"] as? [[String: Any]])
+
+        #expect(written.map { $0["cancelledAt"] as? String } == ["2026-10-26T08:33:20.000Z", nil])
+        #expect(written[1].keys.contains("cancelledAt") == false)
+    }
+
+    @Test func `cancellation is read from the file`() throws {
+        let experiment = try codec.decode(orderFile(replacing: #""cancelledAt": "2026-10-26T08:33:20.000Z""#))
+
+        #expect(experiment.limitOrders.map(\.cancelledAt) == [Date(timeIntervalSince1970: 1_793_003_600)])
+    }
+
+    @Test func `malformed cancellation date is rejected`() {
+        #expect(throws: ExperimentCodingError.invalidOrderDate("soon")) {
+            try codec.decode(orderFile(version: 5, replacing: #""cancelledAt": "soon""#))
+        }
+    }
+
+    @Test func `version 4 file migrates to uncancelled limit orders`() throws {
+        let experiment = try codec.decode(orderFile(version: 4))
+
+        #expect(experiment.limitOrders.map(\.cancelledAt) == [nil])
+        #expect(experiment.buyLimitOrders.isEmpty)
+    }
+
     @Test func `version 3 file migrates to unfilled limit orders`() throws {
         let experiment = try codec.decode(orderFile(version: 3))
 
@@ -142,6 +188,7 @@ struct LimitOrderCodingTests {
         (.nonPositivePrice(.zero), "A limit order's price must be more than zero."),
         (.negativeProfitPercent(-1), "A limit order's profit can't be negative."),
         (.invalidSessionDate("10/23/2026"), "A limit order's fill date must be written yyyy-MM-dd."),
+        (.filledAndCancelled, "A limit order can't be both filled and cancelled."),
     ])
     func `limit order errors describe the problem`(error: LimitOrderError, description: String) {
         #expect(error.localizedDescription == description)
@@ -151,6 +198,8 @@ struct LimitOrderCodingTests {
     @Test(arguments: [
         (ExperimentError.unknownOrder(UUID()), "The experiment has no such limit order."),
         (.orderAlreadyFilled(UUID()), "The limit order has already filled."),
+        (.orderCancelled(UUID()), "The limit order was cancelled."),
+        (.orderNotOpen(UUID()), "The limit order is no longer open."),
         (.invalidSessionDate("10/23/2026"), "A limit order's fill date must be written yyyy-MM-dd."),
     ])
     func `fill errors describe the problem`(error: ExperimentError, description: String) {
@@ -169,7 +218,7 @@ struct LimitOrderCodingTests {
     /// A valid file of `version` with one purchase and one unfilled limit
     /// order on it, with `field`, a `"key": value` pair, in place of the
     /// order's pair with that key, or added when the order has none.
-    private func orderFile(version: Int = 4, replacing field: String? = nil) -> Data {
+    private func orderFile(version: Int = 5, replacing field: String? = nil) -> Data {
         var order = [
             #""id": "00000000-0000-0000-0000-0000000000A1""#,
             #""purchaseID": "00000000-0000-0000-0000-000000000001""#,
@@ -190,7 +239,7 @@ struct LimitOrderCodingTests {
           {"id": "00000000-0000-0000-0000-000000000001", "ticker": "VTI", "shares": 5,
            "pricePerShare": "10", "pricedAt": "2026-10-26T07:33:20.000Z",
            "priceSource": "liveQuote", "delayed": false}
-        ], "limitOrders": [\#(orderJSON)]}
+        ], "limitOrders": [\#(orderJSON)], "buyLimitOrders": []}
         """#.utf8)
     }
 

@@ -3,14 +3,17 @@ import InvestmentSimulatorPresentation
 import SwiftUI
 
 /// The Experiment section's detail: the cash balance, shown large, the
-/// purchases made with it, and the limit orders placed on them.
+/// purchases made with it, and the buy and sell limit orders.
 struct ExperimentDetailView: View {
     let cashBalance: Decimal
+    /// The cash open buy orders hold at a date.
+    let reservedCash: (Date) -> Decimal
     let purchases: [Purchase]
     let hasLimitOrders: Bool
     /// The limit orders as they stand at a date.
     let limitOrderRows: (Date) -> [LimitOrderRow]
     let onSellLimit: (Purchase) -> Void
+    let onCancelOrder: (UUID) -> Void
     /// Whether Check Orders can run at a date.
     let canCheckOrders: (Date) -> Bool
     let isCheckingOrders: Bool
@@ -19,26 +22,27 @@ struct ExperimentDetailView: View {
     let onCheckOrders: () async -> Void
 
     @State private var selectedPurchase: Purchase.ID?
+    @State private var selectedOrder: LimitOrderRow.ID?
+    /// The order Cancel Order asks about, while it asks.
+    @State private var orderToCancel: LimitOrderRow?
 
     var body: some View {
         VStack(spacing: 24) {
-            VStack(spacing: 8) {
-                Text("Cash Balance")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                Text(cashBalance, format: .currency(code: "USD"))
-                    .font(.system(size: 56, weight: .semibold))
-                    .monospacedDigit()
+            // Redrawn every minute, so reserved cash drops as orders expire.
+            TimelineView(.everyMinute) { context in
+                cashHeader(at: context.date)
             }
             .padding(.top, 32)
-            if purchases.isEmpty {
+            if purchases.isEmpty, !hasLimitOrders {
                 ContentUnavailableView(
                     "No Purchases",
                     systemImage: "cart",
                     description: Text("Use Buy to purchase an investment with the cash balance."),
                 )
             } else {
-                purchasesTable
+                if !purchases.isEmpty {
+                    purchasesTable
+                }
                 if hasLimitOrders {
                     limitOrdersTable
                 }
@@ -55,12 +59,60 @@ struct ExperimentDetailView: View {
             // The selection can outlive its purchase, as after File › Revert To.
             .disabled(purchase(withID: selectedPurchase) == nil)
         }
+        .confirmationDialog(
+            cancelTitle,
+            isPresented: Binding(get: { orderToCancel != nil }, set: {
+                if !$0 {
+                    orderToCancel = nil
+                }
+            }),
+            presenting: orderToCancel,
+        ) { row in
+            Button("Cancel Order", role: .destructive) { onCancelOrder(row.id) }
+            Button("Keep Order", role: .cancel) {}
+        } message: { row in
+            switch row.side {
+            case .buy: Text("Its reserved cash will be free to spend again.")
+            case .sell: Text("Its shares will be free to sell again.")
+            }
+        }
+    }
+
+    private var cancelTitle: String {
+        guard let row = orderToCancel else {
+            return ""
+        }
+        let side = row.side == .buy ? "buy" : "sell"
+        return "Cancel the \(side) order for \(row.shares) \(row.ticker.symbol)?"
+    }
+
+    private func cashHeader(at date: Date) -> some View {
+        VStack(spacing: 8) {
+            Text("Cash Balance")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            Text(cashBalance, format: .currency(code: "USD"))
+                .font(.system(size: 56, weight: .semibold))
+                .monospacedDigit()
+            let reserved = reservedCash(date)
+            if reserved > 0 {
+                Text("\(reserved, format: .currency(code: "USD")) reserved for buy orders")
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        }
     }
 
     private var purchasesTable: some View {
         Table(purchases, selection: $selectedPurchase) {
             TableColumn("Date") { purchase in
-                Text(PriceDateFormatter().day(of: purchase.pricedAt, source: purchase.priceSource))
+                HStack {
+                    Text(PriceDateFormatter().day(of: purchase.pricedAt, source: purchase.priceSource))
+                    if case .limitOrderFill = purchase.priceSource {
+                        Text("Limit fill")
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             TableColumn("Ticker", value: \.ticker.symbol)
             // Amounts are right-aligned and monospaced, so digits line up
@@ -113,8 +165,13 @@ struct ExperimentDetailView: View {
                 Button("Check Orders") {
                     Task { await onCheckOrders() }
                 }
-                .help("Fill orders whose limit a past session's high reached")
+                .help("Fill orders whose limit a past session's prices reached")
                 .disabled(!canCheckOrders(date))
+                Button("Cancel Order…") {
+                    orderToCancel = openRow(withID: selectedOrder, at: date)
+                }
+                .help("Cancel the selected open order")
+                .disabled(openRow(withID: selectedOrder, at: date) == nil)
             }
             .padding(.horizontal)
             limitOrdersTable(at: date)
@@ -122,23 +179,29 @@ struct ExperimentDetailView: View {
     }
 
     private func limitOrdersTable(at date: Date) -> some View {
-        Table(limitOrderRows(date)) {
+        Table(limitOrderRows(date), selection: $selectedOrder) {
+            TableColumn("Side") { row in
+                switch row.side {
+                case .buy: Text("Buy")
+                case .sell: Text("Sell")
+                }
+            }
             TableColumn("Ticker", value: \.ticker.symbol)
             TableColumn("Shares") { row in
-                Text(row.order.shares, format: .number)
+                Text(row.shares, format: .number)
                     .monospaced()
             }
             .alignment(.numeric)
             TableColumn("Limit") { row in
-                Text(row.order.limitPrice.amount, format: .currency(code: "USD"))
+                Text(row.limitPrice.amount, format: .currency(code: "USD"))
                     .monospaced()
             }
             .alignment(.numeric)
             TableColumn("Placed") { row in
-                Text(row.order.placedAt.formatted(date: .abbreviated, time: .shortened))
+                Text(row.placedAt.formatted(date: .abbreviated, time: .shortened))
             }
             TableColumn("Expires") { row in
-                Text(row.order.expiresAt.formatted(date: .abbreviated, time: .shortened))
+                Text(row.expiresAt.formatted(date: .abbreviated, time: .shortened))
             }
             TableColumn("Status") { row in
                 switch row.status {
@@ -149,9 +212,22 @@ struct ExperimentDetailView: View {
                 case .expired:
                     Text("Expired")
                         .foregroundStyle(.secondary)
+                case .cancelled:
+                    Text("Cancelled")
+                        .foregroundStyle(.secondary)
                 }
             }
         }
+        .contextMenu(forSelectionType: LimitOrderRow.ID.self) { ids in
+            if let row = openRow(withID: ids.first, at: date) {
+                Button("Cancel Order…") { orderToCancel = row }
+            }
+        }
+    }
+
+    /// The row of the order `id` if it is open at `date`.
+    private func openRow(withID id: LimitOrderRow.ID?, at date: Date) -> LimitOrderRow? {
+        limitOrderRows(date).first { $0.id == id && $0.status == .open }
     }
 
     private func purchase(withID id: Purchase.ID?) -> Purchase? {

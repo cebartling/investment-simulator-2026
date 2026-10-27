@@ -6,6 +6,8 @@ struct ContentView: View {
     let onCreate: () -> Void
     let onPurchase: () -> Void
     let onPlaceLimitOrder: () -> Void
+    let onPlaceBuyLimitOrder: () -> Void
+    let onCancelOrder: (UUID) -> Void
     let onCheckOrders: () async -> Void
 
     var body: some View {
@@ -19,10 +21,13 @@ struct ContentView: View {
             case .experiment:
                 ExperimentDetailView(
                     cashBalance: model.cashBalance,
+                    reservedCash: model.reservedCash(at:),
                     purchases: model.purchases,
-                    hasLimitOrders: !model.experiment.limitOrders.isEmpty,
+                    hasLimitOrders: !model.experiment.limitOrders.isEmpty
+                        || !model.experiment.buyLimitOrders.isEmpty,
                     limitOrderRows: model.limitOrderRows(at:),
                     onSellLimit: model.beginLimitOrder,
+                    onCancelOrder: onCancelOrder,
                     canCheckOrders: model.canCheckOrders(at:),
                     isCheckingOrders: model.isCheckingOrders,
                     orderCheckMessage: model.orderCheckMessage,
@@ -30,12 +35,23 @@ struct ContentView: View {
                 )
                 .toolbar {
                     Button("Buy…", systemImage: "cart.badge.plus", action: model.beginPurchase)
+                    Button("Buy Limit…", systemImage: "arrow.down.to.line", action: model.beginBuyLimitOrder)
+                        .help("Place an order to buy shares once the price drops to a limit")
                 }
                 // On the detail, not beside the New Experiment sheet, so
                 // each sheet has its own view.
                 .sheet(isPresented: $model.isShowingPurchase) {
                     if let purchase = model.purchase {
                         PurchaseSheet(model: purchase, onBuy: onPurchase, onCancel: model.cancelPurchase)
+                    }
+                }
+                .sheet(isPresented: $model.isShowingBuyLimitOrder) {
+                    if let buyLimitOrder = model.buyLimitOrder {
+                        BuyLimitOrderSheet(
+                            model: buyLimitOrder,
+                            onPlace: onPlaceBuyLimitOrder,
+                            onCancel: model.cancelBuyLimitOrder,
+                        )
                     }
                 }
                 .sheet(isPresented: $model.isShowingLimitOrder) {

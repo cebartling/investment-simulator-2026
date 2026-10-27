@@ -6,6 +6,9 @@ public enum PriceSource: Sendable, Hashable {
     case liveQuote(delayed: Bool)
     /// The settled close of the session on `sessionDate` (`yyyy-MM-dd`).
     case close(sessionDate: String)
+    /// A buy limit order filled at its limit price in the session on
+    /// `sessionDate` (`yyyy-MM-dd`, ADR-0014).
+    case limitOrderFill(sessionDate: String)
 }
 
 /// One purchase of a whole number of shares at a quoted price. Buying the

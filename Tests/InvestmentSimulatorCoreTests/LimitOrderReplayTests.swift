@@ -98,7 +98,7 @@ struct LimitOrderReplayTests {
             placedAt: Self.date("2026-04-10T16:00:00Z"),
         )
         let experiment = try Experiment(cashBalance: Money(1000))
-            .purchasing(makePurchase(shares: 10, price: "10"))
+            .purchasing(makePurchase(shares: 10, price: "10"), at: Self.placedAt)
             .placing(expired)
             .placing(resold)
 
@@ -207,7 +207,7 @@ struct LimitOrderReplayTests {
 
     private func experimentWithOrder(shares: Int = 1, limitPrice: String) throws -> Experiment {
         try Experiment(cashBalance: Money(1000))
-            .purchasing(makePurchase(shares: 10, price: "10"))
+            .purchasing(makePurchase(shares: 10, price: "10"), at: Self.placedAt)
             .placing(makeLimitOrder(shares: shares, limitPrice: limitPrice, placedAt: Self.placedAt))
     }
 
