@@ -9,8 +9,8 @@ struct PurchaseSheet: View {
     let onCancel: () -> Void
 
     var body: some View {
-        // The grouped form insets its rows by 20 points, so only the title
-        // and buttons carry their own padding to line up with them.
+        // The grouped form insets its section by 20 points, so only the title
+        // and buttons carry their own padding, to line up with its edges.
         VStack(alignment: .leading, spacing: 0) {
             Text("Buy Investment")
                 .font(.title2.bold())
