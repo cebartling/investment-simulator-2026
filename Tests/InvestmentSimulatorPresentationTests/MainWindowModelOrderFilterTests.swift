@@ -48,6 +48,7 @@ extension MainWindowModelTests {
         _ = try #require(model.cancelOrder(id: buy.id))
 
         #expect(model.limitOrderRows(at: now).isEmpty)
+        #expect(model.experiment.buyLimitOrders.map(\.id) == [buy.id])
     }
 
     /// A model whose sell orders, once the last is cancelled, are expired,
