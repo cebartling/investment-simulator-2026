@@ -103,6 +103,19 @@ struct BuyLimitOrderReplayTests {
         #expect(reopened == replayed)
     }
 
+    /// Only an edited file can reach this: opening it can't check what each
+    /// buy order reserved (ADR-0014).
+    @Test func `a buy order costing more than the opened balance fails the whole check`() throws {
+        let experiment = try Experiment(
+            cashBalance: Money(10),
+            buyLimitOrders: [makeBuyOrder(shares: 4, limitPrice: "9")],
+        )
+
+        #expect(throws: ExperimentError.insufficientCash(cost: Money(36), available: Money(10))) {
+            try experiment.fillingLimitOrders(from: bars(("2026-10-21", "8")), at: Self.now)
+        }
+    }
+
     @Test func `buy and sell orders fill in one check`() throws {
         let purchase = try makePurchase(shares: 10, price: "10")
         let sell = try makeLimitOrder(shares: 2, limitPrice: "12", placedAt: Self.placedAt)

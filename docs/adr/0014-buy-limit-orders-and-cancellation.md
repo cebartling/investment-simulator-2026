@@ -69,6 +69,7 @@ Questions to settle:
 - **Harder:**
   - Two order types with similar rules (expiry, open, cancel) to keep in step.
   - The id of a purchase made by a fill is chosen by its order, not by the Buy sheet.
+  - Opening a file can't check that its open buy orders fit the balance, because the saved balance comes after every fill. In an edited file where one doesn't, Check Orders fails with insufficient cash and fills nothing, sell orders included.
 - **Revisit:**
   - Editing an order instead of cancelling and placing a new one.
   - Filling at a gap-down open, if the conservative fill misleads.
