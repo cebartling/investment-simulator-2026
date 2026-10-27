@@ -12,6 +12,8 @@ struct ExperimentDetailView: View {
     let hasLimitOrders: Bool
     /// The limit orders as they stand at a date.
     let limitOrderRows: (Date) -> [LimitOrderRow]
+    /// Whether the table includes expired and cancelled orders.
+    @Binding var showsExpiredAndCancelledOrders: Bool
     let onSellLimit: (Purchase) -> Void
     let onCancelOrder: (UUID) -> Void
     /// Whether Check Orders can run at a date.
@@ -162,6 +164,9 @@ struct ExperimentDetailView: View {
                     Text(orderCheckMessage)
                         .foregroundStyle(.secondary)
                 }
+                Toggle("Expired & Cancelled", isOn: $showsExpiredAndCancelledOrders)
+                    .toggleStyle(.button)
+                    .help("Show expired and cancelled orders")
                 Button("Check Orders") {
                     Task { await onCheckOrders() }
                 }

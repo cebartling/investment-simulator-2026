@@ -216,6 +216,7 @@ struct MainWindowModelTests {
             .filled(on: "2026-10-28")
         let open = try makeOrder(shares: 2)
         let model = try makeModelWithPurchase(orders: [expired, filled, open])
+        model.showsExpiredAndCancelledOrders = true
 
         let rows = model.limitOrderRows(at: fixedNow)
 

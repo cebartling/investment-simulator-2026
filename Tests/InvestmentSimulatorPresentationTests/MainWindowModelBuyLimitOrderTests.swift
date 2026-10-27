@@ -104,6 +104,7 @@ extension MainWindowModelTests {
         #expect(afterSell.limitOrders.first?.cancelledAt == now)
         #expect(model.experiment == afterSell)
         #expect(model.reservedCash(at: now) == 0)
+        model.showsExpiredAndCancelledOrders = true
         #expect(model.limitOrderRows(at: now).map(\.status) == [.cancelled, .cancelled])
     }
 
@@ -117,6 +118,7 @@ extension MainWindowModelTests {
         now = minuteStart.addingTimeInterval(37)
 
         _ = try #require(model.cancelOrder(id: buy.id))
+        model.showsExpiredAndCancelledOrders = true
 
         #expect(model.limitOrderRows(at: minuteStart).map(\.status) == [.cancelled])
         #expect(model.reservedCash(at: minuteStart) == 0)

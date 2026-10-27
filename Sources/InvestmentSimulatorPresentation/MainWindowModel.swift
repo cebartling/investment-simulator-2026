@@ -25,6 +25,10 @@ public final class MainWindowModel {
     /// The Buy Limit sheet's model while it is shown.
     public private(set) var buyLimitOrder: BuyLimitOrderModel?
 
+    /// Whether the order rows include expired and cancelled orders. Off in
+    /// each new window, and never saved.
+    public var showsExpiredAndCancelledOrders = false
+
     /// True while Check Orders fetches prices.
     public private(set) var isCheckingOrders = false
     /// What the last Check Orders found, or why it failed.
@@ -122,7 +126,9 @@ public final class MainWindowModel {
     }
 
     /// The buy and sell limit orders as they stand at `date`, in the order
-    /// they were placed, so a view can redraw them as orders expire.
+    /// they were placed, so a view can redraw them as orders expire. Leaves
+    /// out expired and cancelled orders unless
+    /// `showsExpiredAndCancelledOrders` is on.
     public func limitOrderRows(at date: Date) -> [LimitOrderRow] {
         let date = readingDate(date)
         let tickers = Dictionary(uniqueKeysWithValues: experiment.purchases.map { ($0.id, $0.ticker) })
@@ -163,7 +169,9 @@ public final class MainWindowModel {
         }
         // Sorting is stable, so orders placed at the same time keep their
         // order.
-        return (sellRows + buyRows).sorted { $0.placedAt < $1.placedAt }
+        return (sellRows + buyRows)
+            .filter { showsExpiredAndCancelledOrders || ($0.status != .expired && $0.status != .cancelled) }
+            .sorted { $0.placedAt < $1.placedAt }
     }
 
     private func status(filledOn: String?, cancelledAt: Date?, isOpen: Bool) -> LimitOrderRow.Status {
