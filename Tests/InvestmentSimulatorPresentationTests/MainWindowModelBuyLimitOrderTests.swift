@@ -122,6 +122,17 @@ extension MainWindowModelTests {
         #expect(model.reservedCash(at: minuteStart) == 0)
     }
 
+    @Test func `cancelling the only open order during the minute stops a check from its start`() throws {
+        var now = threeDaysLater
+        let buy = try makeBuyOrder(shares: 4)
+        let model = try makeModelWithBuyOrders([buy], clock: { now })
+        now = threeDaysLater.addingTimeInterval(37)
+
+        _ = try #require(model.cancelOrder(id: buy.id))
+
+        #expect(!model.canCheckOrders(at: threeDaysLater))
+    }
+
     @Test func `cancelling an order that isn't open changes nothing`() throws {
         let sell = try makeOrder(shares: 2).filled(on: "2026-10-28")
         let model = try makeModelWithBuyOrders(sellOrders: [sell])

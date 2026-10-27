@@ -182,7 +182,7 @@ public final class MainWindowModel {
     /// no check is running. Takes the date, so a view can redraw it as days
     /// pass.
     public func canCheckOrders(at date: Date) -> Bool {
-        !isCheckingOrders && !experiment.sessionsToReplay(at: date).isEmpty
+        !isCheckingOrders && !experiment.sessionsToReplay(at: readingDate(date)).isEmpty
     }
 
     /// Fetches each ticker's daily bars and fills the orders they reach
