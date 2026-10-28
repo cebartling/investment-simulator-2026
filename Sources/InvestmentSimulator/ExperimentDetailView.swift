@@ -2,15 +2,18 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// The Experiment section's tables, below its header: the purchases, and
-/// the buy and sell limit orders.
+/// The Experiment section's tables, below its header: the purchases, the
+/// sales, and the buy and sell limit orders.
 struct ExperimentDetailView: View {
     let purchases: [Purchase]
     let hasLimitOrders: Bool
+    /// Market sales and filled sell orders, by when they sold.
+    let saleRows: [SaleRow]
     /// The limit orders as they stand at a date.
     let limitOrderRows: (Date) -> [LimitOrderRow]
     /// Whether the table includes expired and cancelled orders.
     @Binding var showsExpiredAndCancelledOrders: Bool
+    let onSell: (Purchase) -> Void
     let onSellLimit: (Purchase) -> Void
     let onCancelOrder: (UUID) -> Void
     /// Whether Check Orders can run at a date.
@@ -31,11 +34,14 @@ struct ExperimentDetailView: View {
                 ContentUnavailableView(
                     "No Purchases",
                     systemImage: "cart",
-                    description: Text("Use Buy to purchase an investment with the cash balance."),
+                    description: Text("Use Market Buy to purchase an investment with the cash balance."),
                 )
             } else {
                 if !purchases.isEmpty {
                     purchasesTable
+                }
+                if !saleRows.isEmpty {
+                    salesSection
                 }
                 if hasLimitOrders {
                     limitOrdersTable
@@ -44,6 +50,13 @@ struct ExperimentDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .toolbar {
+            Button("Market Sell…", systemImage: "dollarsign.arrow.circlepath") {
+                if let purchase = purchase(withID: selectedPurchase) {
+                    onSell(purchase)
+                }
+            }
+            .help("Sell shares of the selected purchase now at the market price")
+            .disabled(purchase(withID: selectedPurchase) == nil)
             Button("Sell Limit…", systemImage: "tag") {
                 if let purchase = purchase(withID: selectedPurchase) {
                     onSellLimit(purchase)
@@ -112,7 +125,56 @@ struct ExperimentDetailView: View {
         }
         .contextMenu(forSelectionType: Purchase.ID.self) { ids in
             if let purchase = purchase(withID: ids.first) {
+                Button("Market Sell…") { onSell(purchase) }
                 Button("Sell Limit…") { onSellLimit(purchase) }
+            }
+        }
+    }
+
+    private var salesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Sales")
+                .font(.headline)
+                .padding(.horizontal)
+            Table(saleRows) {
+                TableColumn("Date") { row in
+                    switch row.kind {
+                    case .market:
+                        // Sold at the user's own time, like a live quote.
+                        Text(row.soldAt.formatted(date: .abbreviated, time: .omitted))
+                    case let .limitFill(sessionDate):
+                        HStack {
+                            Text(PriceDateFormatter().day(ofSession: sessionDate))
+                            Text("Limit fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                TableColumn("Ticker", value: \.ticker.symbol)
+                TableColumn("Shares") { row in
+                    Text(row.shares, format: .number)
+                        .monospaced()
+                }
+                .alignment(.numeric)
+                TableColumn("Price") { row in
+                    Text(row.pricePerShare, format: .currency(code: "USD").precision(.fractionLength(2 ... 4)))
+                        .monospaced()
+                }
+                .alignment(.numeric)
+                TableColumn("Proceeds") { row in
+                    Text(row.proceeds.amount, format: .currency(code: "USD"))
+                        .monospaced()
+                }
+                .alignment(.numeric)
+                TableColumn("Gain") { row in
+                    Text(row.realizedGain.amount, format: .currency(code: "USD"))
+                        .monospaced()
+                        // Colored as the header colors Gain/Loss.
+                        .foregroundStyle(
+                            row.realizedGain > .zero ? .green : row.realizedGain < .zero ? .red : .primary,
+                        )
+                }
+                .alignment(.numeric)
             }
         }
     }

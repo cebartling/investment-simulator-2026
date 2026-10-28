@@ -1,6 +1,6 @@
 # ADR-0016: Market Sales and Realized Gain
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-10-28
 **Deciders:** Christopher Bartling
 
