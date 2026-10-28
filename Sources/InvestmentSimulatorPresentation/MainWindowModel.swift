@@ -11,7 +11,9 @@ public final class MainWindowModel {
 
     public private(set) var experiment: Experiment
     public var isShowingNewExperiment: Bool
-    public let newExperiment = NewExperimentModel()
+    public let newExperiment: NewExperimentModel
+    /// Prices the held shares for the header (PIN-408).
+    public let holdingsPrices: HoldingsPricesModel
 
     public var isShowingPurchase = false
     /// The Buy sheet's model while it is shown.
@@ -52,8 +54,8 @@ public final class MainWindowModel {
     public private(set) var shouldCloseWindow = false
 
     /// `needsSetup` is true for a new, untitled document, which opens the
-    /// New Experiment sheet. `clock` tells the time orders are placed and
-    /// checked.
+    /// New Experiment sheet. `clock` tells the time experiments are created
+    /// and orders are placed and checked.
     public init(
         experiment: Experiment,
         needsSetup: Bool,
@@ -66,6 +68,8 @@ public final class MainWindowModel {
         self.quotes = quotes
         self.dailyPrices = dailyPrices
         self.clock = clock
+        newExperiment = NewExperimentModel(clock: clock)
+        holdingsPrices = HoldingsPricesModel(quotes: quotes)
     }
 
     public var cashBalance: Decimal {
@@ -321,7 +325,15 @@ public final class MainWindowModel {
         limitOrder = nil
     }
 
-    public func beginEditingDetails() {
+    public func cancelNewExperiment() {
+        isShowingNewExperiment = false
+        shouldCloseWindow = true
+    }
+}
+
+/// Edit Details (PIN-408).
+public extension MainWindowModel {
+    func beginEditingDetails() {
         details = ExperimentDetailsModel(name: experiment.name, notes: experiment.notes)
         isShowingDetails = true
     }
@@ -330,7 +342,7 @@ public final class MainWindowModel {
     /// document to save, and hides the sheet. Returns nil when they didn't
     /// change, so the document isn't marked edited.
     @discardableResult
-    public func completeEditingDetails() -> Experiment? {
+    func completeEditingDetails() -> Experiment? {
         defer { cancelEditingDetails() }
         guard let details, details.savedName != experiment.name || details.savedNotes != experiment.notes else {
             return nil
@@ -339,13 +351,8 @@ public final class MainWindowModel {
         return experiment
     }
 
-    public func cancelEditingDetails() {
+    func cancelEditingDetails() {
         isShowingDetails = false
         details = nil
-    }
-
-    public func cancelNewExperiment() {
-        isShowingNewExperiment = false
-        shouldCloseWindow = true
     }
 }

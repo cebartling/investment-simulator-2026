@@ -52,4 +52,16 @@ struct NewExperimentModelTests {
 
         #expect(try experiment.cashBalance == Money(#require(Decimal(string: expected))))
     }
+
+    @Test func `created experiment records when it was created`() throws {
+        let now = Date(timeIntervalSince1970: 1_793_000_000)
+        let model = NewExperimentModel(clock: { now })
+        model.cashBalance = 100
+
+        let experiment = try #require(model.create())
+
+        #expect(experiment.createdAt == now)
+        #expect(experiment.name == nil)
+        #expect(experiment.notes == nil)
+    }
 }
