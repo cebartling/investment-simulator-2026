@@ -4,23 +4,29 @@ import Foundation
 /// each is derived from the cash, purchases and orders.
 public extension Experiment {
     /// The cash the experiment started with: the balance plus what every
-    /// purchase cost, less every sell fill's proceeds. Open and cancelled
-    /// orders moved no cash, and a buy fill is one of the purchases.
+    /// purchase cost, less every sale's and sell fill's proceeds. Open and
+    /// cancelled orders moved no cash, and a buy fill is one of the
+    /// purchases.
     var startingCash: Money {
         let spent = purchases.map(\.cost).reduce(.zero, +)
-        let received = limitOrders.filter { $0.filledOn != nil }.map(\.proceeds).reduce(.zero, +)
-        return cashBalance + spent - received
+        let filled = limitOrders.filter { $0.filledOn != nil }.map(\.proceeds).reduce(.zero, +)
+        let sold = sales.map(\.proceeds).reduce(.zero, +)
+        return cashBalance + spent - filled - sold
     }
 
-    /// The shares of `purchase` still held: all but those filled sell orders
-    /// sold. Unlike `availableShares(of:at:)`, shares an open order reserves
-    /// still count.
+    /// The shares of `purchase` still held: all but those sales and filled
+    /// sell orders sold. Unlike `availableShares(of:at:)`, shares an open
+    /// order reserves still count.
     func heldShares(of purchase: Purchase) -> Int {
-        let sold = limitOrders
+        let filled = limitOrders
             .filter { $0.purchaseID == purchase.id && $0.filledOn != nil }
             .map(\.shares)
             .reduce(0, +)
-        return purchase.shares - sold
+        let sold = sales
+            .filter { $0.purchaseID == purchase.id }
+            .map(\.shares)
+            .reduce(0, +)
+        return purchase.shares - filled - sold
     }
 
     /// What the shares still held cost: for each purchase, its held shares

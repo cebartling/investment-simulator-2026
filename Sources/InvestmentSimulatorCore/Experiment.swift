@@ -2,8 +2,9 @@ import Foundation
 
 /// One investment experiment, saved as one `.invsim` document (ADR-0005,
 /// where it is called a scenario). It starts with a cash balance, buys
-/// investments from it, and places limit orders to sell them, whose fills
-/// add to the cash, and to buy more, whose fills become purchases.
+/// investments from it, sells them at a quote, and places limit orders to
+/// sell them, whose fills add to the cash, and to buy more, whose fills
+/// become purchases.
 public struct Experiment: Sendable, Hashable {
     /// A new experiment with no cash yet.
     public static let empty = Experiment(
@@ -11,13 +12,14 @@ public struct Experiment: Sendable, Hashable {
         purchases: [],
         limitOrders: [],
         buyLimitOrders: [],
+        sales: [],
         name: nil,
         notes: nil,
         createdAt: nil,
     )
 
-    /// The cash left after every purchase and buy fill, plus every sell
-    /// fill's proceeds. Open buy orders reserve part of it.
+    /// The cash left after every purchase and buy fill, plus every sale's
+    /// and sell fill's proceeds. Open buy orders reserve part of it.
     public let cashBalance: Money
     /// In the order they were made.
     public let purchases: [Purchase]
@@ -27,6 +29,9 @@ public struct Experiment: Sendable, Hashable {
     /// In the order they were placed, including filled, expired and
     /// cancelled ones (ADR-0014).
     public let buyLimitOrders: [BuyLimitOrder]
+    /// Market sales, in the order they were made (ADR-0016). Filled sell
+    /// orders are in `limitOrders`, not here.
+    public let sales: [Sale]
     /// What the user calls the experiment, or nil to go by its file's name.
     public let name: String?
     public let notes: String?
@@ -39,6 +44,7 @@ public struct Experiment: Sendable, Hashable {
         purchases: [Purchase] = [],
         limitOrders: [LimitOrder] = [],
         buyLimitOrders: [BuyLimitOrder] = [],
+        sales: [Sale] = [],
         name: String? = nil,
         notes: String? = nil,
         createdAt: Date? = nil,
@@ -47,22 +53,35 @@ public struct Experiment: Sendable, Hashable {
             throw .negativeCashBalance(cashBalance)
         }
         try Self.checkFillPurchases(purchases: purchases, buyLimitOrders: buyLimitOrders)
-        try Self.checkUniqueIDs(purchases: purchases, limitOrders: limitOrders, buyLimitOrders: buyLimitOrders)
-        // Sell orders are placed again in their saved order, so each one
-        // passes the same checks it passed when it was first placed. Buy
-        // orders can't be: the balance is the one after every fill, not the
-        // one each order was placed against.
+        try Self.checkUniqueIDs(
+            purchases: purchases,
+            limitOrders: limitOrders,
+            buyLimitOrders: buyLimitOrders,
+            sales: sales,
+        )
+        // Sell orders are placed again, and sales made again, in time order,
+        // so each one passes the same share checks it passed the first time
+        // (ADR-0016). Sales don't add their proceeds again: the balance is
+        // the one after every sale. Buy orders can't be placed again: the
+        // balance is the one after every fill, not the one each order was
+        // placed against.
         var experiment = Experiment(
             validCashBalance: cashBalance,
             purchases: purchases,
             limitOrders: [],
             buyLimitOrders: buyLimitOrders,
+            sales: [],
             name: name,
             notes: notes,
             createdAt: createdAt,
         )
-        for order in limitOrders {
-            experiment = try experiment.placing(order)
+        for step in Self.shareSteps(limitOrders: limitOrders, sales: sales) {
+            switch step {
+            case let .placing(order):
+                experiment = try experiment.placing(order)
+            case let .selling(sale):
+                experiment = try experiment.recording(sale, cashBalance: experiment.cashBalance)
+            }
         }
         self = experiment
     }
@@ -72,6 +91,7 @@ public struct Experiment: Sendable, Hashable {
         purchases: [Purchase],
         limitOrders: [LimitOrder],
         buyLimitOrders: [BuyLimitOrder],
+        sales: [Sale],
         name: String?,
         notes: String?,
         createdAt: Date?,
@@ -80,6 +100,7 @@ public struct Experiment: Sendable, Hashable {
         self.purchases = purchases
         self.limitOrders = limitOrders
         self.buyLimitOrders = buyLimitOrders
+        self.sales = sales
         self.name = name
         self.notes = notes
         self.createdAt = createdAt
@@ -93,6 +114,7 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases,
             limitOrders: limitOrders,
             buyLimitOrders: buyLimitOrders,
+            sales: sales,
             name: name,
             notes: notes,
             createdAt: createdAt,
@@ -126,6 +148,7 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases + [purchase],
             limitOrders: limitOrders,
             buyLimitOrders: buyLimitOrders,
+            sales: sales,
             name: name,
             notes: notes,
             createdAt: createdAt,
@@ -144,20 +167,32 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases,
             limitOrders: limitOrders,
             buyLimitOrders: buyLimitOrders + [order],
+            sales: sales,
             name: name,
             notes: notes,
             createdAt: createdAt,
         )
     }
 
-    /// The shares of `purchase` neither sold by a filled order nor reserved
-    /// by an order open at `date`.
+    /// The shares of `purchase` neither sold, by a sale or a filled order,
+    /// nor reserved by an order open at `date`. Sold shares are gone
+    /// whatever the date.
     public func availableShares(of purchase: Purchase, at date: Date) -> Int {
-        let unavailable = limitOrders
+        let ordered = limitOrders
             .filter { $0.purchaseID == purchase.id && ($0.filledOn != nil || $0.isOpen(at: date)) }
             .map(\.shares)
             .reduce(0, +)
-        return purchase.shares - unavailable
+        let sold = sales
+            .filter { $0.purchaseID == purchase.id }
+            .map(\.shares)
+            .reduce(0, +)
+        return purchase.shares - ordered - sold
+    }
+
+    /// The experiment after `sale`, its proceeds added to cash. It can sell
+    /// only shares available when it is made (ADR-0016).
+    public func selling(_ sale: Sale) throws(ExperimentError) -> Experiment {
+        try recording(sale, cashBalance: cashBalance + sale.proceeds)
     }
 
     /// The experiment with `order` placed. Its shares must be unreserved
@@ -175,6 +210,7 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases,
             limitOrders: limitOrders + [order],
             buyLimitOrders: buyLimitOrders,
+            sales: sales,
             name: name,
             notes: notes,
             createdAt: createdAt,
@@ -206,6 +242,7 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases,
             limitOrders: orders,
             buyLimitOrders: buyLimitOrders,
+            sales: sales,
             name: name,
             notes: notes,
             createdAt: createdAt,
@@ -244,6 +281,7 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases + [purchase],
             limitOrders: limitOrders,
             buyLimitOrders: orders,
+            sales: sales,
             name: name,
             notes: notes,
             createdAt: createdAt,
@@ -265,6 +303,7 @@ public struct Experiment: Sendable, Hashable {
                 purchases: purchases,
                 limitOrders: orders,
                 buyLimitOrders: buyLimitOrders,
+                sales: sales,
                 name: name,
                 notes: notes,
                 createdAt: createdAt,
@@ -283,6 +322,7 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases,
             limitOrders: limitOrders,
             buyLimitOrders: orders,
+            sales: sales,
             name: name,
             notes: notes,
             createdAt: createdAt,
@@ -291,17 +331,64 @@ public struct Experiment: Sendable, Hashable {
 }
 
 private extension Experiment {
-    /// No two purchases or orders share an id, apart from a filled buy order
-    /// and the purchase its fill made, which checkFillPurchases pairs.
+    /// A step a rebuilt experiment takes again to check its shares.
+    enum ShareStep {
+        case placing(LimitOrder)
+        case selling(Sale)
+    }
+
+    /// The sell placements and sales in time order. At the same time,
+    /// placements come first, then sales, each in saved order. Either way
+    /// gives the same result: at one instant an open order and a sale each
+    /// count the other's shares as taken (ADR-0016).
+    static func shareSteps(limitOrders: [LimitOrder], sales: [Sale]) -> [ShareStep] {
+        let placements = limitOrders.enumerated().map { index, order in
+            (date: order.placedAt, kind: 0, index: index, step: ShareStep.placing(order))
+        }
+        let sold = sales.enumerated().map { index, sale in
+            (date: sale.soldAt, kind: 1, index: index, step: ShareStep.selling(sale))
+        }
+        return (placements + sold)
+            .sorted { ($0.date, $0.kind, $0.index) < ($1.date, $1.kind, $1.index) }
+            .map(\.step)
+    }
+
+    /// The experiment with `sale` recorded and its cash set to
+    /// `cashBalance`. The sale must be of a known purchase's available
+    /// shares.
+    func recording(_ sale: Sale, cashBalance: Money) throws(ExperimentError) -> Experiment {
+        guard let purchase = purchases.first(where: { $0.id == sale.purchaseID }) else {
+            throw .unknownPurchase(sale.purchaseID)
+        }
+        let available = availableShares(of: purchase, at: sale.soldAt)
+        guard sale.shares <= available else {
+            throw .insufficientShares(requested: sale.shares, available: available)
+        }
+        return Experiment(
+            validCashBalance: cashBalance,
+            purchases: purchases,
+            limitOrders: limitOrders,
+            buyLimitOrders: buyLimitOrders,
+            sales: sales + [sale],
+            name: name,
+            notes: notes,
+            createdAt: createdAt,
+        )
+    }
+
+    /// No two purchases, orders or sales share an id, apart from a filled
+    /// buy order and the purchase its fill made, which checkFillPurchases
+    /// pairs.
     static func checkUniqueIDs(
         purchases: [Purchase],
         limitOrders: [LimitOrder],
         buyLimitOrders: [BuyLimitOrder],
+        sales: [Sale],
     ) throws(ExperimentError) {
         let unfilledBuyIDs = buyLimitOrders.filter { $0.filledOn == nil }.map(\.id)
         var seen = Set<UUID>()
         var seenBuy = Set<UUID>()
-        for id in purchases.map(\.id) + limitOrders.map(\.id) + unfilledBuyIDs {
+        for id in purchases.map(\.id) + limitOrders.map(\.id) + unfilledBuyIDs + sales.map(\.id) {
             guard seen.insert(id).inserted else {
                 throw .duplicateID(id)
             }
