@@ -29,3 +29,4 @@ ADRs are not edited after acceptance except to change their status. To reverse a
 | [0013](0013-limit-order-fills-from-daily-bars.md) | Fill Limit Orders from Daily Bars, at the Limit Price | Accepted |
 | [0014](0014-buy-limit-orders-and-cancellation.md) | Buy Limit Orders, Reserved Cash and Order Cancellation | Accepted |
 | [0015](0015-experiment-identity-and-holdings-quotes.md) | Experiment Name, Notes and Created Date, and Quoting Holdings on Open | Accepted |
+| [0016](0016-market-sales-and-realized-gain.md) | Market Sales and Realized Gain | Proposed |
