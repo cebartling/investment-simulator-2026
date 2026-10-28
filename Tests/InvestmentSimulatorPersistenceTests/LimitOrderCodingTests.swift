@@ -177,7 +177,7 @@ struct LimitOrderCodingTests {
 
     @Test func `insufficient shares error describes the problem`() {
         let error: any Error = ExperimentError.insufficientShares(requested: 6, available: 5)
-        let description = "A limit order sells more shares than the purchase has free."
+        let description = "A limit order or sale sells more shares than the purchase has free."
 
         #expect(error.localizedDescription == description)
         #expect((error as NSError).localizedFailureReason == description)
@@ -209,7 +209,7 @@ struct LimitOrderCodingTests {
 
     @Test func `unknown purchase error describes the problem`() {
         let error: any Error = ExperimentError.unknownPurchase(UUID())
-        let description = "A limit order sells shares of a purchase the experiment doesn't have."
+        let description = "A limit order or sale sells shares of a purchase the experiment doesn't have."
 
         #expect(error.localizedDescription == description)
         #expect((error as NSError).localizedFailureReason == description)
