@@ -64,8 +64,6 @@ struct ContentView: View {
                         )
                     }
                 }
-            case let section?:
-                ContentUnavailableView(section.title, systemImage: section.systemImage)
             case nil:
                 ContentUnavailableView("No Selection", systemImage: "sidebar.left")
             }
@@ -91,8 +89,6 @@ private extension NavigationSection {
     var systemImage: String {
         switch self {
         case .experiment: "flask"
-        case .simulation: "play.circle"
-        case .results: "chart.line.uptrend.xyaxis"
         }
     }
 }

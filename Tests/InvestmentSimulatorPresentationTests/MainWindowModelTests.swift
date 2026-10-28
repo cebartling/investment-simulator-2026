@@ -5,10 +5,10 @@ import Testing
 
 @MainActor
 struct MainWindowModelTests {
-    @Test func `sections are experiment, simulation, results in order`() throws {
+    @Test func `the only section is experiment`() throws {
         let model = try makeModel()
 
-        #expect(model.sections == [.experiment, .simulation, .results])
+        #expect(model.sections == [.experiment])
     }
 
     @Test func `initial selection is the first section`() throws {
@@ -19,8 +19,6 @@ struct MainWindowModelTests {
 
     @Test(arguments: [
         (NavigationSection.experiment, "Experiment"),
-        (.simulation, "Simulation"),
-        (.results, "Results"),
     ])
     func `section title`(section: NavigationSection, title: String) {
         #expect(section.title == title)
