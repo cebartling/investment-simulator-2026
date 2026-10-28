@@ -25,7 +25,7 @@ bundle:
     mkdir -p "{{app_bundle}}/Contents/MacOS" "{{app_bundle}}/Contents/Resources"
     cp "$(swift build -c release --show-bin-path)/{{app_name}}" "{{app_bundle}}/Contents/MacOS/"
     cp Resources/Info.plist "{{app_bundle}}/Contents/"
-    xcrun actool Resources/AppIcon.icon --compile "{{app_bundle}}/Contents/Resources" --platform macosx --minimum-deployment-target 26.0 --app-icon AppIcon --output-partial-info-plist "{{build_dir}}/AppIcon-partial.plist"
+    xcrun actool "{{justfile_directory()}}/Resources/AppIcon.icon" --compile "{{justfile_directory()}}/{{app_bundle}}/Contents/Resources" --platform macosx --minimum-deployment-target 26.0 --app-icon AppIcon --output-partial-info-plist "{{justfile_directory()}}/{{build_dir}}/AppIcon-partial.plist"
     codesign --force --sign - "{{app_bundle}}"
     @echo "Built {{app_bundle}}"
 
