@@ -116,6 +116,18 @@ public struct LimitOrder: Sendable, Hashable, Identifiable {
         limitPrice.times(shares).roundedToCents()
     }
 
+    /// When the order filled: 4 PM in New York on its session, the close,
+    /// or nil while unfilled. Sales of both kinds sort by it (ADR-0016).
+    public var filledAt: Date? {
+        filledOn.flatMap(sessionClose(on:))
+    }
+
+    /// The proceeds less what the sold shares of `purchase`, the one the
+    /// order sells from, cost (ADR-0016).
+    public func realizedGain(on purchase: Purchase) -> Money {
+        proceeds - purchase.cost(of: shares)
+    }
+
     /// The price that makes `percent` profit on each share of `purchase`,
     /// rounded up to cents so the profit never falls short.
     public static func limitPrice(

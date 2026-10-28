@@ -28,7 +28,7 @@ public extension Experiment {
     /// its cost. Then summed.
     var investedCost: Money {
         purchases
-            .map { Money($0.pricePerShare).times(heldShares(of: $0)).roundedToCents() }
+            .map { $0.cost(of: heldShares(of: $0)) }
             .reduce(.zero, +)
     }
 
