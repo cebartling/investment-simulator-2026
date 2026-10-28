@@ -43,21 +43,37 @@ struct MainWindowModelTests {
     }
 
     @Test func `creating the experiment sets its cash balance and hides the sheet`() throws {
-        let model = try makeModel(needsSetup: true)
+        let model = try makeModel(needsSetup: true, clock: { fixedNow })
         model.newExperiment.cashBalance = 10000
 
         let created = model.createExperiment()
 
-        #expect(try created == Experiment(cashBalance: Money(10000)))
+        #expect(try created == Experiment(cashBalance: Money(10000), createdAt: fixedNow))
         #expect(model.experiment == created)
         #expect(model.cashBalance == 10000)
         #expect(!model.isShowingNewExperiment)
     }
 
     @Test func `creating a zero balance experiment still returns it`() throws {
-        let model = try makeModel(needsSetup: true)
+        let model = try makeModel(needsSetup: true, clock: { fixedNow })
 
-        #expect(model.createExperiment() == Experiment.empty)
+        #expect(try model.createExperiment() == Experiment(cashBalance: .zero, createdAt: fixedNow))
+    }
+
+    @Test func `window prices holdings with its quotes`() async throws {
+        let model = try makeModelWithPurchase()
+        let quotes = try FakeQuotes(.success(makeQuote(price: "12")))
+        let priced = try MainWindowModel(
+            experiment: model.experiment,
+            needsSetup: false,
+            quotes: quotes,
+            dailyPrices: FakeDailyPrices(),
+        )
+
+        await priced.holdingsPrices.priceNewHoldings(of: priced.experiment.heldTickers)
+
+        #expect(quotes.requestCount == 1)
+        #expect(priced.holdingsPrices.valuation(of: priced.experiment) != .pricing)
     }
 
     @Test func `invalid create keeps the sheet and the experiment`() throws {
@@ -269,12 +285,14 @@ struct MainWindowModelTests {
         cashBalance: Decimal = 0,
         needsSetup: Bool = false,
         quotes: FakeQuotes = FakeQuotes(.failure(.missingAPIKey)),
+        clock: @escaping () -> Date = Date.init,
     ) throws -> MainWindowModel {
         try MainWindowModel(
             experiment: Experiment(cashBalance: Money(cashBalance)),
             needsSetup: needsSetup,
             quotes: quotes,
             dailyPrices: FakeDailyPrices(),
+            clock: clock,
         )
     }
 }

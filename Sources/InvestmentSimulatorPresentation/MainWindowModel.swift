@@ -11,7 +11,9 @@ public final class MainWindowModel {
 
     public private(set) var experiment: Experiment
     public var isShowingNewExperiment: Bool
-    public let newExperiment = NewExperimentModel()
+    public let newExperiment: NewExperimentModel
+    /// Prices the held shares for the header (PIN-408).
+    public let holdingsPrices: HoldingsPricesModel
 
     public var isShowingPurchase = false
     /// The Buy sheet's model while it is shown.
@@ -24,6 +26,10 @@ public final class MainWindowModel {
     public var isShowingBuyLimitOrder = false
     /// The Buy Limit sheet's model while it is shown.
     public private(set) var buyLimitOrder: BuyLimitOrderModel?
+
+    public var isShowingDetails = false
+    /// The Edit Details sheet's model while it is shown.
+    public private(set) var details: ExperimentDetailsModel?
 
     /// Whether the order rows include expired and cancelled orders. Off in
     /// each new window, and never saved.
@@ -48,8 +54,8 @@ public final class MainWindowModel {
     public private(set) var shouldCloseWindow = false
 
     /// `needsSetup` is true for a new, untitled document, which opens the
-    /// New Experiment sheet. `clock` tells the time orders are placed and
-    /// checked.
+    /// New Experiment sheet. `clock` tells the time experiments are created
+    /// and orders are placed and checked.
     public init(
         experiment: Experiment,
         needsSetup: Bool,
@@ -62,6 +68,8 @@ public final class MainWindowModel {
         self.quotes = quotes
         self.dailyPrices = dailyPrices
         self.clock = clock
+        newExperiment = NewExperimentModel(clock: clock)
+        holdingsPrices = HoldingsPricesModel(quotes: quotes)
     }
 
     public var cashBalance: Decimal {
@@ -320,5 +328,46 @@ public final class MainWindowModel {
     public func cancelNewExperiment() {
         isShowingNewExperiment = false
         shouldCloseWindow = true
+    }
+}
+
+/// The Experiment header (PIN-408).
+public extension MainWindowModel {
+    /// The experiment's name, else its file's name, else "Untitled" for a
+    /// document never saved. Takes the file's URL, which Save As changes.
+    func title(fileURL: URL?) -> String {
+        experiment.name ?? fileURL?.deletingPathExtension().lastPathComponent ?? "Untitled"
+    }
+
+    /// The cash a purchase or new buy order can spend at `date`. Takes the
+    /// date, so a view can redraw it as orders expire.
+    func availableCash(at date: Date) -> Decimal {
+        experiment.availableCash(at: readingDate(date)).amount
+    }
+}
+
+/// Edit Details (PIN-408).
+public extension MainWindowModel {
+    func beginEditingDetails() {
+        details = ExperimentDetailsModel(name: experiment.name, notes: experiment.notes)
+        isShowingDetails = true
+    }
+
+    /// Returns the experiment with the edited name and notes, for the
+    /// document to save, and hides the sheet. Returns nil when they didn't
+    /// change, so the document isn't marked edited.
+    @discardableResult
+    func completeEditingDetails() -> Experiment? {
+        defer { cancelEditingDetails() }
+        guard let details, details.savedName != experiment.name || details.savedNotes != experiment.notes else {
+            return nil
+        }
+        experiment = experiment.editingDetails(name: details.savedName, notes: details.savedNotes)
+        return experiment
+    }
+
+    func cancelEditingDetails() {
+        isShowingDetails = false
+        details = nil
     }
 }

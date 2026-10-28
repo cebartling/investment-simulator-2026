@@ -2,12 +2,9 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// The Experiment section's detail: the cash balance, shown large, the
-/// purchases made with it, and the buy and sell limit orders.
+/// The Experiment section's tables, below its header: the purchases, and
+/// the buy and sell limit orders.
 struct ExperimentDetailView: View {
-    let cashBalance: Decimal
-    /// The cash open buy orders hold at a date.
-    let reservedCash: (Date) -> Decimal
     let purchases: [Purchase]
     let hasLimitOrders: Bool
     /// The limit orders as they stand at a date.
@@ -30,11 +27,6 @@ struct ExperimentDetailView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            // Redrawn every minute, so reserved cash drops as orders expire.
-            TimelineView(.everyMinute) { context in
-                cashHeader(at: context.date)
-            }
-            .padding(.top, 32)
             if purchases.isEmpty, !hasLimitOrders {
                 ContentUnavailableView(
                     "No Purchases",
@@ -86,23 +78,6 @@ struct ExperimentDetailView: View {
         }
         let side = row.side == .buy ? "buy" : "sell"
         return "Cancel the \(side) order for \(row.shares) \(row.ticker.symbol)?"
-    }
-
-    private func cashHeader(at date: Date) -> some View {
-        VStack(spacing: 8) {
-            Text("Cash Balance")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-            Text(cashBalance, format: .currency(code: "USD"))
-                .font(.system(size: 56, weight: .semibold))
-                .monospacedDigit()
-            let reserved = reservedCash(date)
-            if reserved > 0 {
-                Text("\(reserved, format: .currency(code: "USD")) reserved for buy orders")
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-        }
     }
 
     private var purchasesTable: some View {

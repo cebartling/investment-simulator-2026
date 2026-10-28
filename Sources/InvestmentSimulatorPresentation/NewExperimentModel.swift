@@ -7,7 +7,12 @@ import Observation
 public final class NewExperimentModel {
     public var cashBalance: Decimal = 0
 
-    public init() {}
+    private let clock: () -> Date
+
+    /// `clock` tells when the experiment is created.
+    public init(clock: @escaping () -> Date = Date.init) {
+        self.clock = clock
+    }
 
     /// Typed input is normalized to whole cents; validation and creation
     /// both use this value.
@@ -30,7 +35,7 @@ public final class NewExperimentModel {
             return nil
         }
         do {
-            return try Experiment(cashBalance: roundedCashBalance)
+            return try Experiment(cashBalance: roundedCashBalance, createdAt: clock())
         } catch {
             preconditionFailure("canCreate allowed an invalid cash balance: \(error)")
         }

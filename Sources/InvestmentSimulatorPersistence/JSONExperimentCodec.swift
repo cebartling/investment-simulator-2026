@@ -9,12 +9,15 @@ public struct JSONExperimentCodec: ExperimentCoding {
     private static let dateFormat = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
     public func encode(_ experiment: Experiment) throws -> Data {
-        let document = ExperimentDocumentV5(
-            schemaVersion: ExperimentDocumentV5.schemaVersion,
+        let document = ExperimentDocumentV6(
+            schemaVersion: ExperimentDocumentV6.schemaVersion,
             cashBalance: experiment.cashBalance.amount.description,
             purchases: experiment.purchases.map(encode),
             limitOrders: experiment.limitOrders.map(encode),
             buyLimitOrders: experiment.buyLimitOrders.map(encode),
+            name: experiment.name,
+            notes: experiment.notes,
+            createdAt: experiment.createdAt?.formatted(Self.dateFormat),
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -28,41 +31,70 @@ public struct JSONExperimentCodec: ExperimentCoding {
         case ExperimentDocumentV1.schemaVersion:
             // Migration: version 1 predates purchases.
             let document = try decoder.decode(ExperimentDocumentV1.self, from: data)
-            return try Experiment(cashBalance: cashBalance(from: document.cashBalance))
+            return try datingFromHistory(Experiment(cashBalance: cashBalance(from: document.cashBalance)))
         case ExperimentDocumentV2.schemaVersion:
             // Migration: version 2 predates limit orders.
             let document = try decoder.decode(ExperimentDocumentV2.self, from: data)
-            return try Experiment(
+            return try datingFromHistory(Experiment(
                 cashBalance: cashBalance(from: document.cashBalance),
                 purchases: document.purchases.map(decode),
-            )
+            ))
         case ExperimentDocumentV3.schemaVersion:
             // Migration: version 3 predates fills, so its orders are unfilled.
             let document = try decoder.decode(ExperimentDocumentV3.self, from: data)
-            return try Experiment(
+            return try datingFromHistory(Experiment(
                 cashBalance: cashBalance(from: document.cashBalance),
                 purchases: document.purchases.map(decode),
                 limitOrders: document.limitOrders.map(\.unfilled.uncancelled).map(decode),
-            )
+            ))
         case ExperimentDocumentV4.schemaVersion:
             // Migration: version 4 predates buy orders and cancellations.
             let document = try decoder.decode(ExperimentDocumentV4.self, from: data)
-            return try Experiment(
+            return try datingFromHistory(Experiment(
                 cashBalance: cashBalance(from: document.cashBalance),
                 purchases: document.purchases.map(decode),
                 limitOrders: document.limitOrders.map(\.uncancelled).map(decode),
-            )
+            ))
         case ExperimentDocumentV5.schemaVersion:
+            // Migration: version 5 predates the name, notes and created date.
             let document = try decoder.decode(ExperimentDocumentV5.self, from: data)
+            return try datingFromHistory(Experiment(
+                cashBalance: cashBalance(from: document.cashBalance),
+                purchases: document.purchases.map(decode),
+                limitOrders: document.limitOrders.map(decode),
+                buyLimitOrders: document.buyLimitOrders.map(decode),
+            ))
+        case ExperimentDocumentV6.schemaVersion:
+            let document = try decoder.decode(ExperimentDocumentV6.self, from: data)
             return try Experiment(
                 cashBalance: cashBalance(from: document.cashBalance),
                 purchases: document.purchases.map(decode),
                 limitOrders: document.limitOrders.map(decode),
                 buyLimitOrders: document.buyLimitOrders.map(decode),
+                name: document.name,
+                notes: document.notes,
+                createdAt: document.createdAt.map(createdDate),
             )
         default:
             throw ExperimentCodingError.unsupportedSchemaVersion(version)
         }
+    }
+
+    /// Migration: files before version 6 have no created date, so it is
+    /// the earliest purchase or order placement, or nil with neither. A
+    /// close-priced purchase carries its session's close, so the date can
+    /// be earlier than the experiment really was created.
+    private func datingFromHistory(_ experiment: Experiment) throws -> Experiment {
+        let dates = experiment.purchases.map(\.pricedAt)
+            + experiment.limitOrders.map(\.placedAt)
+            + experiment.buyLimitOrders.map(\.placedAt)
+        return try Experiment(
+            cashBalance: experiment.cashBalance,
+            purchases: experiment.purchases,
+            limitOrders: experiment.limitOrders,
+            buyLimitOrders: experiment.buyLimitOrders,
+            createdAt: dates.min(),
+        )
     }
 
     private func encode(_ purchase: Purchase) -> PurchaseV2 {
@@ -184,6 +216,13 @@ public struct JSONExperimentCodec: ExperimentCoding {
         return date
     }
 
+    private func createdDate(from string: String) throws -> Date {
+        guard let date = try? Self.dateFormat.parse(string) else {
+            throw ExperimentCodingError.invalidCreatedDate(string)
+        }
+        return date
+    }
+
     private func limitPrice(from string: String) throws -> Money {
         try Money(decimal(from: string, invalid: ExperimentCodingError.invalidLimitPrice))
     }
@@ -233,6 +272,7 @@ public enum ExperimentCodingError: Error, Equatable {
     case invalidPriceSource(String)
     case invalidLimitPrice(String)
     case invalidOrderDate(String)
+    case invalidCreatedDate(String)
 }
 
 /// Shown by the document system when a file can't be opened.
@@ -255,6 +295,8 @@ extension ExperimentCodingError: LocalizedError {
             "A limit order's price \"\(price)\" isn't a valid amount."
         case let .invalidOrderDate(date):
             "A limit order's date \"\(date)\" isn't a valid date."
+        case let .invalidCreatedDate(date):
+            "The experiment's created date \"\(date)\" isn't a valid date."
         }
     }
 

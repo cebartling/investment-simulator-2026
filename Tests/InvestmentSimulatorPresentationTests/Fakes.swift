@@ -35,6 +35,113 @@ final class FakeQuotes: QuoteProviding {
     }
 }
 
+/// Answers each ticker's quote from `results`, keyed by symbol, and records
+/// the tickers it was asked for. A ticker with no result is unavailable. A
+/// request cancelled while it waits fails, as a network request would.
+final class FakeTickerQuotes: QuoteProviding {
+    private let results: Mutex<[String: Result<Quote, QuoteError>]>
+    private let asked = Mutex<[String]>([])
+    private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
+
+    init(_ results: [String: Result<Quote, QuoteError>]) {
+        self.results = Mutex(results)
+    }
+
+    /// The symbols asked for, in the order asked.
+    var requests: [String] {
+        asked.withLock { $0 }
+    }
+
+    func answer(_ symbol: String, with result: Result<Quote, QuoteError>) {
+        results.withLock { $0[symbol] = result }
+    }
+
+    /// Runs `action` on the main actor during the next request only, as a
+    /// change made while it waits.
+    func whileAnsweringNext(_ action: @escaping @MainActor @Sendable () -> Void) {
+        hook.withLock { $0 = action }
+    }
+
+    func quote(for ticker: Ticker) async throws(QuoteError) -> Quote {
+        asked.withLock { $0.append(ticker.symbol) }
+        if let action = hook.withLock({ hook in defer { hook = nil }; return hook }) {
+            await action()
+        }
+        if Task.isCancelled {
+            throw .unavailable("Cancelled")
+        }
+        let result = results.withLock { $0[ticker.symbol] } ?? .failure(.unavailable("No fake result"))
+        return try result.get()
+    }
+}
+
+/// Holds every quote open until `release()`, then answers each at 10, and
+/// counts how many quotes started and the most that ran at once.
+final class GatedQuotes: QuoteProviding {
+    private struct State {
+        var started = 0
+        var running = 0
+        var peak = 0
+        var isReleased = false
+        var waiting: [CheckedContinuation<Void, Never>] = []
+    }
+
+    private let state = Mutex(State())
+
+    var startedCount: Int {
+        state.withLock { $0.started }
+    }
+
+    var peakRunning: Int {
+        state.withLock { $0.peak }
+    }
+
+    /// Lets the held quotes and every later one answer.
+    func release() {
+        let waiting = state.withLock { state in
+            state.isReleased = true
+            defer { state.waiting = [] }
+            return state.waiting
+        }
+        waiting.forEach { $0.resume() }
+    }
+
+    func quote(for ticker: Ticker) async throws(QuoteError) -> Quote {
+        state.withLock { state in
+            state.started += 1
+            state.running += 1
+            state.peak = max(state.peak, state.running)
+        }
+        await withCheckedContinuation { continuation in
+            let isReleased = state.withLock { state in
+                if !state.isReleased {
+                    state.waiting.append(continuation)
+                }
+                return state.isReleased
+            }
+            if isReleased {
+                continuation.resume()
+            }
+        }
+        state.withLock { $0.running -= 1 }
+        return Quote(
+            ticker: ticker,
+            price: 10,
+            asOf: Date(timeIntervalSince1970: 1_793_000_000),
+            source: .close(sessionDate: "2026-10-23"),
+        )
+    }
+}
+
+/// A quote for `ticker` at `price`, as of `asOf`.
+func makeQuote(
+    ticker: String,
+    price: Decimal,
+    asOf: Date = Date(timeIntervalSince1970: 1_793_000_000),
+) throws -> Quote {
+    try Quote(ticker: Ticker(ticker), price: price, asOf: asOf, source: .liveQuote(delayed: true))
+}
+
 /// Answers each ticker's daily bars from `bars`, or every request with
 /// `failure`, and records the requests it was sent. `whileAnswering` runs
 /// on the main actor during each request, as a change made mid-check.

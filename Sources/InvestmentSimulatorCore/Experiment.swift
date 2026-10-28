@@ -11,6 +11,9 @@ public struct Experiment: Sendable, Hashable {
         purchases: [],
         limitOrders: [],
         buyLimitOrders: [],
+        name: nil,
+        notes: nil,
+        createdAt: nil,
     )
 
     /// The cash left after every purchase and buy fill, plus every sell
@@ -24,12 +27,21 @@ public struct Experiment: Sendable, Hashable {
     /// In the order they were placed, including filled, expired and
     /// cancelled ones (ADR-0014).
     public let buyLimitOrders: [BuyLimitOrder]
+    /// What the user calls the experiment, or nil to go by its file's name.
+    public let name: String?
+    public let notes: String?
+    /// When the experiment was created, or nil when an older document
+    /// doesn't say (PIN-408).
+    public let createdAt: Date?
 
     public init(
         cashBalance: Money,
         purchases: [Purchase] = [],
         limitOrders: [LimitOrder] = [],
         buyLimitOrders: [BuyLimitOrder] = [],
+        name: String? = nil,
+        notes: String? = nil,
+        createdAt: Date? = nil,
     ) throws(ExperimentError) {
         guard cashBalance.amount >= 0 else {
             throw .negativeCashBalance(cashBalance)
@@ -45,6 +57,9 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases,
             limitOrders: [],
             buyLimitOrders: buyLimitOrders,
+            name: name,
+            notes: notes,
+            createdAt: createdAt,
         )
         for order in limitOrders {
             experiment = try experiment.placing(order)
@@ -57,65 +72,31 @@ public struct Experiment: Sendable, Hashable {
         purchases: [Purchase],
         limitOrders: [LimitOrder],
         buyLimitOrders: [BuyLimitOrder],
+        name: String?,
+        notes: String?,
+        createdAt: Date?,
     ) {
         self.cashBalance = cashBalance
         self.purchases = purchases
         self.limitOrders = limitOrders
         self.buyLimitOrders = buyLimitOrders
+        self.name = name
+        self.notes = notes
+        self.createdAt = createdAt
     }
 
-    /// No two purchases or orders share an id, apart from a filled buy order
-    /// and the purchase its fill made, which checkFillPurchases pairs.
-    private static func checkUniqueIDs(
-        purchases: [Purchase],
-        limitOrders: [LimitOrder],
-        buyLimitOrders: [BuyLimitOrder],
-    ) throws(ExperimentError) {
-        let unfilledBuyIDs = buyLimitOrders.filter { $0.filledOn == nil }.map(\.id)
-        var seen = Set<UUID>()
-        var seenBuy = Set<UUID>()
-        for id in purchases.map(\.id) + limitOrders.map(\.id) + unfilledBuyIDs {
-            guard seen.insert(id).inserted else {
-                throw .duplicateID(id)
-            }
-        }
-        for id in buyLimitOrders.map(\.id) {
-            guard seenBuy.insert(id).inserted else {
-                throw .duplicateID(id)
-            }
-        }
-    }
-
-    /// Each filled buy order has its purchase, exactly the one its fill
-    /// makes, and every other buy order and purchase has none.
-    private static func checkFillPurchases(
-        purchases: [Purchase],
-        buyLimitOrders: [BuyLimitOrder],
-    ) throws(ExperimentError) {
-        let fills = Dictionary(
-            purchases.compactMap { purchase -> (UUID, Purchase)? in
-                guard case .limitOrderFill = purchase.priceSource else {
-                    return nil
-                }
-                return (purchase.id, purchase)
-            },
-            uniquingKeysWith: { first, _ in first },
+    /// The experiment with its name and notes replaced. Whether they are
+    /// blank or need trimming is the caller's rule.
+    public func editingDetails(name: String?, notes: String?) -> Experiment {
+        Experiment(
+            validCashBalance: cashBalance,
+            purchases: purchases,
+            limitOrders: limitOrders,
+            buyLimitOrders: buyLimitOrders,
+            name: name,
+            notes: notes,
+            createdAt: createdAt,
         )
-        let purchaseIDs = Set(purchases.map(\.id))
-        for order in buyLimitOrders {
-            let matches = if let filledOn = order.filledOn {
-                fills[order.id] == (try? order.purchase(filledOn: filledOn))
-            } else {
-                !purchaseIDs.contains(order.id)
-            }
-            guard matches else {
-                throw .mismatchedFillPurchase(order.id)
-            }
-        }
-        let filledIDs = Set(buyLimitOrders.filter { $0.filledOn != nil }.map(\.id))
-        if let orphan = fills.keys.first(where: { !filledIDs.contains($0) }) {
-            throw .mismatchedFillPurchase(orphan)
-        }
     }
 
     /// The cash held by buy orders open at `date`.
@@ -145,6 +126,9 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases + [purchase],
             limitOrders: limitOrders,
             buyLimitOrders: buyLimitOrders,
+            name: name,
+            notes: notes,
+            createdAt: createdAt,
         )
     }
 
@@ -160,6 +144,9 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases,
             limitOrders: limitOrders,
             buyLimitOrders: buyLimitOrders + [order],
+            name: name,
+            notes: notes,
+            createdAt: createdAt,
         )
     }
 
@@ -188,6 +175,9 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases,
             limitOrders: limitOrders + [order],
             buyLimitOrders: buyLimitOrders,
+            name: name,
+            notes: notes,
+            createdAt: createdAt,
         )
     }
 
@@ -216,6 +206,9 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases,
             limitOrders: orders,
             buyLimitOrders: buyLimitOrders,
+            name: name,
+            notes: notes,
+            createdAt: createdAt,
         )
     }
 
@@ -251,6 +244,9 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases + [purchase],
             limitOrders: limitOrders,
             buyLimitOrders: orders,
+            name: name,
+            notes: notes,
+            createdAt: createdAt,
         )
     }
 
@@ -269,6 +265,9 @@ public struct Experiment: Sendable, Hashable {
                 purchases: purchases,
                 limitOrders: orders,
                 buyLimitOrders: buyLimitOrders,
+                name: name,
+                notes: notes,
+                createdAt: createdAt,
             )
         }
         guard let index = buyLimitOrders.firstIndex(where: { $0.id == orderID }) else {
@@ -284,10 +283,69 @@ public struct Experiment: Sendable, Hashable {
             purchases: purchases,
             limitOrders: limitOrders,
             buyLimitOrders: orders,
+            name: name,
+            notes: notes,
+            createdAt: createdAt,
         )
     }
+}
 
-    private static func cancel(_ order: LimitOrder, at date: Date) -> LimitOrder {
+private extension Experiment {
+    /// No two purchases or orders share an id, apart from a filled buy order
+    /// and the purchase its fill made, which checkFillPurchases pairs.
+    static func checkUniqueIDs(
+        purchases: [Purchase],
+        limitOrders: [LimitOrder],
+        buyLimitOrders: [BuyLimitOrder],
+    ) throws(ExperimentError) {
+        let unfilledBuyIDs = buyLimitOrders.filter { $0.filledOn == nil }.map(\.id)
+        var seen = Set<UUID>()
+        var seenBuy = Set<UUID>()
+        for id in purchases.map(\.id) + limitOrders.map(\.id) + unfilledBuyIDs {
+            guard seen.insert(id).inserted else {
+                throw .duplicateID(id)
+            }
+        }
+        for id in buyLimitOrders.map(\.id) {
+            guard seenBuy.insert(id).inserted else {
+                throw .duplicateID(id)
+            }
+        }
+    }
+
+    /// Each filled buy order has its purchase, exactly the one its fill
+    /// makes, and every other buy order and purchase has none.
+    static func checkFillPurchases(
+        purchases: [Purchase],
+        buyLimitOrders: [BuyLimitOrder],
+    ) throws(ExperimentError) {
+        let fills = Dictionary(
+            purchases.compactMap { purchase -> (UUID, Purchase)? in
+                guard case .limitOrderFill = purchase.priceSource else {
+                    return nil
+                }
+                return (purchase.id, purchase)
+            },
+            uniquingKeysWith: { first, _ in first },
+        )
+        let purchaseIDs = Set(purchases.map(\.id))
+        for order in buyLimitOrders {
+            let matches = if let filledOn = order.filledOn {
+                fills[order.id] == (try? order.purchase(filledOn: filledOn))
+            } else {
+                !purchaseIDs.contains(order.id)
+            }
+            guard matches else {
+                throw .mismatchedFillPurchase(order.id)
+            }
+        }
+        let filledIDs = Set(buyLimitOrders.filter { $0.filledOn != nil }.map(\.id))
+        if let orphan = fills.keys.first(where: { !filledIDs.contains($0) }) {
+            throw .mismatchedFillPurchase(orphan)
+        }
+    }
+
+    static func cancel(_ order: LimitOrder, at date: Date) -> LimitOrder {
         do {
             return try order.cancelled(at: date)
         } catch {
@@ -295,7 +353,7 @@ public struct Experiment: Sendable, Hashable {
         }
     }
 
-    private static func cancel(_ order: BuyLimitOrder, at date: Date) -> BuyLimitOrder {
+    static func cancel(_ order: BuyLimitOrder, at date: Date) -> BuyLimitOrder {
         do {
             return try order.cancelled(at: date)
         } catch {

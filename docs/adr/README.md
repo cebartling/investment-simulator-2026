@@ -27,3 +27,5 @@ ADRs are not edited after acceptance except to change their status. To reverse a
 | [0011](0011-document-window-management.md) | Document Window Management, with One AppKit Close | Accepted |
 | [0012](0012-market-data-and-secrets.md) | Market Data from Equibles, with the API Key in the Keychain | Accepted |
 | [0013](0013-limit-order-fills-from-daily-bars.md) | Fill Limit Orders from Daily Bars, at the Limit Price | Accepted |
+| [0014](0014-buy-limit-orders-and-cancellation.md) | Buy Limit Orders, Reserved Cash and Order Cancellation | Accepted |
+| [0015](0015-experiment-identity-and-holdings-quotes.md) | Experiment Name, Notes and Created Date, and Quoting Holdings on Open | Accepted |
