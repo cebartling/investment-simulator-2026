@@ -117,6 +117,30 @@ struct ExperimentSaleTests {
         #expect(try reopen(experiment) == experiment)
     }
 
+    @Test func `a sale and a placement at the same instant survive reopening, whichever came first`() throws {
+        // The sale was made first; reopening places the order first. At one
+        // instant each sees the other's shares as taken (ADR-0016).
+        let order = try makeLimitOrder(shares: 6, placedAt: Self.at(1))
+        let experiment = try experimentWithPurchase(shares: 10)
+            .selling(makeSale(shares: 4, price: "12", soldAt: Self.at(1)))
+            .placing(order)
+
+        #expect(try reopen(experiment) == experiment)
+    }
+
+    @Test func `a sale and a placement at the same instant can't take more than the purchase has`() throws {
+        let purchase = try makePurchase(shares: 10, price: "10")
+
+        #expect(throws: ExperimentError.insufficientShares(requested: 5, available: 4)) {
+            try Experiment(
+                cashBalance: Money(1000),
+                purchases: [purchase],
+                limitOrders: [makeLimitOrder(shares: 6, placedAt: Self.at(1))],
+                sales: [makeSale(shares: 5, price: "12", soldAt: Self.at(1))],
+            )
+        }
+    }
+
     @Test func `experiment created with sales selling too many shares is rejected`() throws {
         let purchase = try makePurchase(shares: 10, price: "10")
         let sales = try [
