@@ -75,6 +75,64 @@ final class FakeTickerQuotes: QuoteProviding {
     }
 }
 
+/// Holds every quote open until `release()`, then answers each at 10, and
+/// counts how many quotes started and the most that ran at once.
+final class GatedQuotes: QuoteProviding {
+    private struct State {
+        var started = 0
+        var running = 0
+        var peak = 0
+        var isReleased = false
+        var waiting: [CheckedContinuation<Void, Never>] = []
+    }
+
+    private let state = Mutex(State())
+
+    var startedCount: Int {
+        state.withLock { $0.started }
+    }
+
+    var peakRunning: Int {
+        state.withLock { $0.peak }
+    }
+
+    /// Lets the held quotes and every later one answer.
+    func release() {
+        let waiting = state.withLock { state in
+            state.isReleased = true
+            defer { state.waiting = [] }
+            return state.waiting
+        }
+        waiting.forEach { $0.resume() }
+    }
+
+    func quote(for ticker: Ticker) async throws(QuoteError) -> Quote {
+        state.withLock { state in
+            state.started += 1
+            state.running += 1
+            state.peak = max(state.peak, state.running)
+        }
+        await withCheckedContinuation { continuation in
+            let isReleased = state.withLock { state in
+                if !state.isReleased {
+                    state.waiting.append(continuation)
+                }
+                return state.isReleased
+            }
+            if isReleased {
+                continuation.resume()
+            }
+        }
+        state.withLock { $0.running -= 1 }
+        return Quote(
+            ticker: ticker,
+            price: 10,
+            asOf: Date(timeIntervalSince1970: 1_793_000_000),
+            source: .close(sessionDate: "2026-10-23"),
+        )
+    }
+}
+
 /// A quote for `ticker` at `price`, as of `asOf`.
 func makeQuote(
     ticker: String,

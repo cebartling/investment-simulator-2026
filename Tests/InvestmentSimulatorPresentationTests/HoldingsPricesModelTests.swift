@@ -153,6 +153,27 @@ struct HoldingsPricesModelTests {
         #expect(quotes.requests.sorted() == ["AAPL", "VTI", "VTI"])
     }
 
+    @Test func `at most four quotes run at once`() async throws {
+        let quotes = GatedQuotes()
+        let model = HoldingsPricesModel(quotes: quotes)
+        let experiment = try experiment(tickers: ["A", "B", "C", "D", "E", "F"])
+        let run = Task { await model.priceNewHoldings(of: experiment.heldTickers) }
+        while quotes.startedCount < 4 {
+            await Task.yield()
+        }
+        // Gives a fifth quote every chance to start while four are held.
+        for _ in 0 ..< 100 {
+            await Task.yield()
+        }
+
+        #expect(quotes.startedCount == 4)
+        quotes.release()
+        await run.value
+        #expect(quotes.startedCount == 6)
+        #expect(quotes.peakRunning == 4)
+        #expect(model.valuation(of: experiment) != .pricing)
+    }
+
     @MainActor
     private final class Runs {
         var first: Task<Void, Never>?
