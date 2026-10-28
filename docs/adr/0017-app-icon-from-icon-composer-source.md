@@ -13,7 +13,8 @@ On macOS 26, icons use Liquid Glass and come in default, dark, tinted and clear 
 ## Decision
 
 - **The icon source is an Icon Composer document, `Resources/AppIcon.icon`:** `icon.json` plus flat SVG layers under `Assets/`. It is edited in Icon Composer (shipped inside Xcode.app), or by hand for the SVGs, and committed like other source.
-- **`just bundle` compiles it with `xcrun actool`** into `Contents/Resources/Assets.car` and an `AppIcon.icns` fallback, before `codesign`, so the signature seals them. `actool` gets absolute paths, because it resolves relative ones against the directory its compile service started in. Its partial `Info.plist` goes to `build/` and isn't merged.
+- **`just bundle` compiles it with `xcrun actool`** into `Contents/Resources/Assets.car` and an `AppIcon.icns` fallback, before `codesign`, so the signature seals them. `actool` gets absolute paths, because relative ones proved unreliable: once, its output path resolved against another directory. Its minimum deployment target is read from `Info.plist`'s `LSMinimumSystemVersion`, so the two can't drift. Its partial `Info.plist` goes to `build/` and isn't merged.
+- **The recipe checks that the icon was written.** `actool` can exit 0 and write nothing, for example for a missing `.icon`. So `just bundle` fails unless `Assets.car` and `AppIcon.icns` are both present and non-empty.
 - **`Info.plist` names the icon with fixed keys:** `CFBundleIconName` and `CFBundleIconFile`, both `AppIcon`, matching `actool`'s partial plist and its `--app-icon` argument. If any of the three changes, all must change together.
 - **`swift run` keeps the generic icon.** It runs the bare executable without a bundle.
 
