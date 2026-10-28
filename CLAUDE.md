@@ -50,6 +50,8 @@ Rules from the accepted ADRs:
 
 `just bundle` assembles the `.app` by hand from `Resources/Info.plist` plus the release binary. The app name and executable name are duplicated across `Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleExecutable`) and the `justfile` (`app_name`, `app_bundle`). Change them together, or the bundle will not launch. ADR-0006 also lists `AppMetadata.displayName`; that type was removed once `DocumentGroup` took the app name from `Info.plist`.
 
+The app icon (ADR-0017) comes from the Icon Composer document `Resources/AppIcon.icon` (`icon.json` plus SVG layers). Tune its glass and appearances in Icon Composer (inside Xcode.app). `just bundle` compiles it with `xcrun actool` into `Contents/Resources` (`Assets.car` plus `AppIcon.icns`) before `codesign`. It passes absolute paths, because relative ones once resolved against another directory, and reads the deployment target from `LSMinimumSystemVersion`. `actool` can exit 0 without writing anything, so the next line fails the recipe unless both files exist. `Info.plist`'s `CFBundleIconName` and `CFBundleIconFile` must match `actool`'s `--app-icon AppIcon`. LaunchServices caches icons: after a rebuild, check with `lsregister -f` on the bundle or `killall Dock`, not by relaunching the app, which reopens documents and asks for the Keychain.
+
 ## Formatting and lint
 
 - SwiftFormat reads its target Swift version from `.swift-version` (6.2). Its defaults rename Swift Testing functions to raw identifiers, e.g. `` @Test func `display name is investment simulator`() ``.

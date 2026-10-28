@@ -1,0 +1,40 @@
+{
+  "fill" : {
+    "automatic-gradient" : "srgb:0.07451,0.16078,0.29412,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "chart.svg",
+          "name" : "chart"
+        },
+        {
+          "image-name" : "bubbles.svg",
+          "name" : "bubbles"
+        }
+      ],
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0
+      }
+    },
+    {
+      "layers" : [
+        {
+          "image-name" : "liquid.svg",
+          "name" : "liquid"
+        },
+        {
+          "image-name" : "flask.svg",
+          "name" : "flask"
+        }
+      ]
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "macOS"
+    ]
+  }
+}
