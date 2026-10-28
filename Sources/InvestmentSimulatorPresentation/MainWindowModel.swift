@@ -25,6 +25,10 @@ public final class MainWindowModel {
     /// The Buy Limit sheet's model while it is shown.
     public private(set) var buyLimitOrder: BuyLimitOrderModel?
 
+    public var isShowingDetails = false
+    /// The Edit Details sheet's model while it is shown.
+    public private(set) var details: ExperimentDetailsModel?
+
     /// Whether the order rows include expired and cancelled orders. Off in
     /// each new window, and never saved.
     public var showsExpiredAndCancelledOrders = false
@@ -315,6 +319,29 @@ public final class MainWindowModel {
     public func cancelLimitOrder() {
         isShowingLimitOrder = false
         limitOrder = nil
+    }
+
+    public func beginEditingDetails() {
+        details = ExperimentDetailsModel(name: experiment.name, notes: experiment.notes)
+        isShowingDetails = true
+    }
+
+    /// Returns the experiment with the edited name and notes, for the
+    /// document to save, and hides the sheet. Returns nil when they didn't
+    /// change, so the document isn't marked edited.
+    @discardableResult
+    public func completeEditingDetails() -> Experiment? {
+        defer { cancelEditingDetails() }
+        guard let details, details.savedName != experiment.name || details.savedNotes != experiment.notes else {
+            return nil
+        }
+        experiment = experiment.editingDetails(name: details.savedName, notes: details.savedNotes)
+        return experiment
+    }
+
+    public func cancelEditingDetails() {
+        isShowingDetails = false
+        details = nil
     }
 
     public func cancelNewExperiment() {
