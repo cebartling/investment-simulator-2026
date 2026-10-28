@@ -27,17 +27,18 @@ public final class HoldingsPricesModel {
     private let quotes: any QuoteProviding
     private var lastGoodQuotes: [Ticker: Quote] = [:]
     private var failures: [Ticker: QuoteError] = [:]
-    private var inFlight: Set<Ticker> = []
 
     public init(quotes: any QuoteProviding) {
         self.quotes = quotes
     }
 
-    /// Quotes the tickers of `tickers` not quoted yet, so new holdings get a
-    /// price. A ticker whose quote failed waits for a refresh.
+    /// Quotes the tickers of `tickers` not answered yet, so new holdings get
+    /// a price. A ticker whose quote failed waits for a refresh. A ticker
+    /// still being quoted is quoted again: the window cancels a run when
+    /// holdings change, and the cancelled run drops what it was quoting.
     public func priceNewHoldings(of tickers: Set<Ticker>) async {
         let answered = Set(lastGoodQuotes.keys).union(failures.keys)
-        await quote(tickers.subtracting(answered).subtracting(inFlight))
+        await quote(tickers.subtracting(answered))
     }
 
     /// Quotes every ticker of `tickers` again.
@@ -47,7 +48,7 @@ public final class HoldingsPricesModel {
         }
         isRefreshing = true
         defer { isRefreshing = false }
-        await quote(tickers.subtracting(inFlight))
+        await quote(tickers)
     }
 
     public func valuation(of experiment: Experiment) -> Valuation {
@@ -66,13 +67,11 @@ public final class HoldingsPricesModel {
 
     /// Quotes `tickers`, at most `maxConcurrentQuotes` at once. Once
     /// cancelled it starts no more quotes and drops failures, which may
-    /// only be the cancellation; tickers left unanswered can be quoted again.
+    /// only be the cancellation, leaving those tickers unanswered.
     private func quote(_ tickers: Set<Ticker>) async {
         guard !tickers.isEmpty else {
             return
         }
-        inFlight.formUnion(tickers)
-        defer { inFlight.subtract(tickers) }
         let quotes = quotes
         await withTaskGroup(of: (Ticker, Result<Quote, QuoteError>).self) { group in
             var remaining = tickers.sorted { $0.symbol < $1.symbol }.makeIterator()

@@ -129,6 +129,36 @@ struct HoldingsPricesModelTests {
         #expect(quotes.requests.sorted() == ["AAPL", "MSFT", "VTI"])
     }
 
+    /// The window cancels a pricing run when holdings change and starts the
+    /// next at once, while the cancelled run's quotes are still out.
+    @Test func `a run cancelled mid-quote leaves its tickers to the next run`() async throws {
+        let quotes = try FakeTickerQuotes([
+            "VTI": .success(makeQuote(ticker: "VTI", price: 12)),
+            "AAPL": .success(makeQuote(ticker: "AAPL", price: 20)),
+        ])
+        let model = HoldingsPricesModel(quotes: quotes)
+        let grown = try experiment(tickers: ["VTI", "AAPL"])
+        let runs = Runs()
+        quotes.whileAnsweringNext {
+            runs.first?.cancel()
+            runs.second = Task { await model.priceNewHoldings(of: grown.heldTickers) }
+        }
+
+        let held = try experiment(tickers: ["VTI"]).heldTickers
+        runs.first = Task { await model.priceNewHoldings(of: held) }
+        await runs.first?.value
+        await runs.second?.value
+
+        #expect(model.valuation(of: grown) != .pricing)
+        #expect(quotes.requests.sorted() == ["AAPL", "VTI", "VTI"])
+    }
+
+    @MainActor
+    private final class Runs {
+        var first: Task<Void, Never>?
+        var second: Task<Void, Never>?
+    }
+
     /// An experiment that started with 1000 and bought one share at 10 of
     /// each of `tickers`.
     private func experiment(tickers: [String] = ["VTI"]) throws -> Experiment {

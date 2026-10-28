@@ -36,10 +36,12 @@ final class FakeQuotes: QuoteProviding {
 }
 
 /// Answers each ticker's quote from `results`, keyed by symbol, and records
-/// the tickers it was asked for. A ticker with no result is unavailable.
+/// the tickers it was asked for. A ticker with no result is unavailable. A
+/// request cancelled while it waits fails, as a network request would.
 final class FakeTickerQuotes: QuoteProviding {
     private let results: Mutex<[String: Result<Quote, QuoteError>]>
     private let asked = Mutex<[String]>([])
+    private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
 
     init(_ results: [String: Result<Quote, QuoteError>]) {
         self.results = Mutex(results)
@@ -54,8 +56,20 @@ final class FakeTickerQuotes: QuoteProviding {
         results.withLock { $0[symbol] = result }
     }
 
+    /// Runs `action` on the main actor during the next request only, as a
+    /// change made while it waits.
+    func whileAnsweringNext(_ action: @escaping @MainActor @Sendable () -> Void) {
+        hook.withLock { $0 = action }
+    }
+
     func quote(for ticker: Ticker) async throws(QuoteError) -> Quote {
         asked.withLock { $0.append(ticker.symbol) }
+        if let action = hook.withLock({ hook in defer { hook = nil }; return hook }) {
+            await action()
+        }
+        if Task.isCancelled {
+            throw .unavailable("Cancelled")
+        }
         let result = results.withLock { $0[ticker.symbol] } ?? .failure(.unavailable("No fake result"))
         return try result.get()
     }
