@@ -47,6 +47,18 @@ struct SaleTests {
         #expect(try sale.realizedGain(on: purchase) == Money(#require(Decimal(string: "0.04"))))
     }
 
+    @Test func `each sale of a purchase sold in pieces rounds its own cost`() throws {
+        // The purchase cost 20.01 (20.010), but each share costs 10.00
+        // (10.005, rounded to even), so the gains total a cent more than
+        // the 22 − 20.01 cash moved (ADR-0016).
+        let purchase = try makePurchase(shares: 2, price: "10.005")
+        let first = try makeSale(shares: 1, price: "11")
+        let second = try makeSale(shares: 1, price: "11")
+
+        #expect(try purchase.cost == Money(#require(Decimal(string: "20.01"))))
+        #expect(first.realizedGain(on: purchase) + second.realizedGain(on: purchase) == Money(2))
+    }
+
     @Test func `a loss is a negative realized gain`() throws {
         let purchase = try makePurchase(shares: 10, price: "10")
         let sale = try makeSale(shares: 2, price: "7.5")
