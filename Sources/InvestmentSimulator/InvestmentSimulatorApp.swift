@@ -24,7 +24,8 @@ struct InvestmentSimulatorApp: App {
 
     var body: some Scene {
         DocumentGroup(newDocument: ExperimentDocument()) { file in
-            MainWindow(document: file.$document, quotes: quotes, dailyPrices: dailyPrices)
+            // Read here, so the title follows Save As.
+            MainWindow(document: file.$document, fileURL: file.fileURL, quotes: quotes, dailyPrices: dailyPrices)
         }
         Settings {
             SettingsView(model: settings)
@@ -37,10 +38,18 @@ struct InvestmentSimulatorApp: App {
 /// model, seeded from its document. Changes flow both ways.
 struct MainWindow: View {
     @Binding var document: ExperimentDocument
+    /// The document's file, or nil until it is saved.
+    let fileURL: URL?
     @State private var model: MainWindowModel
 
-    init(document: Binding<ExperimentDocument>, quotes: any QuoteProviding, dailyPrices: any DailyPriceProviding) {
+    init(
+        document: Binding<ExperimentDocument>,
+        fileURL: URL?,
+        quotes: any QuoteProviding,
+        dailyPrices: any DailyPriceProviding,
+    ) {
         _document = document
+        self.fileURL = fileURL
         _model = State(initialValue: MainWindowModel(
             experiment: document.wrappedValue.experiment,
             needsSetup: document.wrappedValue.needsSetup,
@@ -54,6 +63,7 @@ struct MainWindow: View {
         // experiment (equal to the new document's) as edited.
         ContentView(
             model: model,
+            fileURL: fileURL,
             onCreate: {
                 if let created = model.createExperiment() {
                     document.experiment = created
@@ -81,6 +91,11 @@ struct MainWindow: View {
             },
             onCheckOrders: {
                 if let updated = await model.checkLimitOrders() {
+                    document.experiment = updated
+                }
+            },
+            onSaveDetails: {
+                if let updated = model.completeEditingDetails() {
                     document.experiment = updated
                 }
             },

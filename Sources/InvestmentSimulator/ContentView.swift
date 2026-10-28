@@ -3,12 +3,15 @@ import SwiftUI
 
 struct ContentView: View {
     @Bindable var model: MainWindowModel
+    /// Shown as the experiment's title when it has no name.
+    let fileURL: URL?
     let onCreate: () -> Void
     let onPurchase: () -> Void
     let onPlaceLimitOrder: () -> Void
     let onPlaceBuyLimitOrder: () -> Void
     let onCancelOrder: (UUID) -> Void
     let onCheckOrders: () async -> Void
+    let onSaveDetails: () -> Void
 
     var body: some View {
         NavigationSplitView {
@@ -19,21 +22,27 @@ struct ContentView: View {
         } detail: {
             switch model.selection {
             case .experiment:
-                ExperimentDetailView(
-                    cashBalance: model.cashBalance,
-                    reservedCash: model.reservedCash(at:),
-                    purchases: model.purchases,
-                    hasLimitOrders: !model.experiment.limitOrders.isEmpty
-                        || !model.experiment.buyLimitOrders.isEmpty,
-                    limitOrderRows: model.limitOrderRows(at:),
-                    showsExpiredAndCancelledOrders: $model.showsExpiredAndCancelledOrders,
-                    onSellLimit: model.beginLimitOrder,
-                    onCancelOrder: onCancelOrder,
-                    canCheckOrders: model.canCheckOrders(at:),
-                    isCheckingOrders: model.isCheckingOrders,
-                    orderCheckMessage: model.orderCheckMessage,
-                    onCheckOrders: onCheckOrders,
-                )
+                VStack(spacing: 16) {
+                    ExperimentHeader(
+                        model: model,
+                        title: model.title(fileURL: fileURL),
+                        onEditDetails: model.beginEditingDetails,
+                    )
+                    .padding(.top, 16)
+                    ExperimentDetailView(
+                        purchases: model.purchases,
+                        hasLimitOrders: !model.experiment.limitOrders.isEmpty
+                            || !model.experiment.buyLimitOrders.isEmpty,
+                        limitOrderRows: model.limitOrderRows(at:),
+                        showsExpiredAndCancelledOrders: $model.showsExpiredAndCancelledOrders,
+                        onSellLimit: model.beginLimitOrder,
+                        onCancelOrder: onCancelOrder,
+                        canCheckOrders: model.canCheckOrders(at:),
+                        isCheckingOrders: model.isCheckingOrders,
+                        orderCheckMessage: model.orderCheckMessage,
+                        onCheckOrders: onCheckOrders,
+                    )
+                }
                 .toolbar {
                     Button("Buy…", systemImage: "cart.badge.plus", action: model.beginPurchase)
                     Button("Buy Limit…", systemImage: "arrow.down.to.line", action: model.beginBuyLimitOrder)
@@ -64,13 +73,23 @@ struct ContentView: View {
                         )
                     }
                 }
+                .sheet(isPresented: $model.isShowingDetails) {
+                    if let details = model.details {
+                        ExperimentDetailsSheet(
+                            model: details,
+                            onSave: onSaveDetails,
+                            onCancel: model.cancelEditingDetails,
+                        )
+                    }
+                }
             case nil:
                 ContentUnavailableView("No Selection", systemImage: "sidebar.left")
             }
         }
         // Tall enough for the fullest grouped-form sheet (about nine rows)
-        // to fit without scrolling.
-        .frame(minWidth: 640, minHeight: 480)
+        // to fit without scrolling, and for both tables to keep a few rows
+        // below the Experiment header (PIN-408).
+        .frame(minWidth: 640, minHeight: 640)
         // Over the whole window, so it shows once the Buy sheet closes.
         .overlay(ConfettiView(trigger: model.celebrationCount))
         // Cancelling the new experiment closes the new, untitled document.

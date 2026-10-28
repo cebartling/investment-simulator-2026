@@ -331,6 +331,21 @@ public final class MainWindowModel {
     }
 }
 
+/// The Experiment header (PIN-408).
+public extension MainWindowModel {
+    /// The experiment's name, else its file's name, else "Untitled" for a
+    /// document never saved. Takes the file's URL, which Save As changes.
+    func title(fileURL: URL?) -> String {
+        experiment.name ?? fileURL?.deletingPathExtension().lastPathComponent ?? "Untitled"
+    }
+
+    /// The cash a purchase or new buy order can spend at `date`. Takes the
+    /// date, so a view can redraw it as orders expire.
+    func availableCash(at date: Date) -> Decimal {
+        experiment.availableCash(at: readingDate(date)).amount
+    }
+}
+
 /// Edit Details (PIN-408).
 public extension MainWindowModel {
     func beginEditingDetails() {

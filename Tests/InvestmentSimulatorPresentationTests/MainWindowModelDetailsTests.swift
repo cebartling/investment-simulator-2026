@@ -3,7 +3,7 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import Testing
 
-/// Edit Details (PIN-408).
+/// The Experiment header and Edit Details (PIN-408).
 @MainActor
 struct MainWindowModelDetailsTests {
     @Test func `editing details shows the sheet with the current name and notes`() throws {
@@ -52,6 +52,42 @@ struct MainWindowModelDetailsTests {
         #expect(model.experiment == experiment)
         #expect(!model.isShowingDetails)
         #expect(model.details == nil)
+    }
+
+    @Test func `title is the experiment's name`() throws {
+        let model = try makeModel(name: "Index funds", notes: nil)
+
+        #expect(model.title(fileURL: URL(filePath: "/tmp/Retirement.invsim")) == "Index funds")
+    }
+
+    @Test func `title without a name is the file's name`() throws {
+        let model = try makeModel(name: nil, notes: nil)
+
+        #expect(model.title(fileURL: URL(filePath: "/tmp/Retirement plan.invsim")) == "Retirement plan")
+    }
+
+    @Test func `title of an unnamed, unsaved experiment is untitled`() throws {
+        #expect(try makeModel(name: nil, notes: nil).title(fileURL: nil) == "Untitled")
+    }
+
+    @Test func `available cash leaves out what open buy orders reserve`() throws {
+        let order = try BuyLimitOrder.placed(
+            id: UUID(),
+            ticker: Ticker("VTI"),
+            shares: 4,
+            limitPrice: Money(9),
+            at: fixedNow,
+        )
+        let model = try MainWindowModel(
+            experiment: Experiment(cashBalance: Money(100)).placing(order),
+            needsSetup: false,
+            quotes: FakeQuotes(.failure(.missingAPIKey)),
+            dailyPrices: FakeDailyPrices(),
+            clock: { fixedNow },
+        )
+
+        #expect(model.availableCash(at: fixedNow) == 64)
+        #expect(model.availableCash(at: order.expiresAt) == 100)
     }
 
     private static let created = Date(timeIntervalSince1970: 1_792_000_000)
