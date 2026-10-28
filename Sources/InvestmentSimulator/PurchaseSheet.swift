@@ -12,7 +12,7 @@ struct PurchaseSheet: View {
         // The grouped form insets its section by 20 points, so only the title
         // and buttons carry their own padding, to line up with its edges.
         VStack(alignment: .leading, spacing: 0) {
-            Text("Buy Investment")
+            Text("Market Buy")
                 .font(.title2.bold())
                 .padding([.horizontal, .top], 20)
             Form {

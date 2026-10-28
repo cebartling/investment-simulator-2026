@@ -74,6 +74,11 @@ struct MainWindow: View {
                     document.experiment = updated
                 }
             },
+            onSell: {
+                if let updated = model.completeSale() {
+                    document.experiment = updated
+                }
+            },
             onPlaceLimitOrder: {
                 if let updated = model.completeLimitOrder() {
                     document.experiment = updated

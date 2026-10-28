@@ -7,6 +7,7 @@ struct ContentView: View {
     let fileURL: URL?
     let onCreate: () -> Void
     let onPurchase: () -> Void
+    let onSell: () -> Void
     let onPlaceLimitOrder: () -> Void
     let onPlaceBuyLimitOrder: () -> Void
     let onCancelOrder: (UUID) -> Void
@@ -33,8 +34,10 @@ struct ContentView: View {
                         purchases: model.purchases,
                         hasLimitOrders: !model.experiment.limitOrders.isEmpty
                             || !model.experiment.buyLimitOrders.isEmpty,
+                        saleRows: model.saleRows,
                         limitOrderRows: model.limitOrderRows(at:),
                         showsExpiredAndCancelledOrders: $model.showsExpiredAndCancelledOrders,
+                        onSell: model.beginSale,
                         onSellLimit: model.beginLimitOrder,
                         onCancelOrder: onCancelOrder,
                         canCheckOrders: model.canCheckOrders(at:),
@@ -44,7 +47,8 @@ struct ContentView: View {
                     )
                 }
                 .toolbar {
-                    Button("Buy…", systemImage: "cart.badge.plus", action: model.beginPurchase)
+                    Button("Market Buy…", systemImage: "cart.badge.plus", action: model.beginPurchase)
+                        .help("Buy shares of a ticker now at the market price")
                     Button("Buy Limit…", systemImage: "arrow.down.to.line", action: model.beginBuyLimitOrder)
                         .help("Place an order to buy shares once the price drops to a limit")
                 }
@@ -53,6 +57,11 @@ struct ContentView: View {
                 .sheet(isPresented: $model.isShowingPurchase) {
                     if let purchase = model.purchase {
                         PurchaseSheet(model: purchase, onBuy: onPurchase, onCancel: model.cancelPurchase)
+                    }
+                }
+                .sheet(isPresented: $model.isShowingSale) {
+                    if let sale = model.sale {
+                        SaleSheet(model: sale, onSell: onSell, onCancel: model.cancelSale)
                     }
                 }
                 .sheet(isPresented: $model.isShowingBuyLimitOrder) {
@@ -90,7 +99,7 @@ struct ContentView: View {
         // to fit without scrolling, and for both tables to keep a few rows
         // below the Experiment header (PIN-408).
         .frame(minWidth: 640, minHeight: 640)
-        // Over the whole window, so it shows once the Buy sheet closes.
+        // Over the whole window, so it shows once the Market Buy or Market Sell sheet closes.
         .overlay(ConfettiView(trigger: model.celebrationCount))
         // Cancelling the new experiment closes the new, untitled document.
         .background(WindowCloser(isClosing: model.shouldCloseWindow))

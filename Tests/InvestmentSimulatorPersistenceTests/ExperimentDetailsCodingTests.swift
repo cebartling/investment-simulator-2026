@@ -28,7 +28,7 @@ struct ExperimentDetailsCodingTests {
 
         let json = try object(codec.encode(experiment))
 
-        #expect(json["schemaVersion"] as? Int == 6)
+        #expect(json["schemaVersion"] as? Int == 7)
         #expect(json["name"] as? String == "Index funds")
         #expect(json["notes"] as? String == "Hold")
         #expect(json["createdAt"] as? String == "2026-10-15T09:46:40.000Z")

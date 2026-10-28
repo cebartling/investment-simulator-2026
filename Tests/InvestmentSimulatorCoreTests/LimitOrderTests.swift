@@ -161,6 +161,24 @@ struct LimitOrderTests {
 
         #expect(try order.proceeds == Money(#require(Decimal(string: "1046.10"))))
     }
+
+    @Test func `an unfilled order has no fill time`() throws {
+        #expect(try makeLimitOrder().filledAt == nil)
+    }
+
+    @Test func `a filled order dates from its session's 4 PM close in New York`() throws {
+        let filled = try makeLimitOrder().filled(on: "2026-10-23")
+
+        #expect(filled.filledAt == ISO8601DateFormatter().date(from: "2026-10-23T20:00:00Z"))
+    }
+
+    @Test func `realized gain is proceeds less what the sold shares cost`() throws {
+        let purchase = try makePurchase(shares: 10, price: "9.995")
+        let order = try makeLimitOrder(shares: 3, limitPrice: "12.5")
+
+        // 37.50 − 29.98 (29.985 rounded to cents).
+        #expect(try order.realizedGain(on: purchase) == Money(#require(Decimal(string: "7.52"))))
+    }
 }
 
 func makeLimitOrder(

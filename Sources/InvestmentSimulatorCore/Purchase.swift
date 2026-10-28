@@ -46,6 +46,14 @@ public struct Purchase: Sendable, Hashable, Identifiable {
 
     /// Price times shares, rounded to cents: what the purchase takes from cash.
     public var cost: Money {
+        cost(of: shares)
+    }
+
+    /// What `shares` of the purchase cost: price times shares, rounded to
+    /// cents. A sale's realized gain subtracts it (ADR-0016). Rounded on its
+    /// own, so the costs of a purchase sold in pieces can sum to a cent more
+    /// or less than `cost`.
+    public func cost(of shares: Int) -> Money {
         Money(pricePerShare).times(shares).roundedToCents()
     }
 }

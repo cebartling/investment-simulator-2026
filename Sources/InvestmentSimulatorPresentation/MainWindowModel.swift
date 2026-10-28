@@ -23,6 +23,10 @@ public final class MainWindowModel {
     /// The Sell Limit sheet's model while it is shown.
     public private(set) var limitOrder: LimitOrderModel?
 
+    public var isShowingSale = false
+    /// The Market Sell sheet's model while it is shown.
+    public private(set) var sale: SaleModel?
+
     public var isShowingBuyLimitOrder = false
     /// The Buy Limit sheet's model while it is shown.
     public private(set) var buyLimitOrder: BuyLimitOrderModel?
@@ -40,8 +44,8 @@ public final class MainWindowModel {
     /// What the last Check Orders found, or why it failed.
     public private(set) var orderCheckMessage: String?
 
-    /// Counts the buys and the checks that filled orders, buy or sell, so the window can
-    /// celebrate each one.
+    /// Counts the buys, the sales and the checks that filled orders, buy or
+    /// sell, so the window can celebrate each one.
     public private(set) var celebrationCount = 0
 
     private let quotes: any QuoteProviding
@@ -88,7 +92,7 @@ public final class MainWindowModel {
 
     /// The later of `date` and now. A minute timeline passes the start of
     /// the minute, which is before an order cancelled during it.
-    private func readingDate(_ date: Date) -> Date {
+    func readingDate(_ date: Date) -> Date {
         max(date, clock())
     }
 
@@ -131,67 +135,6 @@ public final class MainWindowModel {
     public func cancelPurchase() {
         isShowingPurchase = false
         purchase = nil
-    }
-
-    /// The buy and sell limit orders as they stand at `date`, in the order
-    /// they were placed, so a view can redraw them as orders expire. Leaves
-    /// out expired and cancelled orders unless
-    /// `showsExpiredAndCancelledOrders` is on.
-    public func limitOrderRows(at date: Date) -> [LimitOrderRow] {
-        let date = readingDate(date)
-        let tickers = Dictionary(uniqueKeysWithValues: experiment.purchases.map { ($0.id, $0.ticker) })
-        let sellRows = experiment.limitOrders.compactMap { order in
-            // Experiment rejects an order whose purchase it doesn't have.
-            tickers[order.purchaseID].map {
-                LimitOrderRow(
-                    id: order.id,
-                    side: .sell,
-                    ticker: $0,
-                    shares: order.shares,
-                    limitPrice: order.limitPrice,
-                    placedAt: order.placedAt,
-                    expiresAt: order.expiresAt,
-                    status: status(
-                        filledOn: order.filledOn,
-                        cancelledAt: order.cancelledAt,
-                        isOpen: order.isOpen(at: date),
-                    ),
-                )
-            }
-        }
-        let buyRows = experiment.buyLimitOrders.map { order in
-            LimitOrderRow(
-                id: order.id,
-                side: .buy,
-                ticker: order.ticker,
-                shares: order.shares,
-                limitPrice: order.limitPrice,
-                placedAt: order.placedAt,
-                expiresAt: order.expiresAt,
-                status: status(
-                    filledOn: order.filledOn,
-                    cancelledAt: order.cancelledAt,
-                    isOpen: order.isOpen(at: date),
-                ),
-            )
-        }
-        // Sorting is stable, so orders placed at the same time keep their
-        // order.
-        return (sellRows + buyRows)
-            .filter { showsExpiredAndCancelledOrders || ($0.status != .expired && $0.status != .cancelled) }
-            .sorted { $0.placedAt < $1.placedAt }
-    }
-
-    private func status(filledOn: String?, cancelledAt: Date?, isOpen: Bool) -> LimitOrderRow.Status {
-        if let filledOn {
-            .filled(sessionDate: filledOn)
-        } else if isOpen {
-            .open
-        } else if cancelledAt != nil {
-            .cancelled
-        } else {
-            .expired
-        }
     }
 
     /// True when a settled session could fill an order open at `date`, and
@@ -343,6 +286,38 @@ public extension MainWindowModel {
     /// date, so a view can redraw it as orders expire.
     func availableCash(at date: Date) -> Decimal {
         experiment.availableCash(at: readingDate(date)).amount
+    }
+}
+
+/// Market sales and the Sales table (PIN-409).
+public extension MainWindowModel {
+    func beginSale(of purchase: Purchase) {
+        sale = SaleModel(
+            purchase: purchase,
+            availableShares: experiment.availableShares(of: purchase, at: clock()),
+            cashBalance: experiment.cashBalance,
+            quotes: quotes,
+            clock: clock,
+        )
+        isShowingSale = true
+    }
+
+    /// Returns the experiment after the sale, for the document to save.
+    /// Returns nil while the sale can't be made, leaving the sheet open.
+    @discardableResult
+    func completeSale() -> Experiment? {
+        guard let sold = sale?.sell(), let updated = try? experiment.selling(sold) else {
+            return nil
+        }
+        experiment = updated
+        celebrationCount += 1
+        cancelSale()
+        return updated
+    }
+
+    func cancelSale() {
+        isShowingSale = false
+        sale = nil
     }
 }
 
