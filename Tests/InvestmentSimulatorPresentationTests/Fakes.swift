@@ -35,6 +35,41 @@ final class FakeQuotes: QuoteProviding {
     }
 }
 
+/// Answers each ticker's quote from `results`, keyed by symbol, and records
+/// the tickers it was asked for. A ticker with no result is unavailable.
+final class FakeTickerQuotes: QuoteProviding {
+    private let results: Mutex<[String: Result<Quote, QuoteError>]>
+    private let asked = Mutex<[String]>([])
+
+    init(_ results: [String: Result<Quote, QuoteError>]) {
+        self.results = Mutex(results)
+    }
+
+    /// The symbols asked for, in the order asked.
+    var requests: [String] {
+        asked.withLock { $0 }
+    }
+
+    func answer(_ symbol: String, with result: Result<Quote, QuoteError>) {
+        results.withLock { $0[symbol] = result }
+    }
+
+    func quote(for ticker: Ticker) async throws(QuoteError) -> Quote {
+        asked.withLock { $0.append(ticker.symbol) }
+        let result = results.withLock { $0[ticker.symbol] } ?? .failure(.unavailable("No fake result"))
+        return try result.get()
+    }
+}
+
+/// A quote for `ticker` at `price`, as of `asOf`.
+func makeQuote(
+    ticker: String,
+    price: Decimal,
+    asOf: Date = Date(timeIntervalSince1970: 1_793_000_000),
+) throws -> Quote {
+    try Quote(ticker: Ticker(ticker), price: price, asOf: asOf, source: .liveQuote(delayed: true))
+}
+
 /// Answers each ticker's daily bars from `bars`, or every request with
 /// `failure`, and records the requests it was sent. `whileAnswering` runs
 /// on the main actor during each request, as a change made mid-check.
