@@ -31,3 +31,20 @@ struct SaleV7: Codable {
     /// Present for `close`.
     let sessionDate: String?
 }
+
+extension ExperimentDocumentV6 {
+    /// The document in version 7, which adds sales, with no sales.
+    var withNoSales: ExperimentDocumentV7 {
+        ExperimentDocumentV7(
+            schemaVersion: ExperimentDocumentV7.schemaVersion,
+            cashBalance: cashBalance,
+            purchases: purchases,
+            limitOrders: limitOrders,
+            buyLimitOrders: buyLimitOrders,
+            sales: [],
+            name: name,
+            notes: notes,
+            createdAt: createdAt,
+        )
+    }
+}

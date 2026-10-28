@@ -92,7 +92,7 @@ public final class MainWindowModel {
 
     /// The later of `date` and now. A minute timeline passes the start of
     /// the minute, which is before an order cancelled during it.
-    private func readingDate(_ date: Date) -> Date {
+    func readingDate(_ date: Date) -> Date {
         max(date, clock())
     }
 
@@ -135,67 +135,6 @@ public final class MainWindowModel {
     public func cancelPurchase() {
         isShowingPurchase = false
         purchase = nil
-    }
-
-    /// The buy and sell limit orders as they stand at `date`, in the order
-    /// they were placed, so a view can redraw them as orders expire. Leaves
-    /// out expired and cancelled orders unless
-    /// `showsExpiredAndCancelledOrders` is on.
-    public func limitOrderRows(at date: Date) -> [LimitOrderRow] {
-        let date = readingDate(date)
-        let tickers = Dictionary(uniqueKeysWithValues: experiment.purchases.map { ($0.id, $0.ticker) })
-        let sellRows = experiment.limitOrders.compactMap { order in
-            // Experiment rejects an order whose purchase it doesn't have.
-            tickers[order.purchaseID].map {
-                LimitOrderRow(
-                    id: order.id,
-                    side: .sell,
-                    ticker: $0,
-                    shares: order.shares,
-                    limitPrice: order.limitPrice,
-                    placedAt: order.placedAt,
-                    expiresAt: order.expiresAt,
-                    status: status(
-                        filledOn: order.filledOn,
-                        cancelledAt: order.cancelledAt,
-                        isOpen: order.isOpen(at: date),
-                    ),
-                )
-            }
-        }
-        let buyRows = experiment.buyLimitOrders.map { order in
-            LimitOrderRow(
-                id: order.id,
-                side: .buy,
-                ticker: order.ticker,
-                shares: order.shares,
-                limitPrice: order.limitPrice,
-                placedAt: order.placedAt,
-                expiresAt: order.expiresAt,
-                status: status(
-                    filledOn: order.filledOn,
-                    cancelledAt: order.cancelledAt,
-                    isOpen: order.isOpen(at: date),
-                ),
-            )
-        }
-        // Sorting is stable, so orders placed at the same time keep their
-        // order.
-        return (sellRows + buyRows)
-            .filter { showsExpiredAndCancelledOrders || ($0.status != .expired && $0.status != .cancelled) }
-            .sorted { $0.placedAt < $1.placedAt }
-    }
-
-    private func status(filledOn: String?, cancelledAt: Date?, isOpen: Bool) -> LimitOrderRow.Status {
-        if let filledOn {
-            .filled(sessionDate: filledOn)
-        } else if isOpen {
-            .open
-        } else if cancelledAt != nil {
-            .cancelled
-        } else {
-            .expired
-        }
     }
 
     /// True when a settled session could fill an order open at `date`, and
@@ -379,46 +318,6 @@ public extension MainWindowModel {
     func cancelSale() {
         isShowingSale = false
         sale = nil
-    }
-
-    /// The market sales and filled sell orders, by when they sold. A fill
-    /// sold at its session's close.
-    var saleRows: [SaleRow] {
-        let purchases = Dictionary(uniqueKeysWithValues: experiment.purchases.map { ($0.id, $0) })
-        // Experiment rejects a sale or order whose purchase it doesn't have.
-        let marketRows = experiment.sales.compactMap { sale in
-            purchases[sale.purchaseID].map {
-                SaleRow(
-                    id: sale.id,
-                    kind: .market(sale.priceSource),
-                    ticker: $0.ticker,
-                    shares: sale.shares,
-                    pricePerShare: sale.pricePerShare,
-                    proceeds: sale.proceeds,
-                    realizedGain: sale.realizedGain(on: $0),
-                    soldAt: sale.soldAt,
-                )
-            }
-        }
-        let fillRows = experiment.limitOrders.compactMap { order -> SaleRow? in
-            guard let filledOn = order.filledOn, let filledAt = order.filledAt,
-                  let purchase = purchases[order.purchaseID]
-            else {
-                return nil
-            }
-            return SaleRow(
-                id: order.id,
-                kind: .limitFill(sessionDate: filledOn),
-                ticker: purchase.ticker,
-                shares: order.shares,
-                pricePerShare: order.limitPrice.amount,
-                proceeds: order.proceeds,
-                realizedGain: order.realizedGain(on: purchase),
-                soldAt: filledAt,
-            )
-        }
-        // Sorting is stable, so sales at the same time keep their order.
-        return (marketRows + fillRows).sorted { $0.soldAt < $1.soldAt }
     }
 }
 

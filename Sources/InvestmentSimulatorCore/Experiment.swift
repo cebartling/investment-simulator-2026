@@ -86,7 +86,9 @@ public struct Experiment: Sendable, Hashable {
         self = experiment
     }
 
-    private init(
+    /// An experiment exactly as given, with none of the checks the public
+    /// init makes. Only Core's own changes to a valid experiment use it.
+    init(
         validCashBalance cashBalance: Money,
         purchases: [Purchase],
         limitOrders: [LimitOrder],
@@ -172,27 +174,6 @@ public struct Experiment: Sendable, Hashable {
             notes: notes,
             createdAt: createdAt,
         )
-    }
-
-    /// The shares of `purchase` neither sold, by a sale or a filled order,
-    /// nor reserved by an order open at `date`. Sold shares are gone
-    /// whatever the date.
-    public func availableShares(of purchase: Purchase, at date: Date) -> Int {
-        let ordered = limitOrders
-            .filter { $0.purchaseID == purchase.id && ($0.filledOn != nil || $0.isOpen(at: date)) }
-            .map(\.shares)
-            .reduce(0, +)
-        let sold = sales
-            .filter { $0.purchaseID == purchase.id }
-            .map(\.shares)
-            .reduce(0, +)
-        return purchase.shares - ordered - sold
-    }
-
-    /// The experiment after `sale`, its proceeds added to cash. It can sell
-    /// only shares available when it is made (ADR-0016).
-    public func selling(_ sale: Sale) throws(ExperimentError) -> Experiment {
-        try recording(sale, cashBalance: cashBalance + sale.proceeds)
     }
 
     /// The experiment with `order` placed. Its shares must be unreserved
@@ -331,51 +312,6 @@ public struct Experiment: Sendable, Hashable {
 }
 
 private extension Experiment {
-    /// A step a rebuilt experiment takes again to check its shares.
-    enum ShareStep {
-        case placing(LimitOrder)
-        case selling(Sale)
-    }
-
-    /// The sell placements and sales in time order. At the same time,
-    /// placements come first, then sales, each in saved order. Either way
-    /// gives the same result: at one instant an open order and a sale each
-    /// count the other's shares as taken (ADR-0016).
-    static func shareSteps(limitOrders: [LimitOrder], sales: [Sale]) -> [ShareStep] {
-        let placements = limitOrders.enumerated().map { index, order in
-            (date: order.placedAt, kind: 0, index: index, step: ShareStep.placing(order))
-        }
-        let sold = sales.enumerated().map { index, sale in
-            (date: sale.soldAt, kind: 1, index: index, step: ShareStep.selling(sale))
-        }
-        return (placements + sold)
-            .sorted { ($0.date, $0.kind, $0.index) < ($1.date, $1.kind, $1.index) }
-            .map(\.step)
-    }
-
-    /// The experiment with `sale` recorded and its cash set to
-    /// `cashBalance`. The sale must be of a known purchase's available
-    /// shares.
-    func recording(_ sale: Sale, cashBalance: Money) throws(ExperimentError) -> Experiment {
-        guard let purchase = purchases.first(where: { $0.id == sale.purchaseID }) else {
-            throw .unknownPurchase(sale.purchaseID)
-        }
-        let available = availableShares(of: purchase, at: sale.soldAt)
-        guard sale.shares <= available else {
-            throw .insufficientShares(requested: sale.shares, available: available)
-        }
-        return Experiment(
-            validCashBalance: cashBalance,
-            purchases: purchases,
-            limitOrders: limitOrders,
-            buyLimitOrders: buyLimitOrders,
-            sales: sales + [sale],
-            name: name,
-            notes: notes,
-            createdAt: createdAt,
-        )
-    }
-
     /// No two purchases, orders or sales share an id, apart from a filled
     /// buy order and the purchase its fill made, which checkFillPurchases
     /// pairs.
@@ -447,23 +383,4 @@ private extension Experiment {
             preconditionFailure("An open buy limit order couldn't be cancelled: \(error)")
         }
     }
-}
-
-public enum ExperimentError: Error, Equatable {
-    case negativeCashBalance(Money)
-    case insufficientCash(cost: Money, available: Money)
-    case unknownPurchase(UUID)
-    case insufficientShares(requested: Int, available: Int)
-    case unknownOrder(UUID)
-    case orderAlreadyFilled(UUID)
-    case orderCancelled(UUID)
-    /// The order has filled, expired or been cancelled.
-    case orderNotOpen(UUID)
-    case invalidSessionDate(String)
-    /// A filled buy order without its purchase, or a purchase marked as a
-    /// fill without its filled buy order.
-    case mismatchedFillPurchase(UUID)
-    /// Two purchases or orders share an id. A filled buy order and its
-    /// purchase are the one pair that shares one.
-    case duplicateID(UUID)
 }

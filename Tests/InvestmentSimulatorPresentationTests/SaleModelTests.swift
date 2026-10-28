@@ -57,7 +57,9 @@ struct SaleModelTests {
     @Test func `a purchase with no free shares says so and can't be sold or priced`() throws {
         let model = try makeModel(available: 0)
 
-        #expect(model.sharesMessage == "No shares of this purchase are free. Cancel an open sell order to free its shares.")
+        #expect(
+            model.sharesMessage == "No shares of this purchase are free. Cancel an open sell order to free its shares.",
+        )
         #expect(!model.canGetPrice)
         #expect(!model.canSell)
     }
