@@ -48,9 +48,13 @@ struct PurchaseCodingTests {
 
         let experiment = try codec.decode(data)
 
-        #expect(try experiment == Experiment(cashBalance: Money(500), purchases: [
-            makePurchase(id: 1, shares: 2, price: "250.1", source: .liveQuote(delayed: true)),
-        ]))
+        // Migration dates the experiment by its only purchase.
+        let purchase = try makePurchase(id: 1, shares: 2, price: "250.1", source: .liveQuote(delayed: true))
+        #expect(try experiment == Experiment(
+            cashBalance: Money(500),
+            purchases: [purchase],
+            createdAt: purchase.pricedAt,
+        ))
     }
 
     @Test(arguments: [
