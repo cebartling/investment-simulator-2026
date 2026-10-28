@@ -1,0 +1,20 @@
+{
+  "fill" : {
+    "automatic-gradient" : "srgb:0.10000,0.55000,0.35000,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "placeholder.svg",
+          "name" : "placeholder"
+        }
+      ]
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "macOS"
+    ]
+  }
+}
