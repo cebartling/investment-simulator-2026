@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "invalid_parameter",
+    "message": "Unknown documentType 'TenK,TenQ,EightK'. Valid values: AnnualReportToHolders, Def14A, Defa14A, Defm14A, Defr14A, EarningsCallTranscript, EightK, EightKa, EsefAnnualReport, EsefReport, FFour, FFourA, FOne, FOneA, Form144, FormD, FormDa, FormFive, FormFiveA, FormFour, FormFourA, FormThree, FormThreeA, FortyF, FortyFa, FThree, FThreeA, FThreeAsr, InvestorEventTranscript, IrNews, LateTenK, LateTenQ, LateTwentyF, NativeAnnualReport, NativeInterimReport, NativeListingDocument, NCen, NCenA, NportP, NportPa, Other, Pre14A, Prem14A, SFour, SFourA, SixK, SixKa, SOne, SOneA, SThree, SThreeA, SThreeAsr, TenderOfferCommunication, TenderOfferIssuer, TenderOfferIssuerA, TenderOfferResponse, TenderOfferResponseA, TenderOfferThirdParty, TenderOfferThirdPartyA, TenK, TenKa, TenQ, TenQa, TwentyF, TwentyFa.",
+    "status": 400
+  }
+}

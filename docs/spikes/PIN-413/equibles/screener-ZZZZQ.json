@@ -1,0 +1,15 @@
+{
+  "totalCount": 0,
+  "count": 0,
+  "page": 1,
+  "totalPages": 1,
+  "vintages": {
+    "shortInterestSettlementDate": "2026-10-15",
+    "thirteenFQuarterEnd": "2026-06-30",
+    "holderSignalsQuarterEnd": "2026-06-30"
+  },
+  "notFound": [
+    "ZZZZQ"
+  ],
+  "data": []
+}

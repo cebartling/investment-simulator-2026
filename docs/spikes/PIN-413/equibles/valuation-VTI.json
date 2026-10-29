@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "not_found",
+    "message": "VB has no computable valuation multiple. TTM money flows need four consecutive discrete fiscal quarters in USD or an exact annual plus current YTD minus prior comparable YTD bridge; a lone annual report is not TTM. Diluted EPS must reconcile to income and diluted weighted shares on one effective split basis; P/E may instead use explicitly reported positive income available to common shareholders. Enterprise-value concepts must share one balance-sheet date. Annual-only 20-F/40-F coverage without comparable interim figures, unsupported currencies and missing debt remain unavailable; missing inputs are never estimated.",
+    "status": 404
+  }
+}

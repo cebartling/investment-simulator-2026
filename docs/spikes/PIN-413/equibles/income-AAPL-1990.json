@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "not_found",
+    "message": "No income statement line items were found for AAPL for FY1990 FY. Reported periods include: FY2026 Q3, FY2026 Q2, FY2026 Q1, FY2025 FY, FY2025 Q3, FY2025 Q2, FY2025 Q1, FY2024 FY. Omit year and period to request the latest available statement.",
+    "status": 404
+  }
+}

@@ -1,0 +1,57 @@
+[
+  {
+    "category": "company",
+    "datetime": 1793293080,
+    "headline": "Nvidia Is Getting Dangerously Close to Getting Surpassed by Apple in Market Cap. Here's the Better Growth Stock to Buy Now.",
+    "id": 143293567,
+    "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+    "related": "AAPL",
+    "source": "Yahoo",
+    "summary": "Apple and Nvidia are the only two companies with market caps above $5 trillion today. Apple is ready to zoom past Nvidia.",
+    "url": "https://finnhub.io/api/news?id=a725ad76085639ed331df7948955e4fb8a18dceababd15a8eedd50fe64f7d83f"
+  },
+  {
+    "category": "company",
+    "datetime": 1793289990,
+    "headline": "Apple Unveils Its First-Ever Touchscreen MacBook Pro. Should Investors Be Concerned About the $2,899 Price Tag?",
+    "id": 143293596,
+    "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+    "related": "AAPL",
+    "source": "Yahoo",
+    "summary": "Apple’s price tag looks steep, but the real story is how it’s handling rising costs without raising prices for everyone.",
+    "url": "https://finnhub.io/api/news?id=900df4aea0ab12c5af1972a437d184e0ad7620ffcbe8d02d0d61c7900eff0741"
+  },
+  {
+    "category": "company",
+    "datetime": 1793287620,
+    "headline": "Walmart, Eli Lilly Join 38 Companies Opposing OKX-ICE Tokenized Stocks",
+    "id": 143292174,
+    "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+    "related": "AAPL",
+    "source": "Yahoo",
+    "summary": "Walmart (NYSE: $WMT), Eli Lilly (NYSE: $LLY), Cigna Group (NYSE: $CI), Carnival (NYSE: $CCL) and Arcos Dorados (NYS...",
+    "url": "https://finnhub.io/api/news?id=d428483546ab5283342fbdb53a361407d3c118239ec36d07dc962f8a3cb0ac7e"
+  },
+  {
+    "category": "company",
+    "datetime": 1793282700,
+    "headline": "What Volkswagen (VOW3) Said on Its Q3 Earnings Call",
+    "id": 143292021,
+    "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+    "related": "AAPL",
+    "source": "Yahoo",
+    "summary": "Volkswagen (ETR:VOW3) reported a near break-even operating result for the first nine months of 2026 as a sharp decline in China, tariffs, higher costs and substantial special items weighed on profitability. The group said it is accelerating cost-cutting and restructuring efforts under its Target Pic",
+    "url": "https://finnhub.io/api/news?id=7788cba1d06efa85820190de3a7491ff418a7e757f6d25ebaa7db5454b922b75"
+  },
+  {
+    "category": "company",
+    "datetime": 1793281386,
+    "headline": "Microsoft beat estimates while Google looks at a value hit, and rising risks at Nvidia",
+    "id": 143288490,
+    "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+    "related": "AAPL",
+    "source": "Yahoo",
+    "summary": "The 8:30 hosts Julie Hyman, Jake Conely, and Pras Subramanian tackle the top stories of the day. Including rounding up the earnings from Microsoft (MSFT) and Alphabet  (GOOGL)(GOOG), the mounting risks at Nvidia (NVDA), and the new touchscreen laptop Apple (AAPL) just debuted.",
+    "url": "https://finnhub.io/api/news?id=c9b5abdcf75b229552c9e4fce4794e765be623ca04272dd3561779f1da7d2931"
+  }
+]

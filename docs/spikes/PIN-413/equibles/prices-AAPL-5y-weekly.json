@@ -1,0 +1,65 @@
+{
+  "data": [
+    {
+      "date": "2026-10-28",
+      "open": 343.92,
+      "high": 347.78,
+      "low": 341.03,
+      "close": 343.83,
+      "adjustedClose": 343.83,
+      "volume": 120507727,
+      "periodStart": "2026-10-26",
+      "partial": true
+    },
+    {
+      "date": "2026-10-23",
+      "open": 340.775,
+      "high": 351.73,
+      "low": 338.7,
+      "close": 347.725,
+      "adjustedClose": 347.725,
+      "volume": 194259397,
+      "periodStart": "2026-10-19",
+      "partial": false
+    },
+    {
+      "date": "2026-10-16",
+      "open": 338.215,
+      "high": 348.1499,
+      "low": 337.6,
+      "close": 343.46,
+      "adjustedClose": 343.46,
+      "volume": 214950436,
+      "periodStart": "2026-10-12",
+      "partial": false
+    },
+    {
+      "date": "2021-11-05",
+      "open": 148.99,
+      "high": 152.43,
+      "low": 147.8,
+      "close": 151.28,
+      "adjustedClose": 147.7695,
+      "volume": 324080300,
+      "periodStart": "2021-11-01",
+      "partial": false
+    },
+    {
+      "date": "2021-10-29",
+      "open": 149.82,
+      "high": 153.17,
+      "low": 146.41,
+      "close": 149.8,
+      "adjustedClose": 146.1106,
+      "volume": 225031100,
+      "periodStart": "2021-10-25",
+      "partial": true
+    }
+  ],
+  "meta": {
+    "limit": 500,
+    "offset": 0,
+    "count": 262,
+    "hasMore": false
+  }
+}

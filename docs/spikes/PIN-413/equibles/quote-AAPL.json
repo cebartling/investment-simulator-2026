@@ -1,0 +1,12 @@
+{
+  "ticker": "AAPL",
+  "price": 350.105,
+  "bidPrice": 350.1,
+  "askPrice": 350.11,
+  "asOf": "2026-10-29T18:12:24.7001054Z",
+  "sessionDate": "2026-10-29",
+  "expectedSessionDate": "2026-10-29",
+  "stale": false,
+  "ageSeconds": 900,
+  "delayed": true
+}

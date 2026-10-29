@@ -1,0 +1,44 @@
+{
+  "coverage": {
+    "status": "scraped",
+    "lastScrapedAt": "2026-10-29T11:04:13.49419Z"
+  },
+  "data": [
+    {
+      "publishedAt": "2026-10-19T11:00:00Z",
+      "title": "Plug Power Appoints Dr. Lee Sweetland as Global Engineering Industrialization Lead",
+      "url": "https://www.ir.plugpower.com/press-releases/news-details/2026/Plug-Power-Appoints-Dr--Lee-Sweetland-as-Global-Engineering-Industrialization-Lead/default.aspx",
+      "summary": null
+    },
+    {
+      "publishedAt": "2026-10-15T11:00:00Z",
+      "title": "Plug Power Reports Continued Business Progress, Sets Dates for Third Quarter 2026 Earnings Call and Global Plug Symposium",
+      "url": "https://www.ir.plugpower.com/press-releases/news-details/2026/Plug-Power-Reports-Continued-Business-Progress-Sets-Dates-for-Third-Quarter-2026-Earnings-Call-and-Global-Plug-Symposium/default.aspx",
+      "summary": null
+    },
+    {
+      "publishedAt": "2026-09-29T11:00:00Z",
+      "title": "Plug and Arcadia eFuels Sign Strategic Partnership Covering More Than 1 GW of e-SAF Projects, Starting with 280 MW to Turn Danish Renewable Electricity into Jet Fuel",
+      "url": "https://www.ir.plugpower.com/press-releases/news-details/2026/Plug-and-Arcadia-eFuels-Sign-Strategic-Partnership-Covering-More-Than-1-GW-of-e-SAF-Projects-Starting-with-280-MW-to-Turn-Danish-Renewable-Electricity-into-Jet-Fuel/default.aspx",
+      "summary": null
+    },
+    {
+      "publishedAt": "2026-09-22T11:00:00Z",
+      "title": "Plug Power Expands Hydrogen Footprint Across New Zealand and Australia with GenEco™ Electrolyzer Delivery to HWR Hydrogen",
+      "url": "https://www.ir.plugpower.com/press-releases/news-details/2026/Plug-Power-Expands-Hydrogen-Footprint-Across-New-Zealand-and-Australia-with-GenEco-Electrolyzer-Delivery-to-HWR-Hydrogen/default.aspx",
+      "summary": null
+    },
+    {
+      "publishedAt": "2026-08-10T20:01:00Z",
+      "title": "Plug Reports Revenue of ~$178 Million, ~Break-Even Gross Margin, Net Cash Usage of ~$61 Million and Increases Revenue Guidance for 2026",
+      "url": "https://www.ir.plugpower.com/press-releases/news-details/2026/Plug-Reports-Revenue-of-178-Million-Break-Even-Gross-Margin-Net-Cash-Usage-of-61-Million-and-Increases-Revenue-Guidance-for-2026/default.aspx",
+      "summary": null
+    }
+  ],
+  "meta": {
+    "limit": 5,
+    "offset": 0,
+    "count": 5,
+    "hasMore": true
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "ticker": "AAPL",
+  "companyName": "Apple Inc.",
+  "statement": "cashflow",
+  "fiscalYear": 2026,
+  "fiscalPeriod": "Q3",
+  "data": [
+    {
+      "lineItem": "Net Income",
+      "value": 29789000000.0,
+      "unit": "USD",
+      "basis": "reported",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-06-27",
+      "form": "10-Q",
+      "filedDate": "2026-07-31",
+      "accessionNumber": "0000320193-26-000020",
+      "documentId": "dd7d5e88-69c1-4130-9da8-58bacc4b9d96"
+    },
+    {
+      "lineItem": "Depreciation & Amortization",
+      "value": 3320000000.0,
+      "unit": "USD",
+      "basis": "derived",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-06-27",
+      "form": null,
+      "filedDate": "2026-07-31",
+      "accessionNumber": null,
+      "documentId": null
+    },
+    {
+      "lineItem": "Share-Based Compensation",
+      "value": 3401000000.0,
+      "unit": "USD",
+      "basis": "derived",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-06-27",
+      "form": null,
+      "filedDate": "2026-07-31",
+      "accessionNumber": null,
+      "documentId": null
+    },
+    {
+      "lineItem": "Operating Cash Flow",
+      "value": 34369000000.0,
+      "unit": "USD",
+      "basis": "derived",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-06-27",
+      "form": null,
+      "filedDate": "2026-07-31",
+      "accessionNumber": null,
+      "documentId": null
+    },
+    {
+      "lineItem": "Capital Expenditures",
+      "value": 2455000000.0,
+      "unit": "USD",
+      "basis": "derived",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-06-27",
+      "form": null,
+      "filedDate": "2026-07-31",
+      "accessionNumber": null,
+      "documentId": null
+    },
+    {
+      "lineItem": "Investing Cash Flow",
+      "value": -7757000000.0,
+      "unit": "USD",
+      "basis": "derived",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-06-27",
+      "form": null,
+      "filedDate": "2026-07-31",
+      "accessionNumber": null,
+      "documentId": null
+    },
+    {
+      "lineItem": "Share Repurchases",
+      "value": 25105000000.0,
+      "unit": "USD",
+      "basis": "derived",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-06-27",
+      "form": null,
+      "filedDate": "2026-07-31",
+      "accessionNumber": null,
+      "documentId": null
+    },
+    {
+      "lineItem": "Dividends Paid",
+      "value": 4035000000.0,
+      "unit": "USD",
+      "basis": "derived",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-06-27",
+      "form": null,
+      "filedDate": "2026-07-31",
+      "accessionNumber": null,
+      "documentId": null
+    },
+    {
+      "lineItem": "Debt Repaid",
+      "value": 232000000.0,
+      "unit": "USD",
+      "basis": "derived",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-06-27",
+      "form": null,
+      "filedDate": "2026-07-31",
+      "accessionNumber": null,
+      "documentId": null
+    },
+    {
+      "lineItem": "Financing Cash Flow",
+      "value": -32640000000.0,
+      "unit": "USD",
+      "basis": "derived",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-06-27",
+      "form": null,
+      "filedDate": "2026-07-31",
+      "accessionNumber": null,
+      "documentId": null
+    },
+    {
+      "lineItem": "Net Change in Cash",
+      "value": -6028000000.0,
+      "unit": "USD",
+      "basis": "derived",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-06-27",
+      "form": null,
+      "filedDate": "2026-07-31",
+      "accessionNumber": null,
+      "documentId": null
+    }
+  ]
+}

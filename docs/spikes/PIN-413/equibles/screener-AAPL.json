@@ -1,0 +1,45 @@
+{
+  "totalCount": 1,
+  "count": 1,
+  "page": 1,
+  "totalPages": 1,
+  "vintages": {
+    "shortInterestSettlementDate": "2026-10-15",
+    "thirteenFQuarterEnd": "2026-06-30",
+    "holderSignalsQuarterEnd": "2026-06-30"
+  },
+  "notFound": [],
+  "data": [
+    {
+      "ticker": "AAPL",
+      "name": "Apple Inc.",
+      "market": "US",
+      "currency": "USD",
+      "sector": "Technology",
+      "industry": "Consumer Electronics",
+      "marketCap": 5024265535488.0,
+      "price": 343.83,
+      "filerCount": 6192,
+      "filerDelta": 23,
+      "shortInterestPercent": 0.9,
+      "daysToCover": 3.71,
+      "squeezeScore": 56.43,
+      "insiderSentimentScore": null,
+      "netInsiderBuy": -95477077.12,
+      "hasGoingConcernDoubt": false,
+      "priceToEarnings": 39.475315729047075,
+      "dividendYieldPercent": 0.30829188843323735,
+      "revenueGrowthYoYPercent": 16.356501765281383,
+      "grossMarginPercent": 48.65291555900202,
+      "averageDollarVolume3Month": 14228268544.0,
+      "netIncomeTtm": 128930000000.0,
+      "institutionalOwnershipPercent": 68.7,
+      "convictionSharePercent": 61.35,
+      "crowdingPercent": 6.6043,
+      "privateFundOwnershipPercent": 6.3012,
+      "activeHolderChangePercent": 1.45,
+      "holderTenureQuarters": 19.02,
+      "estimatedCostGapPercent": 32.21
+    }
+  ]
+}
