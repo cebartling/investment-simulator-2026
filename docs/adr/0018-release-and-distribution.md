@@ -76,6 +76,7 @@
 - **Easier:** a release is `git tag vX.Y.Z && git push origin vX.Y.Z`. The download opens on any Apple-silicon Mac running macOS 26.
 - **Harder:**
   - The signing identity's name is in `release.yml`. A renewed certificate means new secrets, and a new name there if the name changed.
+  - The current certificate, and the original Developer ID CA that issued it, expire on 2027-02-01. Releases signed before then stay valid because their signatures are timestamped, but signing a new release needs a renewed certificate. The workflow imports both Apple intermediates, pinned by SHA-256, so a renewed certificate issued under G2 needs no workflow change.
   - A notarized app's signature differs from local builds, so the Keychain asks again before the released app can read the API key.
 - **Revisit:**
   - A shared setup action, if a third workflow needs the same tools.
