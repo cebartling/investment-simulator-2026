@@ -32,3 +32,4 @@ ADRs are not edited after acceptance except to change their status. To reverse a
 | [0016](0016-market-sales-and-realized-gain.md) | Market Sales and Realized Gain | Accepted |
 | [0017](0017-app-icon-from-icon-composer-source.md) | App Icon from an Icon Composer Source | Accepted |
 | [0018](0018-release-and-distribution.md) | Releases as Notarized Zips on GitHub, Built from Tags | Accepted |
+| [0019](0019-research-window.md) | Research Window, Its Ports, and SEC EDGAR for Tickers | Accepted |
