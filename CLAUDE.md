@@ -12,7 +12,9 @@ All tasks go through the `justfile`:
 - `just test`: run all tests (Swift Testing)
 - `swift test --filter MoneyTests`: run a single suite (or `--filter <Suite>/<test>`)
 - `just run`: launch the app straight from SwiftPM
-- `just bundle`: release build wrapped into an ad-hoc signed `build/Investment Simulator.app`
+- `just bundle`: release build wrapped into `build/Investment Simulator.app`, signed ad-hoc unless `CODESIGN_IDENTITY` names a Developer ID (which adds hardened runtime and a timestamp). `just bundle 1.2.3 42` also stamps that version and build number into the bundled `Info.plist` before signing.
+- `just release-zip <version>`: zip the `.app` as `build/Investment-Simulator-<version>.zip`
+- `just notarize <version>`: notarize that zip, staple the `.app`, check it with `stapler validate` and `spctl`, then re-zip it. Needs `NOTARY_KEY_PATH`, `NOTARY_KEY_ID` and `NOTARY_ISSUER_ID`.
 - `just open`: bundle, then open the `.app`
 - `just format`: SwiftFormat in place
 - `just lint`: SwiftFormat in lint mode plus `swiftlint lint --strict`; CI fails on any violation
@@ -62,4 +64,21 @@ The app icon (ADR-0017) comes from the Icon Composer document `Resources/AppIcon
 
 `.github/workflows/ci.yml` runs `just lint`, `just test` and `just bundle` on pushes to `main` and on pull requests. It uses the `xcode-27` runner, a GitHub public-preview image, and selects `/Applications/Xcode_27.1.app` to match the local toolchain. When that Xcode is removed from the image, update the path.
 
-CI pins SwiftFormat and SwiftLint by version and SHA-256 in `ci.yml`. When you upgrade either tool locally, update the version and checksum there to match, or CI and local lint can disagree.
+CI pins SwiftFormat and SwiftLint by version and SHA-256 in `ci.yml`. When you upgrade either tool locally, update the version and checksum there to match, or CI and local lint can disagree. `release.yml` copies the same pins; bump both workflows together.
+
+## Releases
+
+Releases follow ADR-0018. Pushing a `vMAJOR.MINOR.PATCH` tag on a commit on `main` runs `.github/workflows/release.yml`, which:
+
+1. lints and tests
+2. runs `just bundle <version> <run number>` with the Developer ID identity
+3. runs `just release-zip` and `just notarize`
+4. publishes a GitHub Release with `Investment-Simulator-<version>.zip` and generated notes
+
+Any other `v*` tag, or one on a commit that isn't on `main`, fails before building, and nothing is published.
+
+The committed `Info.plist` version is a development placeholder; never bump it for a release.
+
+The secrets are `DEVELOPER_ID_P12_BASE64`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_API_KEY_P8_BASE64`, `NOTARY_KEY_ID` and `NOTARY_ISSUER_ID`. They live in the `release` GitHub Environment, restricted to `v*` tags. The identity's name, `Developer ID Application: Christopher Bartling (RDD45JXSRK)`, is written in `release.yml`.
+
+Rehearse locally with `CODESIGN_IDENTITY=<that name> just bundle 0.1.0 1`, then `just release-zip 0.1.0` and `just notarize 0.1.0`.

@@ -31,3 +31,4 @@ ADRs are not edited after acceptance except to change their status. To reverse a
 | [0015](0015-experiment-identity-and-holdings-quotes.md) | Experiment Name, Notes and Created Date, and Quoting Holdings on Open | Accepted |
 | [0016](0016-market-sales-and-realized-gain.md) | Market Sales and Realized Gain | Accepted |
 | [0017](0017-app-icon-from-icon-composer-source.md) | App Icon from an Icon Composer Source | Accepted |
+| [0018](0018-release-and-distribution.md) | Releases as Notarized Zips on GitHub, Built from Tags | Accepted |
