@@ -3,7 +3,8 @@ import SwiftUI
 
 struct ContentView: View {
     @Bindable var model: MainWindowModel
-    /// Shown as the experiment's title when it has no name.
+    /// Shown as the experiment's title when it has no name, and in the
+    /// footer.
     let fileURL: URL?
     let onCreate: () -> Void
     let onPurchase: () -> Void
@@ -15,85 +16,91 @@ struct ContentView: View {
     let onSaveDetails: () -> Void
 
     var body: some View {
-        NavigationSplitView {
-            List(model.sections, selection: $model.selection) { section in
-                Label(section.title, systemImage: section.systemImage)
+        // The footer sits outside the split, so it spans the sidebar and
+        // the detail (PIN-411).
+        VStack(spacing: 0) {
+            NavigationSplitView {
+                List(model.sections, selection: $model.selection) { section in
+                    Label(section.title, systemImage: section.systemImage)
+                }
+                .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            } detail: {
+                switch model.selection {
+                case .experiment:
+                    VStack(spacing: 16) {
+                        ExperimentHeader(
+                            model: model,
+                            title: model.title(fileURL: fileURL),
+                            onEditDetails: model.beginEditingDetails,
+                        )
+                        .padding(.top, 16)
+                        ExperimentDetailView(
+                            purchases: model.purchases,
+                            hasLimitOrders: !model.experiment.limitOrders.isEmpty
+                                || !model.experiment.buyLimitOrders.isEmpty,
+                            saleRows: model.saleRows,
+                            limitOrderRows: model.limitOrderRows(at:),
+                            showsExpiredAndCancelledOrders: $model.showsExpiredAndCancelledOrders,
+                            onSell: model.beginSale,
+                            onSellLimit: model.beginLimitOrder,
+                            onCancelOrder: onCancelOrder,
+                            canCheckOrders: model.canCheckOrders(at:),
+                            isCheckingOrders: model.isCheckingOrders,
+                            orderCheckMessage: model.orderCheckMessage,
+                            onCheckOrders: onCheckOrders,
+                        )
+                    }
+                    .toolbar {
+                        Button("Market Buy…", systemImage: "cart.badge.plus", action: model.beginPurchase)
+                            .help("Buy shares of a ticker now at the market price")
+                        Button("Buy Limit…", systemImage: "arrow.down.to.line", action: model.beginBuyLimitOrder)
+                            .help("Place an order to buy shares once the price drops to a limit")
+                    }
+                    // On the detail, not beside the New Experiment sheet, so
+                    // each sheet has its own view.
+                    .sheet(isPresented: $model.isShowingPurchase) {
+                        if let purchase = model.purchase {
+                            PurchaseSheet(model: purchase, onBuy: onPurchase, onCancel: model.cancelPurchase)
+                        }
+                    }
+                    .sheet(isPresented: $model.isShowingSale) {
+                        if let sale = model.sale {
+                            SaleSheet(model: sale, onSell: onSell, onCancel: model.cancelSale)
+                        }
+                    }
+                    .sheet(isPresented: $model.isShowingBuyLimitOrder) {
+                        if let buyLimitOrder = model.buyLimitOrder {
+                            BuyLimitOrderSheet(
+                                model: buyLimitOrder,
+                                onPlace: onPlaceBuyLimitOrder,
+                                onCancel: model.cancelBuyLimitOrder,
+                            )
+                        }
+                    }
+                    .sheet(isPresented: $model.isShowingLimitOrder) {
+                        if let limitOrder = model.limitOrder {
+                            LimitOrderSheet(
+                                model: limitOrder,
+                                onPlace: onPlaceLimitOrder,
+                                onCancel: model.cancelLimitOrder,
+                            )
+                        }
+                    }
+                    .sheet(isPresented: $model.isShowingDetails) {
+                        if let details = model.details {
+                            ExperimentDetailsSheet(
+                                model: details,
+                                onSave: onSaveDetails,
+                                onCancel: model.cancelEditingDetails,
+                            )
+                        }
+                    }
+                case nil:
+                    ContentUnavailableView("No Selection", systemImage: "sidebar.left")
+                }
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-        } detail: {
-            switch model.selection {
-            case .experiment:
-                VStack(spacing: 16) {
-                    ExperimentHeader(
-                        model: model,
-                        title: model.title(fileURL: fileURL),
-                        onEditDetails: model.beginEditingDetails,
-                    )
-                    .padding(.top, 16)
-                    ExperimentDetailView(
-                        purchases: model.purchases,
-                        hasLimitOrders: !model.experiment.limitOrders.isEmpty
-                            || !model.experiment.buyLimitOrders.isEmpty,
-                        saleRows: model.saleRows,
-                        limitOrderRows: model.limitOrderRows(at:),
-                        showsExpiredAndCancelledOrders: $model.showsExpiredAndCancelledOrders,
-                        onSell: model.beginSale,
-                        onSellLimit: model.beginLimitOrder,
-                        onCancelOrder: onCancelOrder,
-                        canCheckOrders: model.canCheckOrders(at:),
-                        isCheckingOrders: model.isCheckingOrders,
-                        orderCheckMessage: model.orderCheckMessage,
-                        onCheckOrders: onCheckOrders,
-                    )
-                }
-                .toolbar {
-                    Button("Market Buy…", systemImage: "cart.badge.plus", action: model.beginPurchase)
-                        .help("Buy shares of a ticker now at the market price")
-                    Button("Buy Limit…", systemImage: "arrow.down.to.line", action: model.beginBuyLimitOrder)
-                        .help("Place an order to buy shares once the price drops to a limit")
-                }
-                // On the detail, not beside the New Experiment sheet, so
-                // each sheet has its own view.
-                .sheet(isPresented: $model.isShowingPurchase) {
-                    if let purchase = model.purchase {
-                        PurchaseSheet(model: purchase, onBuy: onPurchase, onCancel: model.cancelPurchase)
-                    }
-                }
-                .sheet(isPresented: $model.isShowingSale) {
-                    if let sale = model.sale {
-                        SaleSheet(model: sale, onSell: onSell, onCancel: model.cancelSale)
-                    }
-                }
-                .sheet(isPresented: $model.isShowingBuyLimitOrder) {
-                    if let buyLimitOrder = model.buyLimitOrder {
-                        BuyLimitOrderSheet(
-                            model: buyLimitOrder,
-                            onPlace: onPlaceBuyLimitOrder,
-                            onCancel: model.cancelBuyLimitOrder,
-                        )
-                    }
-                }
-                .sheet(isPresented: $model.isShowingLimitOrder) {
-                    if let limitOrder = model.limitOrder {
-                        LimitOrderSheet(
-                            model: limitOrder,
-                            onPlace: onPlaceLimitOrder,
-                            onCancel: model.cancelLimitOrder,
-                        )
-                    }
-                }
-                .sheet(isPresented: $model.isShowingDetails) {
-                    if let details = model.details {
-                        ExperimentDetailsSheet(
-                            model: details,
-                            onSave: onSaveDetails,
-                            onCancel: model.cancelEditingDetails,
-                        )
-                    }
-                }
-            case nil:
-                ContentUnavailableView("No Selection", systemImage: "sidebar.left")
-            }
+            Divider()
+            ExperimentFooter(model: model, fileURL: fileURL)
         }
         // Tall enough for the fullest grouped-form sheet (about nine rows)
         // to fit without scrolling, and for both tables to keep a few rows

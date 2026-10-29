@@ -282,6 +282,13 @@ public extension MainWindowModel {
         experiment.name ?? fileURL?.deletingPathExtension().lastPathComponent ?? "Untitled"
     }
 
+    /// The document's file name for the window footer (PIN-411), or "Not
+    /// saved" before its first save. Takes the file's URL, which Save As
+    /// changes.
+    func fileLabel(fileURL: URL?) -> String {
+        fileURL?.lastPathComponent ?? "Not saved"
+    }
+
     /// The cash a purchase or new buy order can spend at `date`. Takes the
     /// date, so a view can redraw it as orders expire.
     func availableCash(at date: Date) -> Decimal {
