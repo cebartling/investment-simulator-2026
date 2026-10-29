@@ -1,0 +1,54 @@
+{
+  "data": [
+    {
+      "date": "2026-10-28",
+      "open": 330.0,
+      "high": 351.73,
+      "low": 325.81,
+      "close": 343.83,
+      "adjustedClose": 343.83,
+      "volume": 771513914,
+      "periodStart": "2026-10-01",
+      "partial": true
+    },
+    {
+      "date": "2026-09-30",
+      "open": 316.98,
+      "high": 345.34,
+      "low": 309.9,
+      "close": 333.02,
+      "adjustedClose": 333.02,
+      "volume": 899301900,
+      "periodStart": "2026-09-01",
+      "partial": false
+    },
+    {
+      "date": "2020-02-28",
+      "open": 76.075,
+      "high": 81.805,
+      "low": 64.0925,
+      "close": 68.34,
+      "adjustedClose": 65.9332,
+      "volume": 3019279200,
+      "periodStart": "2020-02-01",
+      "partial": false
+    },
+    {
+      "date": "2020-01-31",
+      "open": 74.06,
+      "high": 81.9625,
+      "low": 73.1875,
+      "close": 77.3775,
+      "adjustedClose": 74.4757,
+      "volume": 2934370400,
+      "periodStart": "2020-01-01",
+      "partial": false
+    }
+  ],
+  "meta": {
+    "limit": 500,
+    "offset": 0,
+    "count": 82,
+    "hasMore": false
+  }
+}

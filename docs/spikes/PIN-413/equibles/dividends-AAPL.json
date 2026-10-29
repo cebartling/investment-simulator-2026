@@ -1,0 +1,50 @@
+{
+  "data": [
+    {
+      "exDate": "2026-08-10",
+      "amountPerShare": 0.27,
+      "currency": "USD"
+    },
+    {
+      "exDate": "2026-05-11",
+      "amountPerShare": 0.27,
+      "currency": "USD"
+    },
+    {
+      "exDate": "2026-02-09",
+      "amountPerShare": 0.26,
+      "currency": "USD"
+    },
+    {
+      "exDate": "2025-11-10",
+      "amountPerShare": 0.26,
+      "currency": "USD"
+    },
+    {
+      "exDate": "2025-08-11",
+      "amountPerShare": 0.26,
+      "currency": "USD"
+    },
+    {
+      "exDate": "2025-05-12",
+      "amountPerShare": 0.26,
+      "currency": "USD"
+    },
+    {
+      "exDate": "2025-02-10",
+      "amountPerShare": 0.25,
+      "currency": "USD"
+    },
+    {
+      "exDate": "2024-11-08",
+      "amountPerShare": 0.25,
+      "currency": "USD"
+    }
+  ],
+  "meta": {
+    "limit": 8,
+    "offset": 0,
+    "count": 8,
+    "hasMore": true
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "data": [
+    {
+      "id": "64272dac-bf9b-4608-8f9e-17ff24642984",
+      "ticker": "AAPL",
+      "companyName": "Apple Inc.",
+      "documentType": "TenK",
+      "documentTypeName": "10-K",
+      "filedDate": "2025-10-31",
+      "summary": null,
+      "reportingForDate": "2025-09-27",
+      "itemNumbers": [],
+      "lineCount": 2751,
+      "accessionNumber": "0000320193-25-000079",
+      "acceptedAt": null,
+      "ingestedAt": "2026-04-01T23:25:53.154771Z",
+      "url": "https://equibles.com/stocks/aapl/documents/64272dac-bf9b-4608-8f9e-17ff24642984"
+    },
+    {
+      "id": "b16fc74d-1ec7-4205-a4d6-ec9f64a850af",
+      "ticker": "AAPL",
+      "companyName": "Apple Inc.",
+      "documentType": "TenK",
+      "documentTypeName": "10-K",
+      "filedDate": "2024-11-01",
+      "summary": null,
+      "reportingForDate": "2024-09-28",
+      "itemNumbers": [],
+      "lineCount": 3575,
+      "accessionNumber": "0000320193-24-000123",
+      "acceptedAt": null,
+      "ingestedAt": "2026-04-01T23:25:53.609979Z",
+      "url": "https://equibles.com/stocks/aapl/documents/b16fc74d-1ec7-4205-a4d6-ec9f64a850af"
+    },
+    {
+      "id": "169684a6-6242-4733-9932-6296443e74e4",
+      "ticker": "AAPL",
+      "companyName": "Apple Inc.",
+      "documentType": "TenK",
+      "documentTypeName": "10-K",
+      "filedDate": "2023-11-03",
+      "summary": null,
+      "reportingForDate": "2023-09-30",
+      "itemNumbers": [],
+      "lineCount": 2769,
+      "accessionNumber": "0000320193-23-000106",
+      "acceptedAt": null,
+      "ingestedAt": "2026-04-01T23:25:53.974038Z",
+      "url": "https://equibles.com/stocks/aapl/documents/169684a6-6242-4733-9932-6296443e74e4"
+    }
+  ],
+  "meta": {
+    "limit": 3,
+    "offset": 0,
+    "count": 3,
+    "hasMore": true
+  }
+}

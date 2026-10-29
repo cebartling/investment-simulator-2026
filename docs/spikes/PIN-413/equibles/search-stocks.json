@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "not_found",
+    "message": "Unknown endpoint: GET /v1/stocks. Browse the endpoint list at https://equibles.com/docs/api/endpoints or try it interactively at https://api.equibles.com/docs.",
+    "status": 404
+  }
+}

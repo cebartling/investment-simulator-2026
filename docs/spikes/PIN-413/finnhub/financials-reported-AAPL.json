@@ -1,0 +1,73 @@
+{
+  "cik": "320193",
+  "data": [
+    {
+      "accessNumber": "0000320193-26-000020",
+      "symbol": "AAPL",
+      "cik": "320193",
+      "year": 2026,
+      "quarter": 3,
+      "form": "10-Q",
+      "startDate": "2025-09-28 00:00:00",
+      "endDate": "2026-06-27 00:00:00",
+      "filedDate": "2026-07-31 00:00:00",
+      "acceptedDate": "2026-07-31 06:01:02",
+      "report": {
+        "bs": [],
+        "ic": [
+          {
+            "concept": "us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax",
+            "unit": "usd",
+            "label": "Net sales",
+            "value": 364357000000.0
+          },
+          {
+            "concept": "us-gaap_CostOfGoodsAndServicesSold",
+            "unit": "usd",
+            "label": "Cost of sales",
+            "value": 185575000000.0
+          },
+          {
+            "concept": "us-gaap_GrossProfit",
+            "unit": "usd",
+            "label": "Gross margin",
+            "value": 178782000000
+          },
+          {
+            "concept": "us-gaap_ResearchAndDevelopmentExpense",
+            "unit": "usd",
+            "label": "Research and development",
+            "value": 34035000000.0
+          }
+        ],
+        "cf": [
+          {
+            "concept": "us-gaap_NetIncomeLoss",
+            "unit": "usd",
+            "label": "Net income",
+            "value": 101464000000.0
+          },
+          {
+            "concept": "us-gaap_DepreciationDepletionAndAmortization",
+            "unit": "usd",
+            "label": "Depreciation and amortization",
+            "value": 9973000000
+          },
+          {
+            "concept": "us-gaap_ShareBasedCompensation",
+            "unit": "usd",
+            "label": "Share-based compensation expense",
+            "value": 10523000000
+          },
+          {
+            "concept": "us-gaap_OtherNoncashIncomeExpense",
+            "unit": "usd",
+            "label": "Other",
+            "value": 2037000000
+          }
+        ]
+      }
+    }
+  ],
+  "symbol": "AAPL"
+}

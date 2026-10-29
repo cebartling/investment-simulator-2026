@@ -1,0 +1,13 @@
+{
+  "coverage": {
+    "status": "discovered",
+    "lastScrapedAt": null
+  },
+  "data": [],
+  "meta": {
+    "limit": 3,
+    "offset": 0,
+    "count": 0,
+    "hasMore": false
+  }
+}

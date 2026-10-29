@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "not_found",
+    "message": "Stock 'ZZZZQ' not found.",
+    "status": 404
+  }
+}
