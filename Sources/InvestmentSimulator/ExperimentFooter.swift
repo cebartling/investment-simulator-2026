@@ -14,9 +14,13 @@ struct ExperimentFooter: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .help(fileURL?.path(percentEncoded: false) ?? "")
+                .foregroundStyle(.secondary)
             Spacer()
+            // Secondary like the file name; the button keeps its own color,
+            // so it reads as disabled when it is.
             pricesStatus
                 .lineLimit(1)
+                .foregroundStyle(.secondary)
             Button("Refresh Prices", systemImage: "arrow.clockwise") {
                 Task {
                     await model.holdingsPrices.refreshPrices(of: model.experiment.heldTickers)
@@ -27,7 +31,6 @@ struct ExperimentFooter: View {
             .disabled(model.holdingsPrices.isRefreshing || model.experiment.heldTickers.isEmpty)
         }
         .font(.callout)
-        .foregroundStyle(.secondary)
         .controlSize(.small)
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
