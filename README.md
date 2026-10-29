@@ -13,16 +13,20 @@ Investments simulator built in Swift and SwiftUI
 
 ## Commands
 
-| Command       | Description                                        |
-| ------------- | -------------------------------------------------- |
-| `just build`  | Debug build                                        |
-| `just test`   | Run the test suite (Swift Testing)                 |
-| `just run`    | Launch the app directly from SwiftPM               |
-| `just bundle` | Build an ad-hoc signed release `.app` in `build/`  |
-| `just open`   | Build the `.app` bundle and open it                |
-| `just format` | Format sources in place                            |
-| `just lint`   | Check formatting and lint                          |
-| `just clean`  | Remove build artifacts                             |
+| Command                      | Description                                                              |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| `just build`                 | Debug build                                                              |
+| `just test`                  | Run the test suite (Swift Testing)                                       |
+| `just run`                   | Launch the app directly from SwiftPM                                     |
+| `just bundle`                | Build a release `.app` in `build/`, ad-hoc signed by default             |
+| `just open`                  | Build the `.app` bundle and open it                                      |
+| `just release-zip <version>` | Zip the `.app` for a GitHub Release                                      |
+| `just notarize <version>`    | Notarize and staple the release zip                                      |
+| `just format`                | Format sources in place                                                  |
+| `just lint`                  | Check formatting and lint                                                |
+| `just clean`                 | Remove build artifacts                                                   |
+
+Releases are built from `vX.Y.Z` tags; see [Releasing](docs/releasing.md).
 
 ## Layout
 

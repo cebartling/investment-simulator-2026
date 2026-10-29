@@ -68,7 +68,7 @@ CI pins SwiftFormat and SwiftLint by version and SHA-256 in `ci.yml`. When you u
 
 ## Releases
 
-Releases follow ADR-0018. Pushing a `vMAJOR.MINOR.PATCH` tag on a commit on `main` runs `.github/workflows/release.yml`, which:
+Releases follow ADR-0018; [docs/releasing.md](docs/releasing.md) is the step-by-step guide for setup, rehearsal, cutting a release and certificate renewal. Pushing a `vMAJOR.MINOR.PATCH` tag on a commit on `main` runs `.github/workflows/release.yml`, which:
 
 1. lints and tests
 2. runs `just bundle <version> <run number>` with the Developer ID identity
