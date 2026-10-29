@@ -38,7 +38,7 @@ The `.p12` doesn't need Apple's intermediate certificate, because the workflow d
 
 1. In [App Store Connect](https://appstoreconnect.apple.com), go to **Users and Access → Integrations → App Store Connect API → Team Keys**.
 2. Click **Generate API Key**, name it e.g. `investment-simulator-notary`, and choose the **Developer** role.
-3. **Download the `.p8` right away.** Apple lets you download it only once. Keep it outside the repo, e.g. in `~/.private_keys/`.
+3. **Download the `.p8` right away.** Apple lets you download it only once. Keep it outside the repo, e.g. in `~/.private-keys/`.
 4. Note two values:
    - the **Key ID** from the key's row, which becomes `NOTARY_KEY_ID`
    - the **Issuer ID**, the UUID shown above the table, which becomes `NOTARY_ISSUER_ID`
@@ -48,13 +48,15 @@ The `.p12` doesn't need Apple's intermediate certificate, because the workflow d
 Run these in your own terminal. Piping and prompting keep the values out of your shell history:
 
 ```bash
-base64 -i ~/Desktop/developer-id.p12 | gh secret set DEVELOPER_ID_P12_BASE64 --env release
+test -s ~/Desktop/developer-id.p12 && base64 -i ~/Desktop/developer-id.p12 | gh secret set DEVELOPER_ID_P12_BASE64 --env release
 gh secret set DEVELOPER_ID_P12_PASSWORD --env release        # prompts for the export password
-base64 -i ~/.private_keys/AuthKey_XXXXXXXXXX.p8 | gh secret set NOTARY_API_KEY_P8_BASE64 --env release
+test -s ~/.private-keys/AuthKey_XXXXXXXXXX.p8 && base64 -i ~/.private-keys/AuthKey_XXXXXXXXXX.p8 | gh secret set NOTARY_API_KEY_P8_BASE64 --env release
 gh secret set NOTARY_KEY_ID --env release                    # prompts for the Key ID
 gh secret set NOTARY_ISSUER_ID --env release                 # prompts for the Issuer ID
 gh secret list --env release                                 # lists all five
 ```
+
+The `test -s` guards matter. If the file is missing, `base64` fails, but `gh secret set` still runs, stores the empty input as the secret, and reports success. With the guard, nothing is stored unless the file exists and isn't empty. If a secret does end up empty, the workflow's "Check the secrets" step catches it before building.
 
 Store them as **environment** secrets, not repository secrets. Only the environment's tag rule keeps them away from pull-request workflows.
 
@@ -65,7 +67,7 @@ Then delete the exported `.p12`; the certificate stays in your keychain. Keep th
 The workflow only calls `just` recipes, so a release can be rehearsed locally with the same steps:
 
 ```bash
-export NOTARY_KEY_PATH=~/.private_keys/AuthKey_XXXXXXXXXX.p8 NOTARY_KEY_ID=… NOTARY_ISSUER_ID=…
+export NOTARY_KEY_PATH=~/.private-keys/AuthKey_XXXXXXXXXX.p8 NOTARY_KEY_ID=… NOTARY_ISSUER_ID=…
 CODESIGN_IDENTITY="Developer ID Application: Christopher Bartling (RDD45JXSRK)" just bundle 0.1.0 1
 just release-zip 0.1.0
 just notarize 0.1.0
