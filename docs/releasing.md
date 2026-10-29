@@ -104,6 +104,12 @@ To check a release:
 - **The run fails at "Check the secrets".** The step names each missing secret. Add them to the `release` environment, not the repository.
 - **`timestamps differ by N seconds - check your system clock`** when signing locally. `codesign` records the signing time before it shows the Keychain access dialog. Leaving the dialog open for minutes makes that time disagree with Apple's timestamp. Check the clock with `sntp time.apple.com`, then sign again.
 - **Notarization ends `Invalid`.** `just notarize` prints the notary log, which lists each problem with its file.
+- **`HTTP status code: 403. A required agreement is missing or has expired.`** Apple rejects the upload before notarizing. `just notarize` then fails with `notarytool returned no submission`. This isn't a problem with the zip or the key: the team's Apple Developer Program License Agreement has been updated, or the membership has lapsed. To fix it:
+  1. As the Account Holder, sign in at [developer.apple.com/account](https://developer.apple.com/account) and accept the agreement from the banner. Check that the membership is active.
+  2. Check App Store Connect → **Business** for any agreement still pending.
+  3. Wait, then re-run `just notarize <version>`. The signed bundle and zip don't need rebuilding. Acceptance can take an hour or more to reach the notary service. For PIN-423's first release it took about an hour, and the agreements page already showed it as accepted.
+
+  `xcrun notarytool history` with the same key gets the same 403 until the acceptance takes effect, so it's a quick way to check without uploading. If it still fails hours later, check that the key under Users and Access → Integrations → Team Keys belongs to the team that accepted the agreement.
 - **`stapler staple` fails right after `Accepted`.** The ticket can take a moment to propagate. Re-run the job.
 
 ## Certificate renewal
