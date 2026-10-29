@@ -17,29 +17,22 @@ struct ExperimentHeader: View {
             TimelineView(.everyMinute) { context in
                 tiles(at: context.date)
             }
-            pricesLine
         }
         .padding(.horizontal, 20)
-        // Prices every held ticker when the window opens, and each ticker
-        // newly held after a buy or a fill. Changing holdings cancels a
-        // pricing still running and starts one for the new set.
-        .task(id: model.experiment.heldTickers) {
-            await model.holdingsPrices.priceNewHoldings(of: model.experiment.heldTickers)
-        }
     }
 
-    /// The buttons sit beside the title when they fit, else below it, so
+    /// Edit Details… sits beside the title when it fits, else below it, so
     /// the subtitle is never cut short.
     private var titleBlock: some View {
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .firstTextBaseline) {
                 titleText
                 Spacer()
-                buttons
+                editDetailsButton
             }
             VStack(alignment: .leading, spacing: 8) {
                 titleText
-                HStack { buttons }
+                editDetailsButton
             }
         }
     }
@@ -60,14 +53,7 @@ struct ExperimentHeader: View {
         }
     }
 
-    @ViewBuilder private var buttons: some View {
-        Button("Refresh Prices", systemImage: "arrow.clockwise") {
-            Task {
-                await model.holdingsPrices.refreshPrices(of: model.experiment.heldTickers)
-            }
-        }
-        .help("Get the latest price of each holding")
-        .disabled(model.holdingsPrices.isRefreshing || model.experiment.heldTickers.isEmpty)
+    private var editDetailsButton: some View {
         Button("Edit Details…", action: onEditDetails)
             .help("Change the experiment's name and notes")
     }
@@ -138,27 +124,6 @@ struct ExperimentHeader: View {
             value: currency(model.availableCash(at: date)),
             caption: reserved > 0 ? "\(currency(reserved)) reserved" : nil,
         )
-    }
-
-    /// When the prices are from, or why Total Value and Gain/Loss have none.
-    @ViewBuilder private var pricesLine: some View {
-        switch valuation {
-        case let .valued(_, _, pricesAsOf?):
-            Text("Prices as of \(pricesAsOf.formatted(date: .abbreviated, time: .shortened))")
-                .foregroundStyle(.secondary)
-        case .valued:
-            EmptyView()
-        case .pricing:
-            HStack(spacing: 6) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Getting prices…")
-            }
-            .foregroundStyle(.secondary)
-        case let .unpriced(error):
-            Text(error.localizedDescription)
-                .foregroundStyle(.secondary)
-        }
     }
 
     private static let unknown = "—"
