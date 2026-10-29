@@ -54,8 +54,12 @@ notarize version:
     zip="{{release_zip_prefix}}{{version}}.zip"
     test -f "$zip" || { echo "error: $zip not found; run just release-zip {{version}} first" >&2; exit 1; }
     auth=(--key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID")
-    result=$(xcrun notarytool submit "$zip" "${auth[@]}" --wait --output-format json)
-    id=$(plutil -extract id raw -o - - <<< "$result")
+    # notarytool exits non-zero for an Invalid submission; read its result anyway so the log gets printed.
+    result=$(xcrun notarytool submit "$zip" "${auth[@]}" --wait --output-format json) || true
+    id=$(plutil -extract id raw -o - - <<< "$result" 2> /dev/null) || {
+        echo "error: notarytool returned no submission for $zip: $result" >&2
+        exit 1
+    }
     status=$(plutil -extract status raw -o - - <<< "$result")
     if [ "$status" != "Accepted" ]; then
         echo "error: notarization of $zip ended with status '$status' (submission $id)" >&2
