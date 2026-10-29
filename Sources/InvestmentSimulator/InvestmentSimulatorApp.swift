@@ -13,6 +13,8 @@ struct InvestmentSimulatorApp: App {
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
     @State private var settings: SettingsModel
+    /// App-wide, so open tickers survive closing the Research window (ADR-0019).
+    @State private var research: ResearchWindowModel
 
     init() {
         let credentials = KeychainCredentialStore()
@@ -20,6 +22,7 @@ struct InvestmentSimulatorApp: App {
         quotes = equibles
         dailyPrices = equibles
         _settings = State(initialValue: SettingsModel(credentials: credentials))
+        _research = State(initialValue: ResearchWindowModel(quotes: equibles))
     }
 
     var body: some Scene {
@@ -27,6 +30,11 @@ struct InvestmentSimulatorApp: App {
             // Read here, so the title follows Save As.
             MainWindow(document: file.$document, fileURL: file.fileURL, quotes: quotes, dailyPrices: dailyPrices)
         }
+        // The scene puts itself in the Window menu with its shortcut.
+        Window("Research", id: "research") {
+            ResearchWindow(model: research)
+        }
+        .keyboardShortcut("r", modifiers: [.command, .shift])
         Settings {
             SettingsView(model: settings)
         }
