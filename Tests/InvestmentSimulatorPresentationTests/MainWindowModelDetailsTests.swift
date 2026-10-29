@@ -70,6 +70,16 @@ struct MainWindowModelDetailsTests {
         #expect(try makeModel(name: nil, notes: nil).title(fileURL: nil) == "Untitled")
     }
 
+    @Test func `file label is the file's name with its extension`() throws {
+        let model = try makeModel(name: "Index funds", notes: nil)
+
+        #expect(model.fileLabel(fileURL: URL(filePath: "/tmp/Retirement plan.invsim")) == "Retirement plan.invsim")
+    }
+
+    @Test func `file label of an unsaved experiment is not saved`() throws {
+        #expect(try makeModel(name: "Index funds", notes: nil).fileLabel(fileURL: nil) == "Not saved")
+    }
+
     @Test func `available cash leaves out what open buy orders reserve`() throws {
         let order = try BuyLimitOrder.placed(
             id: UUID(),
