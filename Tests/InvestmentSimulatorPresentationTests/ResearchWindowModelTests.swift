@@ -6,7 +6,7 @@ import Testing
 @MainActor
 struct ResearchWindowModelTests {
     @Test func `starts with no tickers`() {
-        let model = ResearchWindowModel(quotes: FakeTickerQuotes([:]))
+        let model = research(FakeTickerQuotes([:]))
 
         #expect(model.tabs.isEmpty)
         #expect(model.selection == nil)
@@ -15,7 +15,7 @@ struct ResearchWindowModelTests {
     }
 
     @Test func `an invalid symbol explains itself and can't be opened`() {
-        let model = ResearchWindowModel(quotes: FakeTickerQuotes([:]))
+        let model = research(FakeTickerQuotes([:]))
 
         model.symbolText = "VT I"
 
@@ -26,7 +26,7 @@ struct ResearchWindowModelTests {
 
     @Test func `opening adds the ticker, selects it and quotes it`() async throws {
         let quote = try makeQuote(ticker: "VTI", price: 12)
-        let model = ResearchWindowModel(quotes: FakeTickerQuotes(["VTI": .success(quote)]))
+        let model = research(FakeTickerQuotes(["VTI": .success(quote)]))
         model.symbolText = "vti"
 
         let opening = model.open()
@@ -39,7 +39,7 @@ struct ResearchWindowModelTests {
     }
 
     @Test func `tickers stay in the order they were opened`() async throws {
-        let model = try ResearchWindowModel(quotes: FakeTickerQuotes([
+        let model = try research(FakeTickerQuotes([
             "VTI": .success(makeQuote(ticker: "VTI", price: 12)),
             "AAPL": .success(makeQuote(ticker: "AAPL", price: 20)),
             "MSFT": .success(makeQuote(ticker: "MSFT", price: 30)),
@@ -58,7 +58,7 @@ struct ResearchWindowModelTests {
             "VTI": .success(makeQuote(ticker: "VTI", price: 12)),
             "AAPL": .success(makeQuote(ticker: "AAPL", price: 20)),
         ])
-        let model = ResearchWindowModel(quotes: quotes)
+        let model = research(quotes)
         await open("VTI", in: model)
         await open("AAPL", in: model)
 
@@ -74,7 +74,7 @@ struct ResearchWindowModelTests {
 
     @Test func `an unknown ticker is dropped and says why`() async throws {
         let zzzzq = try Ticker("ZZZZQ")
-        let model = try ResearchWindowModel(quotes: FakeTickerQuotes([
+        let model = try research(FakeTickerQuotes([
             "AAPL": .success(makeQuote(ticker: "AAPL", price: 20)),
             "ZZZZQ": .failure(.unknownTicker(zzzzq)),
         ]))
@@ -89,7 +89,7 @@ struct ResearchWindowModelTests {
 
     @Test func `typing clears the open error`() async throws {
         let zzzzq = try Ticker("ZZZZQ")
-        let model = ResearchWindowModel(quotes: FakeTickerQuotes(["ZZZZQ": .failure(.unknownTicker(zzzzq))]))
+        let model = research(FakeTickerQuotes(["ZZZZQ": .failure(.unknownTicker(zzzzq))]))
         await open("ZZZZQ", in: model)
 
         model.symbolText = "V"
@@ -104,7 +104,7 @@ struct ResearchWindowModelTests {
         .unavailable("Equibles is down"),
     ])
     func `any other quote error keeps the ticker open`(error: QuoteError) async {
-        let model = ResearchWindowModel(quotes: FakeTickerQuotes(["VTI": .failure(error)]))
+        let model = research(FakeTickerQuotes(["VTI": .failure(error)]))
 
         await open("VTI", in: model)
 
@@ -115,7 +115,7 @@ struct ResearchWindowModelTests {
 
     @Test func `refresh quotes the ticker again`() async throws {
         let quotes = FakeTickerQuotes(["VTI": .failure(.missingAPIKey)])
-        let model = ResearchWindowModel(quotes: quotes)
+        let model = research(quotes)
         let vti = try Ticker("VTI")
         await open("VTI", in: model)
         let quote = try makeQuote(ticker: "VTI", price: 12)
@@ -129,7 +129,7 @@ struct ResearchWindowModelTests {
     @Test func `a refresh that finds the ticker unknown drops it`() async throws {
         let zzzzq = try Ticker("ZZZZQ")
         let quotes = FakeTickerQuotes(["ZZZZQ": .failure(.missingAPIKey)])
-        let model = ResearchWindowModel(quotes: quotes)
+        let model = research(quotes)
         await open("ZZZZQ", in: model)
         quotes.answer("ZZZZQ", with: .failure(.unknownTicker(zzzzq)))
 
@@ -141,7 +141,7 @@ struct ResearchWindowModelTests {
     }
 
     @Test func `closing selects the next ticker, or the previous at the end`() async throws {
-        let model = try ResearchWindowModel(quotes: FakeTickerQuotes([
+        let model = try research(FakeTickerQuotes([
             "VTI": .success(makeQuote(ticker: "VTI", price: 12)),
             "AAPL": .success(makeQuote(ticker: "AAPL", price: 20)),
             "MSFT": .success(makeQuote(ticker: "MSFT", price: 30)),
@@ -163,7 +163,7 @@ struct ResearchWindowModelTests {
     }
 
     @Test func `closing another ticker keeps the selection`() async throws {
-        let model = try ResearchWindowModel(quotes: FakeTickerQuotes([
+        let model = try research(FakeTickerQuotes([
             "VTI": .success(makeQuote(ticker: "VTI", price: 12)),
             "AAPL": .success(makeQuote(ticker: "AAPL", price: 20)),
         ]))
@@ -179,7 +179,7 @@ struct ResearchWindowModelTests {
     @Test func `closing a ticker mid-quote cancels its quote`() async throws {
         let vti = try Ticker("VTI")
         let quotes = try FakeTickerQuotes(["VTI": .success(makeQuote(ticker: "VTI", price: 12))])
-        let model = ResearchWindowModel(quotes: quotes)
+        let model = research(quotes)
         let closed = Closed()
         quotes.whileAnsweringNext {
             closed.tab = model.selectedTab
@@ -192,6 +192,58 @@ struct ResearchWindowModelTests {
         #expect(model.openError == nil)
         #expect(closed.tab?.quoteState == .loading)
     }
+
+    @Test func `opening charts the ticker too`() async throws {
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-28", high: 1)]])
+        let quotes = try FakeTickerQuotes(["VTI": .success(makeQuote(ticker: "VTI", price: 12))])
+        let model = research(quotes, prices: prices)
+
+        await open("VTI", in: model)
+
+        #expect(prices.requests.count == 1)
+        guard case .loaded = model.selectedTab?.chartState else {
+            Issue.record("Expected a loaded chart, got \(String(describing: model.selectedTab?.chartState))")
+            return
+        }
+    }
+
+    @Test func `showing a range charts it`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-28", high: 1)]])
+        let quotes = try FakeTickerQuotes(["VTI": .success(makeQuote(ticker: "VTI", price: 12))])
+        let model = research(quotes, prices: prices)
+        await open("VTI", in: model)
+
+        await model.showRange(.oneYear, for: vti)?.value
+
+        #expect(model.selectedTab?.chartRange == .oneYear)
+        #expect(prices.requests.map(\.startDate) == ["2026-04-29", "2025-10-29"])
+    }
+
+    @Test func `closing a ticker mid-range cancels the range`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-28", high: 1)]])
+        let quotes = try FakeTickerQuotes(["VTI": .success(makeQuote(ticker: "VTI", price: 12))])
+        let model = research(quotes, prices: prices)
+        await open("VTI", in: model)
+        let tab = model.selectedTab
+        prices.whileAnswering { model.close(vti) }
+
+        await model.showRange(.oneYear, for: vti)?.value
+
+        #expect(model.tabs.isEmpty)
+        #expect(tab?.chartState == .loading)
+    }
+
+    private func research(
+        _ quotes: some QuoteProviding,
+        prices: FakeDailyPrices = FakeDailyPrices(),
+    ) -> ResearchWindowModel {
+        ResearchWindowModel(quotes: quotes, dailyPrices: prices, clock: { Self.now })
+    }
+
+    /// 2 PM in New York on 2026-10-29.
+    private static let now = ISO8601DateFormatter().date(from: "2026-10-29T18:00:00Z")!
 
     private func open(_ symbol: String, in model: ResearchWindowModel) async {
         model.symbolText = symbol
