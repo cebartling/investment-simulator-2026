@@ -149,9 +149,13 @@ struct ResearchChartSection: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case let .failed(error):
-            Text(error.localizedDescription)
-                .foregroundStyle(.red)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            VStack(spacing: 8) {
+                Text(error.localizedDescription)
+                    .foregroundStyle(.red)
+                // A failed range isn't kept, so showing it again retries it.
+                Button("Retry") { onShowRange(tab.chartRange) }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }

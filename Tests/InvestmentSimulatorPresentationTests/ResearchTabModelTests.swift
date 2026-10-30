@@ -149,6 +149,17 @@ struct ResearchTabModelTests {
         #expect(closes(tab) == [12])
     }
 
+    @Test func `showing a failed range again retries it`() async throws {
+        let prices = FakeDailyPrices(failure: .unavailable("Couldn't reach Equibles."))
+        let tab = try tab(FakeQuotes(.failure(.missingAPIKey)), prices: prices)
+        await tab.load()
+
+        await tab.showRange(.sixMonths)
+
+        #expect(prices.requests.count == 2)
+        #expect(tab.chartState == .failed(.unavailable("Couldn't reach Equibles.")))
+    }
+
     @Test func `five years asks for weekly bars`() async throws {
         let prices = try FakeDailyPrices(["VTI": [bar("2026-10-28", close: 12)]])
         let tab = try tab(FakeQuotes(.failure(.missingAPIKey)), prices: prices)
