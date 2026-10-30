@@ -150,6 +150,7 @@ final class FakeDailyPrices: DailyPriceProviding {
         let ticker: String
         let startDate: String
         let endDate: String
+        var interval = BarInterval.daily
     }
 
     private let bars: [String: [DailyBar]]
@@ -174,8 +175,11 @@ final class FakeDailyPrices: DailyPriceProviding {
         for ticker: Ticker,
         from startDate: String,
         through endDate: String,
+        interval: BarInterval,
     ) async throws(QuoteError) -> [DailyBar] {
-        sent.withLock { $0.append(Request(ticker: ticker.symbol, startDate: startDate, endDate: endDate)) }
+        sent.withLock {
+            $0.append(Request(ticker: ticker.symbol, startDate: startDate, endDate: endDate, interval: interval))
+        }
         if let action = hook.withLock({ $0 }) {
             await action()
         }

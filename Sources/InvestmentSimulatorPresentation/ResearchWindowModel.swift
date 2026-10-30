@@ -4,7 +4,7 @@ import Observation
 
 /// Drives the app-wide Research window (ADR-0019): the open tickers, in the
 /// order opened, and the selected one. It outlives the window, so it owns
-/// each ticker's quote task rather than a view's `.task`.
+/// each ticker's load and chart range tasks rather than a view's `.task`.
 @Observable
 public final class ResearchWindowModel {
     public var symbolText = "" {
@@ -21,10 +21,21 @@ public final class ResearchWindowModel {
     public private(set) var openError: QuoteError?
 
     private let quotes: any QuoteProviding
+    private let dailyPrices: any DailyPriceProviding
+    private let clock: () -> Date
     private var tasks: [Ticker: Task<Void, Never>] = [:]
+    /// Each ticker's chart range still loading, apart from its first load.
+    private var chartTasks: [Ticker: Task<Void, Never>] = [:]
 
-    public init(quotes: any QuoteProviding) {
+    /// `clock` tells the time chart ranges reach back from.
+    public init(
+        quotes: any QuoteProviding,
+        dailyPrices: any DailyPriceProviding,
+        clock: @escaping () -> Date = Date.init,
+    ) {
         self.quotes = quotes
+        self.dailyPrices = dailyPrices
+        self.clock = clock
     }
 
     private var ticker: Ticker? {
@@ -40,7 +51,7 @@ public final class ResearchWindowModel {
     }
 
     /// Opens the typed ticker and selects it, or selects it if it's already
-    /// open. Returns the new ticker's quote task. An unknown ticker is
+    /// open. Returns the new ticker's load task. An unknown ticker is
     /// dropped again once its quote says so.
     @discardableResult
     public func open() -> Task<Void, Never>? {
@@ -53,42 +64,54 @@ public final class ResearchWindowModel {
             return nil
         }
         let previous = selection
-        let tab = ResearchTabModel(ticker: ticker, quotes: quotes)
+        let tab = ResearchTabModel(ticker: ticker, quotes: quotes, dailyPrices: dailyPrices, clock: clock)
         tabs.append(tab)
         selection = ticker
-        return quote(tab, reselecting: previous)
+        return load(tab, reselecting: previous)
     }
 
-    /// Quotes an open ticker again, replacing any quote still running. As
-    /// when opening, an unknown ticker is dropped.
+    /// Quotes and charts an open ticker again, replacing anything still
+    /// loading for it. As when opening, an unknown ticker is dropped.
     @discardableResult
     public func refresh(_ ticker: Ticker) -> Task<Void, Never>? {
         guard let tab = tabs.first(where: { $0.ticker == ticker }) else {
             return nil
         }
-        return quote(tab, reselecting: nil)
+        return load(tab, reselecting: nil)
     }
 
-    /// Closes `ticker`, cancelling its quote. If it was selected, the next
+    /// Charts `range` for an open ticker, replacing a range still loading.
+    @discardableResult
+    public func showRange(_ range: PriceRange, for ticker: Ticker) -> Task<Void, Never>? {
+        guard let tab = tabs.first(where: { $0.ticker == ticker }) else {
+            return nil
+        }
+        chartTasks[ticker]?.cancel()
+        let task = Task { await tab.showRange(range) }
+        chartTasks[ticker] = task
+        return task
+    }
+
+    /// Closes `ticker`, cancelling all it was loading. If it was selected, the next
     /// ticker is selected, or the previous one at the end of the list.
     public func close(_ ticker: Ticker) {
         guard let index = tabs.firstIndex(where: { $0.ticker == ticker }) else {
             return
         }
-        tasks.removeValue(forKey: ticker)?.cancel()
+        cancelTasks(of: ticker)
         tabs.remove(at: index)
         if selection == ticker {
             selection = tabs.indices.contains(index) ? tabs[index].ticker : tabs.last?.ticker
         }
     }
 
-    /// Quotes `tab`, cancelling any quote still running for it. If the quote
+    /// Loads `tab`, cancelling anything still loading for it. If its quote
     /// finds no such ticker, the tab is dropped and `openError` says why.
-    private func quote(_ tab: ResearchTabModel, reselecting previous: Ticker?) -> Task<Void, Never> {
+    private func load(_ tab: ResearchTabModel, reselecting previous: Ticker?) -> Task<Void, Never> {
         let ticker = tab.ticker
-        tasks[ticker]?.cancel()
+        cancelTasks(of: ticker)
         let task = Task {
-            await tab.refresh()
+            await tab.load()
             guard !Task.isCancelled, case .failed(.unknownTicker) = tab.quoteState else {
                 return
             }
@@ -99,8 +122,14 @@ public final class ResearchWindowModel {
         return task
     }
 
+    private func cancelTasks(of ticker: Ticker) {
+        tasks.removeValue(forKey: ticker)?.cancel()
+        chartTasks.removeValue(forKey: ticker)?.cancel()
+    }
+
     private func drop(_ ticker: Ticker, reselecting previous: Ticker?) {
         tasks[ticker] = nil
+        chartTasks.removeValue(forKey: ticker)?.cancel()
         tabs.removeAll { $0.ticker == ticker }
         if selection == ticker {
             selection = tabs.contains { $0.ticker == previous } ? previous : tabs.last?.ticker

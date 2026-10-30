@@ -22,7 +22,7 @@ struct InvestmentSimulatorApp: App {
         quotes = equibles
         dailyPrices = equibles
         _settings = State(initialValue: SettingsModel(credentials: credentials))
-        _research = State(initialValue: ResearchWindowModel(quotes: quotes))
+        _research = State(initialValue: ResearchWindowModel(quotes: quotes, dailyPrices: dailyPrices))
     }
 
     var body: some Scene {

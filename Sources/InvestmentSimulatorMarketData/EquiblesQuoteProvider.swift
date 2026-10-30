@@ -77,8 +77,17 @@ public struct EquiblesQuoteProvider: QuoteProviding, DailyPriceProviding {
         for ticker: Ticker,
         from startDate: String,
         through endDate: String,
+        interval: BarInterval,
     ) async throws(QuoteError) -> [DailyBar] {
         let key = try apiKey()
+        var range = [
+            URLQueryItem(name: "startDate", value: startDate),
+            URLQueryItem(name: "endDate", value: endDate),
+        ]
+        // Equibles rolls bars up on request; daily is its default.
+        if interval == .weekly {
+            range.append(URLQueryItem(name: "interval", value: "weekly"))
+        }
         var bars: [DailyBar] = []
         var hasMore = true
         var pages = 0
@@ -87,9 +96,7 @@ public struct EquiblesQuoteProvider: QuoteProviding, DailyPriceProviding {
                 throw .unreadableResponse
             }
             pages += 1
-            let url = baseURL.appending(path: "stocks/\(ticker.symbol)/prices").appending(queryItems: [
-                URLQueryItem(name: "startDate", value: startDate),
-                URLQueryItem(name: "endDate", value: endDate),
+            let url = baseURL.appending(path: "stocks/\(ticker.symbol)/prices").appending(queryItems: range + [
                 URLQueryItem(name: "limit", value: String(Self.pageLimit)),
                 URLQueryItem(name: "offset", value: String(bars.count)),
             ])

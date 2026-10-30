@@ -45,6 +45,33 @@ struct EquiblesDailyPricesTests {
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer eq_test")
     }
 
+    /// As Equibles sent it on 2026-10-29 (`docs/spikes/PIN-413`), trimmed to
+    /// two weeks. The current week's bar is partial.
+    static let twoWeeks = #"""
+    {"data": [{"date": "2026-10-28", "open": 343.92, "high": 347.78, "low": 341.03, "close": 343.83,
+               "adjustedClose": 343.83, "volume": 120507727, "periodStart": "2026-10-26", "partial": true},
+              {"date": "2026-10-23", "open": 340.775, "high": 351.73, "low": 338.7, "close": 347.725,
+               "adjustedClose": 347.725, "volume": 194259397, "periodStart": "2026-10-19", "partial": false}],
+     "meta": {"limit": 500, "offset": 0, "count": 2, "hasMore": false}}
+    """#
+
+    @Test func `weekly bars are asked for by interval and dated by their last session`() async throws {
+        let transport = FakeTransport([Self.path: (200, Self.twoWeeks)])
+
+        let bars = try await EquiblesQuoteProvider(transport: transport, credentials: FakeCredentials("eq_test"))
+            .dailyBars(for: aapl, from: "2026-10-12", through: "2026-10-25", interval: .weekly)
+
+        let request = try #require(transport.requests.first)
+        #expect(request.url?.absoluteString == "https://api.equibles.com\(Self.path)"
+            + "?startDate=2026-10-12&endDate=2026-10-25&interval=weekly&limit=500&offset=0")
+        #expect(try bars == [
+            DailyBar(sessionDate: "2026-10-28", open: decimal("343.92"), high: decimal("347.78"),
+                     low: decimal("341.03"), close: decimal("343.83")),
+            DailyBar(sessionDate: "2026-10-23", open: decimal("340.775"), high: decimal("351.73"),
+                     low: decimal("338.7"), close: decimal("347.725")),
+        ])
+    }
+
     @Test func `later pages are fetched while more remain`() async throws {
         let first = Self.twoSessions.replacingOccurrences(of: #""hasMore": false"#, with: #""hasMore": true"#)
         let second = #"""
