@@ -74,7 +74,9 @@ struct ResearchSectionTests {
 
     @Test func `loading again shows loading in place of a failure`() async throws {
         let data = FakeResearchData(multiples: .failure(.dailyLimitReached))
-        let tab = try tab(data)
+        // Its own fake for profiles, so the check runs during the multiples
+        // request and not before that section has started.
+        let tab = try tab(data, profiles: FakeResearchData())
         await tab.load()
         #expect(tab.multiplesState == .failed(.dailyLimitReached))
         data.whileAnswering { #expect(tab.multiplesState == .loading) }
@@ -97,7 +99,10 @@ struct ResearchSectionTests {
 
     @Test func `a load cancelled before it starts asks for nothing`() async throws {
         let data = FakeResearchData(profile: .success(Self.profile), multiples: .success(Self.multiples))
-        let tab = try tab(data)
+        let quote = try makeQuote(ticker: "VTI", price: 12)
+        let quotes = FakeTickerQuotes(["VTI": .success(quote)])
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-28", high: 2)]])
+        let tab = try tab(data, quotes: quotes, prices: prices)
         await tab.load()
         let before = data.requestCount
 
@@ -106,11 +111,27 @@ struct ResearchSectionTests {
         await task.value
 
         #expect(data.requestCount == before)
+        #expect(quotes.requests == ["VTI"])
+        #expect(tab.quoteState == .quoted(quote))
         #expect(tab.profileState == .loaded(Self.profile))
+    }
+
+    @Test func `a load cancelled before it starts keeps the charts loaded before`() async throws {
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-28", high: 2)]])
+        let tab = try tab(FakeResearchData(), prices: prices)
+        await tab.load()
+
+        let task = Task { await tab.load() }
+        task.cancel()
+        await task.value
+        await tab.showRange(.sixMonths)
+
+        #expect(prices.requests.count == 1)
     }
 
     private func tab(
         _ data: FakeResearchData,
+        profiles: FakeResearchData? = nil,
         quotes: some QuoteProviding = FakeQuotes(.failure(.missingAPIKey)),
         prices: FakeDailyPrices = FakeDailyPrices(),
     ) throws -> ResearchTabModel {
@@ -118,7 +139,7 @@ struct ResearchSectionTests {
             ticker: Ticker("VTI"),
             quotes: quotes,
             dailyPrices: prices,
-            profiles: data,
+            profiles: profiles ?? data,
             multiples: data,
             clock: { Date(timeIntervalSince1970: 1_793_000_000) },
         )

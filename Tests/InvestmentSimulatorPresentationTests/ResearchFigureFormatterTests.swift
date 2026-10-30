@@ -24,4 +24,29 @@ struct ResearchFigureFormatterTests {
     @Test func `a missing market cap is a dash`() {
         #expect(formatter.marketCap(nil) == "—")
     }
+
+    @Test func `a classification joins the sector and industry`() {
+        let profile = CompanyProfile(
+            name: "Apple Inc.",
+            sector: "Technology",
+            industry: "Consumer Electronics",
+            marketCap: nil,
+        )
+
+        #expect(formatter.classification(of: profile) == "Technology · Consumer Electronics")
+    }
+
+    @Test func `a classification shows whichever part there is`() {
+        let sectorOnly = CompanyProfile(name: "Apple Inc.", sector: "Technology", industry: nil, marketCap: nil)
+        let industryOnly = CompanyProfile(name: "Apple Inc.", sector: nil, industry: "Software", marketCap: nil)
+
+        #expect(formatter.classification(of: sectorOnly) == "Technology")
+        #expect(formatter.classification(of: industryOnly) == "Software")
+    }
+
+    @Test func `no sector or industry is no classification`() {
+        let profile = CompanyProfile(name: "Apple Inc.", sector: nil, industry: nil, marketCap: nil)
+
+        #expect(formatter.classification(of: profile) == nil)
+    }
 }

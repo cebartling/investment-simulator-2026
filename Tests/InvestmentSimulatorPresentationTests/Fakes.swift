@@ -195,7 +195,7 @@ final class FakeDailyPrices: DailyPriceProviding {
 /// change made while it waits.
 final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProviding {
     private let profile: Result<CompanyProfile, MarketDataError>
-    private let multiples: Result<ValuationMultiples, MarketDataError>
+    private let multiples: Mutex<Result<ValuationMultiples, MarketDataError>>
     private let sent = Mutex(0)
     private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
 
@@ -204,11 +204,15 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
         multiples: Result<ValuationMultiples, MarketDataError> = .failure(.noData),
     ) {
         self.profile = profile
-        self.multiples = multiples
+        self.multiples = Mutex(multiples)
     }
 
     var requestCount: Int {
         sent.withLock { $0 }
+    }
+
+    func answerMultiples(with result: Result<ValuationMultiples, MarketDataError>) {
+        multiples.withLock { $0 = result }
     }
 
     func whileAnswering(_ action: @escaping @MainActor @Sendable () -> Void) {
@@ -222,7 +226,7 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
 
     func valuationMultiples(for _: Ticker) async throws(MarketDataError) -> ValuationMultiples {
         await answering()
-        return try multiples.get()
+        return try multiples.withLock { $0 }.get()
     }
 
     private func answering() async {

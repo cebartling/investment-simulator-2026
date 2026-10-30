@@ -50,6 +50,7 @@ struct ResearchWindow: View {
                     tab: tab,
                     onRefresh: { model.refresh(tab.ticker) },
                     onShowRange: { model.showRange($0, for: tab.ticker) },
+                    onRetry: { model.retry($0, for: tab.ticker) },
                 )
             } else {
                 // A sidebar list can be deselected with tickers still open.
@@ -69,6 +70,7 @@ struct ResearchTickerView: View {
     let tab: ResearchTabModel
     let onRefresh: () -> Void
     let onShowRange: @MainActor (PriceRange) -> Void
+    let onRetry: @MainActor (ResearchTabModel.Section) -> Void
 
     var body: some View {
         ScrollView {
@@ -81,14 +83,14 @@ struct ResearchTickerView: View {
                     title: "Profile",
                     state: tab.profileState,
                     ticker: tab.ticker,
-                    onRetry: onRefresh,
+                    onRetry: { onRetry(.profile) },
                     content: ResearchProfileView.init,
                 )
                 ResearchSection(
                     title: "Valuation Multiples",
                     state: tab.multiplesState,
                     ticker: tab.ticker,
-                    onRetry: onRefresh,
+                    onRetry: { onRetry(.multiples) },
                     content: ResearchMultiplesView.init,
                 )
             }
@@ -213,18 +215,15 @@ struct ResearchSection<Value: Equatable, Content: View>: View {
 struct ResearchProfileView: View {
     let profile: CompanyProfile
 
-    private var classification: String {
-        [profile.sector, profile.industry].compactMap(\.self).joined(separator: " · ")
-    }
-
     var body: some View {
+        let formatter = ResearchFigureFormatter()
         VStack(alignment: .leading, spacing: 4) {
             Text(profile.name)
-            if !classification.isEmpty {
+            if let classification = formatter.classification(of: profile) {
                 Text(classification)
                     .foregroundStyle(.secondary)
             }
-            Text("Market cap \(ResearchFigureFormatter().marketCap(profile.marketCap))")
+            Text("Market cap \(formatter.marketCap(profile.marketCap))")
         }
     }
 }

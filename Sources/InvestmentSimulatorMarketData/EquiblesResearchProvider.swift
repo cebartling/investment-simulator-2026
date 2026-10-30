@@ -24,8 +24,9 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
         let url = baseURL.appending(path: "screener/stocks")
             .appending(queryItems: [URLQueryItem(name: "tickers", value: ticker.symbol)])
         let response = try await get(ScreenerResponse.self, from: url)
-        // An unknown ticker is a 200 with no row.
-        guard let row = response.data.first(where: { $0.ticker == ticker.symbol }) else {
+        // An unknown ticker is a 200 with no row. Any row is this ticker's,
+        // though not always spelled alike: `BRK.B` comes back as `BRK-B`.
+        guard let row = response.data.first else {
             throw .noData
         }
         return try CompanyProfile(
@@ -128,7 +129,6 @@ private extension MarketDataError {
 
 private struct ScreenerResponse: Decodable {
     struct Row: Decodable {
-        let ticker: String
         let name: String
         let sector: String?
         let industry: String?

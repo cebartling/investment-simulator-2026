@@ -139,6 +139,22 @@ struct EquiblesQuoteProviderTests {
         }
     }
 
+    @Test func `a share class's latest close can spell its ticker with a dash`() async throws {
+        let berkshire = try Ticker("BRK.B")
+        let closes = #"""
+        {"data": [{"ticker": "BRK-B", "date": "2026-10-30", "close": 542.49}], "notFound": []}
+        """#
+        let transport = FakeTransport([
+            "/v1/stocks/BRK.B/quote": (403, ""),
+            "/v1/prices/latest": (200, closes),
+        ])
+
+        let quote = try await provider(transport).quote(for: berkshire)
+
+        #expect(quote.ticker == berkshire)
+        #expect(quote.source == .close(sessionDate: "2026-10-30"))
+    }
+
     @Test func `daily limit on the close request is reported`() async {
         let transport = FakeTransport([
             "/v1/stocks/VTI/quote": (403, ""),

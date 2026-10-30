@@ -23,4 +23,11 @@ public struct ResearchFigureFormatter {
             .currency(code: "USD").notation(.compactName).precision(.fractionLength(2)).locale(locale),
         ) ?? Self.missing
     }
+
+    /// A company's sector and industry, such as "Technology · Software", or
+    /// nil if Equibles sent neither.
+    public func classification(of profile: CompanyProfile) -> String? {
+        let parts = [profile.sector, profile.industry].compactMap(\.self)
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
 }

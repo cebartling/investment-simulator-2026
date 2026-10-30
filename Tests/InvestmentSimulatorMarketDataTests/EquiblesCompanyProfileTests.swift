@@ -25,6 +25,15 @@ struct EquiblesCompanyProfileTests {
     {"totalCount": 0, "count": 0, "page": 1, "totalPages": 1, "notFound": ["ZZZZQ"], "data": []}
     """#
 
+    /// As Equibles sent it on 2026-10-30 when asked for `BRK.B`, trimmed the
+    /// same way: its row spells the share class with a dash.
+    static let berkshire = #"""
+    {"totalCount": 1, "count": 1, "page": 1, "totalPages": 1, "notFound": [],
+     "data": [{"ticker": "BRK-B", "name": "Berkshire Hathaway Inc", "market": "US", "currency": "USD",
+               "sector": "Financial Services", "industry": "Insurance - Diversified",
+               "marketCap": 763363462436.538, "price": 542.49}]}
+    """#
+
     @Test func `the profile comes from the screener row`() async throws {
         let transport = FakeTransport([Self.path: (200, Self.apple)])
 
@@ -35,6 +44,19 @@ struct EquiblesCompanyProfileTests {
             sector: "Technology",
             industry: "Consumer Electronics",
             marketCap: Money(5_024_265_535_488),
+        ))
+    }
+
+    @Test func `a share class's row can spell its ticker with a dash`() async throws {
+        let transport = FakeTransport([Self.path: (200, Self.berkshire)])
+
+        let profile = try await provider(transport).companyProfile(for: Ticker("BRK.B"))
+
+        #expect(try profile == CompanyProfile(
+            name: "Berkshire Hathaway Inc",
+            sector: "Financial Services",
+            industry: "Insurance - Diversified",
+            marketCap: Money(#require(Decimal(string: "763363462436.538"))),
         ))
     }
 

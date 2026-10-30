@@ -62,6 +62,24 @@ struct EquiblesValuationMultiplesTests {
         #expect(multiples.evToEbit.peerMedian == nil)
     }
 
+    @Test func `each ratio reads its own peer figures`() async throws {
+        let body = #"""
+        {"peRatio": 1, "evToRevenue": 2, "evToEbit": 3,
+         "industryContext": {"peMedian": 11, "peP25": 12, "peP75": 13,
+           "evToRevenueMedian": 21, "evToRevenueP25": 22, "evToRevenueP75": 23,
+           "evToEbitMedian": 31, "evToEbitP25": 32, "evToEbitP75": 33}}
+        """#
+        let transport = FakeTransport([Self.path: (200, body)])
+
+        let multiples = try await provider(transport).valuationMultiples(for: aapl)
+
+        #expect(multiples == ValuationMultiples(
+            peRatio: ValuationRatio(value: 1, peerMedian: 11, peerP25: 12, peerP75: 13),
+            evToRevenue: ValuationRatio(value: 2, peerMedian: 21, peerP25: 22, peerP75: 23),
+            evToEbit: ValuationRatio(value: 3, peerMedian: 31, peerP25: 32, peerP75: 33),
+        ))
+    }
+
     @Test func `a null ratio stays nil`() async throws {
         let body = #"{"evToRevenue": null, "evToEbit": null, "peRatio": null, "industryContext": null}"#
         let transport = FakeTransport([Self.path: (200, body)])

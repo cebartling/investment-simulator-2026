@@ -30,6 +30,12 @@ public final class ResearchTabModel: Identifiable {
         case failed(QuoteError)
     }
 
+    /// The parts of a ticker's research that load through a section port.
+    public nonisolated enum Section: CaseIterable, Sendable {
+        case profile
+        case multiples
+    }
+
     public let ticker: Ticker
     public private(set) var quoteState = QuoteState.loading
     public private(set) var chartRange = PriceRange.sixMonths
@@ -72,14 +78,19 @@ public final class ResearchTabModel: Identifiable {
 
     /// Quotes the ticker, charts the current range and loads the sections at
     /// the same time, forgetting the ranges loaded before. If the quote finds
-    /// no such ticker, the rest is cancelled rather than waited for.
+    /// no such ticker, the rest is cancelled rather than waited for. A load
+    /// cancelled before it starts changes nothing.
     public func load() async {
+        guard !Task.isCancelled else {
+            return
+        }
         charts = [:]
         let range = chartRange
         await withTaskGroup { group in
             group.addTask { await self.showRange(range) }
-            group.addTask { await self.loadProfile() }
-            group.addTask { await self.loadMultiples() }
+            for section in Section.allCases {
+                group.addTask { await self.load(section) }
+            }
             await refresh()
             if case .failed(.unknownTicker) = quoteState {
                 group.cancelAll()
@@ -153,43 +164,41 @@ public final class ResearchTabModel: Identifiable {
         chartState = points.isEmpty ? .empty : .loaded(points)
     }
 
-    private func loadProfile() async {
-        guard !Task.isCancelled else {
-            return
-        }
-        profileState = .loading
-        if let state = await sectionState(of: { () async throws(MarketDataError) in
-            try await profiles.companyProfile(for: ticker)
-        }) {
-            profileState = state
-        }
-    }
-
-    private func loadMultiples() async {
-        guard !Task.isCancelled else {
-            return
-        }
-        multiplesState = .loading
-        if let state = await sectionState(of: { () async throws(MarketDataError) in
-            try await multiples.valuationMultiples(for: ticker)
-        }) {
-            multiplesState = state
+    /// Loads one section, leaving the rest as they are. A request cancelled
+    /// before it starts changes nothing; one cancelled while loading changes
+    /// nothing more.
+    public func load(_ section: Section) async {
+        switch section {
+        case .profile:
+            await load(\.profileState) { () async throws(MarketDataError) in
+                try await profiles.companyProfile(for: ticker)
+            }
+        case .multiples:
+            await load(\.multiplesState) { () async throws(MarketDataError) in
+                try await multiples.valuationMultiples(for: ticker)
+            }
         }
     }
 
-    /// What a section shows after `request`, or nil if it was cancelled.
-    private func sectionState<Value>(
-        of request: () async throws(MarketDataError) -> Value,
-    ) async -> ResearchSectionState<Value>? {
-        let state: ResearchSectionState<Value>
+    private func load<Value>(
+        _ state: ReferenceWritableKeyPath<ResearchTabModel, ResearchSectionState<Value>>,
+        from request: () async throws(MarketDataError) -> Value,
+    ) async {
+        guard !Task.isCancelled else {
+            return
+        }
+        self[keyPath: state] = .loading
+        let outcome: ResearchSectionState<Value>
         do throws(MarketDataError) {
-            state = try await .loaded(request())
+            outcome = try await .loaded(request())
         } catch .noData {
-            state = .empty
+            outcome = .empty
         } catch {
-            state = .failed(error)
+            outcome = .failed(error)
         }
-        return Task.isCancelled ? nil : state
+        if !Task.isCancelled {
+            self[keyPath: state] = outcome
+        }
     }
 }
 
