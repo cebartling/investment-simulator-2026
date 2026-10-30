@@ -11,7 +11,6 @@ struct ResearchWindowModelTests {
         #expect(model.tabs.isEmpty)
         #expect(model.selection == nil)
         #expect(model.selectedTab == nil)
-        #expect(!model.canOpen)
         #expect(model.open() == nil)
     }
 
@@ -21,7 +20,6 @@ struct ResearchWindowModelTests {
         model.symbolText = "VT I"
 
         #expect(model.symbolMessage == "Enter a ticker symbol, such as VTI.")
-        #expect(!model.canOpen)
         #expect(model.open() == nil)
         #expect(model.tabs.isEmpty)
     }
@@ -126,6 +124,20 @@ struct ResearchWindowModelTests {
         await model.refresh(vti)?.value
 
         #expect(model.selectedTab?.quoteState == .quoted(quote))
+    }
+
+    @Test func `a refresh that finds the ticker unknown drops it`() async throws {
+        let zzzzq = try Ticker("ZZZZQ")
+        let quotes = FakeTickerQuotes(["ZZZZQ": .failure(.missingAPIKey)])
+        let model = ResearchWindowModel(quotes: quotes)
+        await open("ZZZZQ", in: model)
+        quotes.answer("ZZZZQ", with: .failure(.unknownTicker(zzzzq)))
+
+        await model.refresh(zzzzq)?.value
+
+        #expect(model.tabs.isEmpty)
+        #expect(model.selection == nil)
+        #expect(model.openError == .unknownTicker(zzzzq))
     }
 
     @Test func `closing selects the next ticker, or the previous at the end`() async throws {

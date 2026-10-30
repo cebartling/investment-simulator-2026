@@ -47,8 +47,9 @@ struct ResearchWindow: View {
             if let tab = model.selectedTab {
                 ResearchTickerView(tab: tab, onRefresh: { model.refresh(tab.ticker) })
             } else {
+                // A sidebar list can be deselected with tickers still open.
                 ContentUnavailableView(
-                    "No Ticker Open",
+                    model.tabs.isEmpty ? "No Ticker Open" : "No Ticker Selected",
                     systemImage: "magnifyingglass",
                     description: Text("Type a ticker symbol, such as VTI, to research it."),
                 )

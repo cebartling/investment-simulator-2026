@@ -35,10 +35,6 @@ public final class ResearchWindowModel {
         symbolText.isEmpty || ticker != nil ? nil : "Enter a ticker symbol, such as VTI."
     }
 
-    public var canOpen: Bool {
-        ticker != nil
-    }
-
     public var selectedTab: ResearchTabModel? {
         tabs.first { $0.ticker == selection }
     }
@@ -60,28 +56,17 @@ public final class ResearchWindowModel {
         let tab = ResearchTabModel(ticker: ticker, quotes: quotes)
         tabs.append(tab)
         selection = ticker
-        let task = Task {
-            await tab.refresh()
-            guard !Task.isCancelled, case .failed(.unknownTicker) = tab.quoteState else {
-                return
-            }
-            drop(ticker, reselecting: previous)
-            openError = .unknownTicker(ticker)
-        }
-        tasks[ticker] = task
-        return task
+        return quote(tab, reselecting: previous)
     }
 
-    /// Quotes an open ticker again, replacing any quote still running.
+    /// Quotes an open ticker again, replacing any quote still running. As
+    /// when opening, an unknown ticker is dropped.
     @discardableResult
     public func refresh(_ ticker: Ticker) -> Task<Void, Never>? {
         guard let tab = tabs.first(where: { $0.ticker == ticker }) else {
             return nil
         }
-        tasks[ticker]?.cancel()
-        let task = Task { await tab.refresh() }
-        tasks[ticker] = task
-        return task
+        return quote(tab, reselecting: nil)
     }
 
     /// Closes `ticker`, cancelling its quote. If it was selected, the next
@@ -95,6 +80,23 @@ public final class ResearchWindowModel {
         if selection == ticker {
             selection = tabs.indices.contains(index) ? tabs[index].ticker : tabs.last?.ticker
         }
+    }
+
+    /// Quotes `tab`, cancelling any quote still running for it. If the quote
+    /// finds no such ticker, the tab is dropped and `openError` says why.
+    private func quote(_ tab: ResearchTabModel, reselecting previous: Ticker?) -> Task<Void, Never> {
+        let ticker = tab.ticker
+        tasks[ticker]?.cancel()
+        let task = Task {
+            await tab.refresh()
+            guard !Task.isCancelled, case .failed(.unknownTicker) = tab.quoteState else {
+                return
+            }
+            drop(ticker, reselecting: previous)
+            openError = .unknownTicker(ticker)
+        }
+        tasks[ticker] = task
+        return task
     }
 
     private func drop(_ ticker: Ticker, reselecting previous: Ticker?) {
