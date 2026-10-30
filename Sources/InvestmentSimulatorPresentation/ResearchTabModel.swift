@@ -80,12 +80,16 @@ public final class ResearchTabModel: Identifiable {
         }
     }
 
-    /// Charts `range`, from memory if it was loaded before. A cancelled or
-    /// superseded request changes nothing more.
+    /// Charts `range`, from memory if it was loaded before. A request
+    /// cancelled before it starts changes nothing; one cancelled or
+    /// superseded while loading changes nothing more.
     public func showRange(_ range: PriceRange) async {
+        guard !Task.isCancelled else {
+            return
+        }
         chartRange = range
         if let points = charts[range] {
-            chartState = points.isEmpty ? .empty : .loaded(points)
+            show(points)
             return
         }
         chartState = .loading
@@ -116,14 +120,18 @@ public final class ResearchTabModel: Identifiable {
         let points = bars.sorted { $0.sessionDate < $1.sessionDate }.map(ChartPoint.init)
         charts[range] = points
         if chartRange == range {
-            chartState = points.isEmpty ? .empty : .loaded(points)
+            show(points)
         }
+    }
+
+    private func show(_ points: [ChartPoint]) {
+        chartState = points.isEmpty ? .empty : .loaded(points)
     }
 }
 
 /// One bar's close, placed at noon of its New York session, so no daylight
 /// saving change moves it to another day.
-public struct ChartPoint: Equatable, Sendable {
+public nonisolated struct ChartPoint: Equatable, Sendable {
     public let date: Date
     public let close: Decimal
 

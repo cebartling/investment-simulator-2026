@@ -135,17 +135,36 @@ struct ResearchTabModelTests {
     }
 
     @Test func `a late failure doesn't hide a newer chart of the same range`() async throws {
-        let prices = try FailsFirstLate(bars: [bar("2026-10-28", close: 12)], failure: .dailyLimitReached)
+        let prices = try AnswersFirstLate(first: .failure(.dailyLimitReached), later: [bar("2026-10-28", close: 12)])
         let tab = try ResearchTabModel(
             ticker: Ticker("VTI"),
             quotes: FakeQuotes(.failure(.missingAPIKey)),
             dailyPrices: prices,
             clock: { Self.now },
         )
-        prices.beforeFailing { await tab.showRange(.sixMonths) }
+        prices.beforeAnsweringFirst { await tab.showRange(.sixMonths) }
 
         await tab.showRange(.sixMonths)
 
+        #expect(closes(tab) == [12])
+    }
+
+    @Test func `a late chart of another range doesn't replace the range shown`() async throws {
+        let prices = try AnswersFirstLate(
+            first: .success([bar("2026-10-28", close: 10)]),
+            later: [bar("2026-10-28", close: 12)],
+        )
+        let tab = try ResearchTabModel(
+            ticker: Ticker("VTI"),
+            quotes: FakeQuotes(.failure(.missingAPIKey)),
+            dailyPrices: prices,
+            clock: { Self.now },
+        )
+        prices.beforeAnsweringFirst { await tab.showRange(.oneYear) }
+
+        await tab.showRange(.sixMonths)
+
+        #expect(tab.chartRange == .oneYear)
         #expect(closes(tab) == [12])
     }
 
@@ -196,6 +215,18 @@ struct ResearchTabModelTests {
         #expect(prices.requests.count == 2)
     }
 
+    @Test func `a range cancelled before it starts changes nothing`() async throws {
+        let prices = try FakeDailyPrices(["VTI": [bar("2026-10-28", close: 12)]])
+        let tab = try tab(FakeQuotes(.failure(.missingAPIKey)), prices: prices)
+
+        let task = Task { await tab.showRange(.oneYear) }
+        task.cancel()
+        await task.value
+
+        #expect(tab.chartRange == .sixMonths)
+        #expect(prices.requests.isEmpty)
+    }
+
     @Test func `a cancelled range load leaves the chart alone`() async throws {
         let prices = try FakeDailyPrices(["VTI": [bar("2026-10-28", close: 12)]])
         let tab = try tab(FakeQuotes(.failure(.missingAPIKey)), prices: prices)
@@ -231,21 +262,21 @@ private func bar(_ session: String, close: Decimal) throws -> DailyBar {
     try DailyBar(sessionDate: session, open: close, high: close, low: close, close: close)
 }
 
-/// Fails its first request with `failure`, but only once `beforeFailing`
-/// has run, as a newer request answering first. Answers every later
-/// request with `bars`.
-private final class FailsFirstLate: DailyPriceProviding {
-    private let bars: [DailyBar]
-    private let failure: QuoteError
+/// Answers its first request with `first`, but only once
+/// `beforeAnsweringFirst` has run, as a newer request answering first.
+/// Answers every later request with `later`.
+private final class AnswersFirstLate: DailyPriceProviding {
+    private let first: Result<[DailyBar], QuoteError>
+    private let later: [DailyBar]
     private let count = Mutex(0)
     private let hook = Mutex<(@MainActor @Sendable () async -> Void)?>(nil)
 
-    init(bars: [DailyBar], failure: QuoteError) {
-        self.bars = bars
-        self.failure = failure
+    init(first: Result<[DailyBar], QuoteError>, later: [DailyBar]) {
+        self.first = first
+        self.later = later
     }
 
-    func beforeFailing(_ action: @escaping @MainActor @Sendable () async -> Void) {
+    func beforeAnsweringFirst(_ action: @escaping @MainActor @Sendable () async -> Void) {
         hook.withLock { $0 = action }
     }
 
@@ -260,12 +291,12 @@ private final class FailsFirstLate: DailyPriceProviding {
             return count == 1
         }
         guard isFirst else {
-            return bars
+            return later
         }
         if let action = hook.withLock({ $0 }) {
             await action()
         }
-        throw failure
+        return try first.get()
     }
 }
 

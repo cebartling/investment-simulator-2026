@@ -142,6 +142,10 @@ struct ResearchChartSection: View {
         case let .loaded(points):
             Chart(points, id: \.date) { point in
                 LineMark(x: .value("Date", point.date), y: .value("Close", point.close))
+                // A line through one point draws nothing.
+                if points.count == 1 {
+                    PointMark(x: .value("Date", point.date), y: .value("Close", point.close))
+                }
             }
             .chartYScale(domain: .automatic(includesZero: false))
         case .empty:
