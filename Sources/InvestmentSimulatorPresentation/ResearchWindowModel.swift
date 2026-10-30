@@ -4,7 +4,7 @@ import Observation
 
 /// Drives the app-wide Research window (ADR-0019): the open tickers, in the
 /// order opened, and the selected one. It outlives the window, so it owns
-/// each ticker's quote task rather than a view's `.task`.
+/// each ticker's load and chart range tasks rather than a view's `.task`.
 @Observable
 public final class ResearchWindowModel {
     public var symbolText = "" {
@@ -51,7 +51,7 @@ public final class ResearchWindowModel {
     }
 
     /// Opens the typed ticker and selects it, or selects it if it's already
-    /// open. Returns the new ticker's quote task. An unknown ticker is
+    /// open. Returns the new ticker's load task. An unknown ticker is
     /// dropped again once its quote says so.
     @discardableResult
     public func open() -> Task<Void, Never>? {

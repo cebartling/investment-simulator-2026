@@ -90,26 +90,33 @@ public final class ResearchTabModel: Identifiable {
         }
         chartState = .loading
         let sessions = range.sessions(endingAt: clock())
+        let bars: [DailyBar]
         do throws(QuoteError) {
-            let bars = try await dailyPrices.dailyBars(
+            bars = try await dailyPrices.dailyBars(
                 for: ticker,
                 from: sessions.lowerBound,
                 through: sessions.upperBound,
                 interval: range.interval,
             )
-            guard !Task.isCancelled else {
-                return
-            }
-            let points = bars.sorted { $0.sessionDate < $1.sessionDate }.map(ChartPoint.init)
-            charts[range] = points
-            if chartRange == range {
-                chartState = points.isEmpty ? .empty : .loaded(points)
-            }
+        } catch .unknownTicker {
+            // The quote validates the ticker, so here a 404 means no
+            // history: an empty state, not an error (ADR-0019).
+            bars = []
         } catch {
-            guard !Task.isCancelled, chartRange == range else {
+            // A newer request may have charted this range already.
+            guard !Task.isCancelled, chartRange == range, charts[range] == nil else {
                 return
             }
             chartState = .failed(error)
+            return
+        }
+        guard !Task.isCancelled else {
+            return
+        }
+        let points = bars.sorted { $0.sessionDate < $1.sessionDate }.map(ChartPoint.init)
+        charts[range] = points
+        if chartRange == range {
+            chartState = points.isEmpty ? .empty : .loaded(points)
         }
     }
 }

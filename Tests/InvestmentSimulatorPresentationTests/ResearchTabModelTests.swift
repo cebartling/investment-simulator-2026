@@ -1,6 +1,7 @@
 import Foundation
 import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
+import Synchronization
 import Testing
 
 @MainActor
@@ -123,6 +124,31 @@ struct ResearchTabModelTests {
         #expect(tab.quoteState == .quoted(quote))
     }
 
+    @Test func `no history for a quoted ticker is an empty chart, not an error`() async throws {
+        let quote = try makeQuote(ticker: "VTI", price: 12)
+        let prices = try FakeDailyPrices(failure: .unknownTicker(Ticker("VTI")))
+        let tab = try tab(FakeQuotes(.success(quote)), prices: prices)
+
+        await tab.load()
+
+        #expect(tab.chartState == .empty)
+    }
+
+    @Test func `a late failure doesn't hide a newer chart of the same range`() async throws {
+        let prices = try FailsFirstLate(bars: [bar("2026-10-28", close: 12)], failure: .dailyLimitReached)
+        let tab = try ResearchTabModel(
+            ticker: Ticker("VTI"),
+            quotes: FakeQuotes(.failure(.missingAPIKey)),
+            dailyPrices: prices,
+            clock: { Self.now },
+        )
+        prices.beforeFailing { await tab.showRange(.sixMonths) }
+
+        await tab.showRange(.sixMonths)
+
+        #expect(closes(tab) == [12])
+    }
+
     @Test func `five years asks for weekly bars`() async throws {
         let prices = try FakeDailyPrices(["VTI": [bar("2026-10-28", close: 12)]])
         let tab = try tab(FakeQuotes(.failure(.missingAPIKey)), prices: prices)
@@ -192,6 +218,44 @@ struct ResearchTabModelTests {
 /// A bar for `session` that opened, closed and ranged at `close`.
 private func bar(_ session: String, close: Decimal) throws -> DailyBar {
     try DailyBar(sessionDate: session, open: close, high: close, low: close, close: close)
+}
+
+/// Fails its first request with `failure`, but only once `beforeFailing`
+/// has run, as a newer request answering first. Answers every later
+/// request with `bars`.
+private final class FailsFirstLate: DailyPriceProviding {
+    private let bars: [DailyBar]
+    private let failure: QuoteError
+    private let count = Mutex(0)
+    private let hook = Mutex<(@MainActor @Sendable () async -> Void)?>(nil)
+
+    init(bars: [DailyBar], failure: QuoteError) {
+        self.bars = bars
+        self.failure = failure
+    }
+
+    func beforeFailing(_ action: @escaping @MainActor @Sendable () async -> Void) {
+        hook.withLock { $0 = action }
+    }
+
+    func dailyBars(
+        for _: Ticker,
+        from _: String,
+        through _: String,
+        interval _: BarInterval,
+    ) async throws(QuoteError) -> [DailyBar] {
+        let isFirst = count.withLock { count in
+            count += 1
+            return count == 1
+        }
+        guard isFirst else {
+            return bars
+        }
+        if let action = hook.withLock({ $0 }) {
+            await action()
+        }
+        throw failure
+    }
 }
 
 @MainActor
