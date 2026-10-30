@@ -49,7 +49,9 @@ struct EquiblesCompanyProfileTests {
     }
 
     @Test func `a missing sector, industry or market cap stays nil`() async throws {
-        let body = #"{"data": [{"ticker": "AAPL", "name": "Apple Inc.", "sector": null, "industry": null, "marketCap": null}]}"#
+        let body = #"""
+        {"data": [{"ticker": "AAPL", "name": "Apple Inc.", "sector": null, "industry": null, "marketCap": null}]}
+        """#
         let transport = FakeTransport([Self.path: (200, body)])
 
         let profile = try await provider(transport).companyProfile(for: aapl)

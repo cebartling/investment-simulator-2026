@@ -77,6 +77,20 @@ struct ResearchTickerView: View {
                     .font(.largeTitle.bold())
                 quote
                 ResearchChartSection(tab: tab, onShowRange: onShowRange)
+                ResearchSection(
+                    title: "Profile",
+                    state: tab.profileState,
+                    ticker: tab.ticker,
+                    onRetry: onRefresh,
+                    content: ResearchProfileView.init,
+                )
+                ResearchSection(
+                    title: "Valuation Multiples",
+                    state: tab.multiplesState,
+                    ticker: tab.ticker,
+                    onRetry: onRefresh,
+                    content: ResearchMultiplesView.init,
+                )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
@@ -160,6 +174,93 @@ struct ResearchChartSection: View {
                 Button("Retry") { onShowRange(tab.chartRange) }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+/// A titled section of a ticker's research, with its own loading, empty and
+/// error states.
+struct ResearchSection<Value: Equatable, Content: View>: View {
+    let title: String
+    let state: ResearchSectionState<Value>
+    let ticker: Ticker
+    let onRetry: () -> Void
+    @ViewBuilder let content: (Value) -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.headline)
+            switch state {
+            case .loading:
+                ProgressView()
+                    .controlSize(.small)
+            case let .loaded(value):
+                content(value)
+            case .empty:
+                Text("No \(title.lowercased()) for \(ticker.symbol).")
+                    .foregroundStyle(.secondary)
+            case let .failed(error):
+                Text(error.localizedDescription)
+                    .foregroundStyle(.red)
+                Button("Retry", action: onRetry)
+            }
+        }
+    }
+}
+
+/// Who the company is and what it's worth.
+struct ResearchProfileView: View {
+    let profile: CompanyProfile
+
+    private var classification: String {
+        [profile.sector, profile.industry].compactMap(\.self).joined(separator: " · ")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(profile.name)
+            if !classification.isEmpty {
+                Text(classification)
+                    .foregroundStyle(.secondary)
+            }
+            Text("Market cap \(ResearchFigureFormatter().marketCap(profile.marketCap))")
+        }
+    }
+}
+
+/// The company's ratios beside its industry peers.
+struct ResearchMultiplesView: View {
+    let multiples: ValuationMultiples
+
+    var body: some View {
+        Grid(alignment: .trailing, horizontalSpacing: 20, verticalSpacing: 4) {
+            GridRow {
+                Text("Ratio")
+                    .gridColumnAlignment(.leading)
+                Text("Value")
+                Text("Peer P25")
+                Text("Peer Median")
+                Text("Peer P75")
+            }
+            .foregroundStyle(.secondary)
+            row("P/E", multiples.peRatio)
+            row("EV/Revenue", multiples.evToRevenue)
+            row("EV/EBIT", multiples.evToEbit)
+        }
+    }
+
+    private func row(_ name: String, _ ratio: ValuationRatio) -> some View {
+        let formatter = ResearchFigureFormatter()
+        return GridRow {
+            Text(name)
+            Group {
+                Text(formatter.ratio(ratio.value))
+                Text(formatter.ratio(ratio.peerP25))
+                Text(formatter.ratio(ratio.peerMedian))
+                Text(formatter.ratio(ratio.peerP75))
+            }
+            .monospaced()
         }
     }
 }
