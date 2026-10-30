@@ -2,9 +2,18 @@ import Foundation
 import InvestmentSimulatorCore
 import Observation
 
-/// One open ticker in the Research window (ADR-0019): its quote and its
-/// price history chart, each with its own state, so one failing leaves the
-/// other showing.
+/// One Research section's progress (ADR-0019).
+public nonisolated enum ResearchSectionState<Value: Equatable>: Equatable {
+    case loading
+    case loaded(Value)
+    /// Equibles has nothing to show for this ticker.
+    case empty
+    case failed(MarketDataError)
+}
+
+/// One open ticker in the Research window (ADR-0019): its quote, price
+/// history chart and sections, each with its own state, so one failing
+/// leaves the others showing.
 @Observable
 public final class ResearchTabModel: Identifiable {
     public enum QuoteState: Equatable {
@@ -25,9 +34,13 @@ public final class ResearchTabModel: Identifiable {
     public private(set) var quoteState = QuoteState.loading
     public private(set) var chartRange = PriceRange.sixMonths
     public private(set) var chartState = ChartState.loading
+    public private(set) var profileState = ResearchSectionState<CompanyProfile>.loading
+    public private(set) var multiplesState = ResearchSectionState<ValuationMultiples>.loading
 
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
+    private let profiles: any CompanyProfileProviding
+    private let multiples: any ValuationMultiplesProviding
     private let clock: () -> Date
     /// Each range's points once loaded, so going back to it asks for nothing.
     private var charts: [PriceRange: [ChartPoint]] = [:]
@@ -36,11 +49,15 @@ public final class ResearchTabModel: Identifiable {
         ticker: Ticker,
         quotes: any QuoteProviding,
         dailyPrices: any DailyPriceProviding,
+        profiles: any CompanyProfileProviding,
+        multiples: any ValuationMultiplesProviding,
         clock: @escaping () -> Date,
     ) {
         self.ticker = ticker
         self.quotes = quotes
         self.dailyPrices = dailyPrices
+        self.profiles = profiles
+        self.multiples = multiples
         self.clock = clock
     }
 
@@ -53,14 +70,16 @@ public final class ResearchTabModel: Identifiable {
         quoteState == .failed(.missingAPIKey) || quoteState == .failed(.invalidAPIKey)
     }
 
-    /// Quotes the ticker and charts the current range at the same time,
-    /// forgetting the ranges loaded before. If the quote finds no such
-    /// ticker, the chart is cancelled rather than waited for.
+    /// Quotes the ticker, charts the current range and loads the sections at
+    /// the same time, forgetting the ranges loaded before. If the quote finds
+    /// no such ticker, the rest is cancelled rather than waited for.
     public func load() async {
         charts = [:]
         let range = chartRange
         await withTaskGroup { group in
             group.addTask { await self.showRange(range) }
+            group.addTask { await self.loadProfile() }
+            group.addTask { await self.loadMultiples() }
             await refresh()
             if case .failed(.unknownTicker) = quoteState {
                 group.cancelAll()
@@ -132,6 +151,45 @@ public final class ResearchTabModel: Identifiable {
 
     private func show(_ points: [ChartPoint]) {
         chartState = points.isEmpty ? .empty : .loaded(points)
+    }
+
+    private func loadProfile() async {
+        guard !Task.isCancelled else {
+            return
+        }
+        profileState = .loading
+        if let state = await sectionState(of: { () async throws(MarketDataError) in
+            try await profiles.companyProfile(for: ticker)
+        }) {
+            profileState = state
+        }
+    }
+
+    private func loadMultiples() async {
+        guard !Task.isCancelled else {
+            return
+        }
+        multiplesState = .loading
+        if let state = await sectionState(of: { () async throws(MarketDataError) in
+            try await multiples.valuationMultiples(for: ticker)
+        }) {
+            multiplesState = state
+        }
+    }
+
+    /// What a section shows after `request`, or nil if it was cancelled.
+    private func sectionState<Value>(
+        of request: () async throws(MarketDataError) -> Value,
+    ) async -> ResearchSectionState<Value>? {
+        let state: ResearchSectionState<Value>
+        do throws(MarketDataError) {
+            state = try await .loaded(request())
+        } catch .noData {
+            state = .empty
+        } catch {
+            state = .failed(error)
+        }
+        return Task.isCancelled ? nil : state
     }
 }
 
