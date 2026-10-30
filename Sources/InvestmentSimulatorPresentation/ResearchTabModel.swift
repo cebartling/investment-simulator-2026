@@ -54,12 +54,18 @@ public final class ResearchTabModel: Identifiable {
     }
 
     /// Quotes the ticker and charts the current range at the same time,
-    /// forgetting the ranges loaded before.
+    /// forgetting the ranges loaded before. If the quote finds no such
+    /// ticker, the chart is cancelled rather than waited for.
     public func load() async {
         charts = [:]
-        async let quoted: Void = refresh()
-        async let charted: Void = showRange(chartRange)
-        _ = await (quoted, charted)
+        let range = chartRange
+        await withTaskGroup { group in
+            group.addTask { await self.showRange(range) }
+            await refresh()
+            if case .failed(.unknownTicker) = quoteState {
+                group.cancelAll()
+            }
+        }
     }
 
     /// Quotes the ticker again. A cancelled request changes nothing more: the

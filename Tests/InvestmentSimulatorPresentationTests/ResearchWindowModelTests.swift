@@ -87,6 +87,21 @@ struct ResearchWindowModelTests {
         #expect(try model.selection == Ticker("AAPL"))
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func `an unknown ticker is dropped without waiting for its chart`() async throws {
+        let zzzzq = try Ticker("ZZZZQ")
+        let model = ResearchWindowModel(
+            quotes: FakeTickerQuotes(["ZZZZQ": .failure(.unknownTicker(zzzzq))]),
+            dailyPrices: UntilCancelled(),
+            clock: { Self.now },
+        )
+
+        await open("ZZZZQ", in: model)
+
+        #expect(model.tabs.isEmpty)
+        #expect(model.openError == .unknownTicker(zzzzq))
+    }
+
     @Test func `typing clears the open error`() async throws {
         let zzzzq = try Ticker("ZZZZQ")
         let model = research(FakeTickerQuotes(["ZZZZQ": .failure(.unknownTicker(zzzzq))]))
@@ -254,4 +269,21 @@ struct ResearchWindowModelTests {
 @MainActor
 private final class Closed {
     var tab: ResearchTabModel?
+}
+
+/// A price request that never answers until its task is cancelled, as on a
+/// network that hangs.
+private final class UntilCancelled: DailyPriceProviding {
+    func dailyBars(
+        for _: Ticker,
+        from _: String,
+        through _: String,
+        interval _: BarInterval,
+    ) async throws(QuoteError) -> [DailyBar] {
+        // A stream nothing yields to ends only when its task is cancelled.
+        let (stream, continuation) = AsyncStream<Never>.makeStream()
+        for await _ in stream {}
+        withExtendedLifetime(continuation) {}
+        throw .unavailable("Cancelled")
+    }
 }
