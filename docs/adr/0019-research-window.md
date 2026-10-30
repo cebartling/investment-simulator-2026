@@ -28,12 +28,12 @@ ADR-0004 gives each screen one `@Observable` model, built by a composition root.
 
 - **One app-wide `Window("Research", id: "research")` scene,** with `.keyboardShortcut("r", modifiers: [.command, .shift])`. It appears in the Window menu as **Research ⇧⌘R**.
 - **Open tickers are a sidebar list, not tabs,** in a `NavigationSplitView`.
-  - The sidebar lists open tickers in the order they were opened, above a field for opening another.
+  - The sidebar has a field for opening a ticker, above the open tickers in the order they were opened.
   - Selecting a ticker shows its sections in the detail pane.
   - A ticker closes from its row's close button, its context menu, or the Delete key.
   - Reordering is out of the first cut. Nothing is restored at launch.
 - **Presentation** (`InvestmentSimulatorPresentation`):
-  - **`ResearchWindowModel`** owns the open tickers, the selection, and opening a ticker. A typed symbol is validated with a `QuoteProviding` quote first; a search result is opened the same way. Opening a ticker already open selects it.
+  - **`ResearchWindowModel`** owns the open tickers, the selection, and opening a ticker. A typed symbol opens straight away and its `QuoteProviding` quote validates it: an unknown ticker is removed again, with its message under the field. A search result is opened the same way. Opening a ticker already open selects it.
   - **It is `@State` on `InvestmentSimulatorApp`**, as `SettingsModel` is, so open tickers survive closing and reopening the window during a launch. This is app-wide state, which ADR-0011's no-shared-state rule doesn't cover, because that rule is about document windows.
   - **`ResearchTabModel`** holds one ticker's quote and one state per section: `loading`, `loaded(value)`, `empty(reason)` or `failed(MarketDataError)`. Each section's issue adds its own state and view.
   - Ranges and dates come from an injected `clock: () -> Date`, as in `MainWindowModel`.
