@@ -140,6 +140,8 @@ struct ResearchTabModelTests {
             ticker: Ticker("VTI"),
             quotes: FakeQuotes(.failure(.missingAPIKey)),
             dailyPrices: prices,
+            profiles: FakeResearchData(),
+            multiples: FakeResearchData(),
             clock: { Self.now },
         )
         prices.beforeAnsweringFirst { await tab.showRange(.sixMonths) }
@@ -158,6 +160,8 @@ struct ResearchTabModelTests {
             ticker: Ticker("VTI"),
             quotes: FakeQuotes(.failure(.missingAPIKey)),
             dailyPrices: prices,
+            profiles: FakeResearchData(),
+            multiples: FakeResearchData(),
             clock: { Self.now },
         )
         prices.beforeAnsweringFirst { await tab.showRange(.oneYear) }
@@ -243,7 +247,14 @@ struct ResearchTabModelTests {
         _ quotes: some QuoteProviding,
         prices: FakeDailyPrices = FakeDailyPrices(),
     ) throws -> ResearchTabModel {
-        try ResearchTabModel(ticker: Ticker("VTI"), quotes: quotes, dailyPrices: prices, clock: { Self.now })
+        try ResearchTabModel(
+            ticker: Ticker("VTI"),
+            quotes: quotes,
+            dailyPrices: prices,
+            profiles: FakeResearchData(),
+            multiples: FakeResearchData(),
+            clock: { Self.now },
+        )
     }
 
     private func closes(_ tab: ResearchTabModel) -> [Decimal]? {

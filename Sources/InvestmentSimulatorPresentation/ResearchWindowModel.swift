@@ -4,7 +4,8 @@ import Observation
 
 /// Drives the app-wide Research window (ADR-0019): the open tickers, in the
 /// order opened, and the selected one. It outlives the window, so it owns
-/// each ticker's load and chart range tasks rather than a view's `.task`.
+/// each ticker's load, chart range and section retry tasks rather than a
+/// view's `.task`.
 @Observable
 public final class ResearchWindowModel {
     public var symbolText = "" {
@@ -22,19 +23,27 @@ public final class ResearchWindowModel {
 
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
+    private let profiles: any CompanyProfileProviding
+    private let multiples: any ValuationMultiplesProviding
     private let clock: () -> Date
     private var tasks: [Ticker: Task<Void, Never>] = [:]
     /// Each ticker's chart range still loading, apart from its first load.
     private var chartTasks: [Ticker: Task<Void, Never>] = [:]
+    /// Each ticker's section retries still loading.
+    private var retryTasks: [Ticker: [ResearchTabModel.Section: Task<Void, Never>]] = [:]
 
     /// `clock` tells the time chart ranges reach back from.
     public init(
         quotes: any QuoteProviding,
         dailyPrices: any DailyPriceProviding,
+        profiles: any CompanyProfileProviding,
+        multiples: any ValuationMultiplesProviding,
         clock: @escaping () -> Date = Date.init,
     ) {
         self.quotes = quotes
         self.dailyPrices = dailyPrices
+        self.profiles = profiles
+        self.multiples = multiples
         self.clock = clock
     }
 
@@ -64,14 +73,22 @@ public final class ResearchWindowModel {
             return nil
         }
         let previous = selection
-        let tab = ResearchTabModel(ticker: ticker, quotes: quotes, dailyPrices: dailyPrices, clock: clock)
+        let tab = ResearchTabModel(
+            ticker: ticker,
+            quotes: quotes,
+            dailyPrices: dailyPrices,
+            profiles: profiles,
+            multiples: multiples,
+            clock: clock,
+        )
         tabs.append(tab)
         selection = ticker
         return load(tab, reselecting: previous)
     }
 
-    /// Quotes and charts an open ticker again, replacing anything still
-    /// loading for it. As when opening, an unknown ticker is dropped.
+    /// Loads an open ticker's quote, chart and sections again, replacing
+    /// anything still loading for it. As when opening, an unknown ticker is
+    /// dropped.
     @discardableResult
     public func refresh(_ ticker: Ticker) -> Task<Void, Never>? {
         guard let tab = tabs.first(where: { $0.ticker == ticker }) else {
@@ -89,6 +106,19 @@ public final class ResearchWindowModel {
         chartTasks[ticker]?.cancel()
         let task = Task { await tab.showRange(range) }
         chartTasks[ticker] = task
+        return task
+    }
+
+    /// Loads one section of an open ticker again, leaving what has already
+    /// loaded as it is, and replacing a retry of that section still loading.
+    @discardableResult
+    public func retry(_ section: ResearchTabModel.Section, for ticker: Ticker) -> Task<Void, Never>? {
+        guard let tab = tabs.first(where: { $0.ticker == ticker }) else {
+            return nil
+        }
+        retryTasks[ticker]?[section]?.cancel()
+        let task = Task { await tab.load(section) }
+        retryTasks[ticker, default: [:]][section] = task
         return task
     }
 
@@ -124,12 +154,18 @@ public final class ResearchWindowModel {
 
     private func cancelTasks(of ticker: Ticker) {
         tasks.removeValue(forKey: ticker)?.cancel()
+        cancelPartialTasks(of: ticker)
+    }
+
+    /// Cancels what loads one part of a ticker, apart from its full load.
+    private func cancelPartialTasks(of ticker: Ticker) {
         chartTasks.removeValue(forKey: ticker)?.cancel()
+        retryTasks.removeValue(forKey: ticker)?.values.forEach { $0.cancel() }
     }
 
     private func drop(_ ticker: Ticker, reselecting previous: Ticker?) {
         tasks[ticker] = nil
-        chartTasks.removeValue(forKey: ticker)?.cancel()
+        cancelPartialTasks(of: ticker)
         tabs.removeAll { $0.ticker == ticker }
         if selection == ticker {
             selection = tabs.contains { $0.ticker == previous } ? previous : tabs.last?.ticker

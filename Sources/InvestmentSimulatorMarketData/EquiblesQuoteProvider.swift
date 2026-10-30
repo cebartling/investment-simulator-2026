@@ -62,7 +62,9 @@ public struct EquiblesQuoteProvider: QuoteProviding, DailyPriceProviding {
             throw error(for: status, ticker: ticker)
         }
         let response = try decode(LatestClosesResponse.self, from: data)
-        guard let row = response.data.first(where: { $0.ticker == ticker.symbol }) else {
+        // Any row is this ticker's, though not always spelled alike: `BRK.B`
+        // comes back as `BRK-B`.
+        guard let row = response.data.first else {
             throw .unknownTicker(ticker)
         }
         return try Quote(
@@ -215,7 +217,6 @@ private struct LiveQuoteResponse: Decodable {
 
 private struct LatestClosesResponse: Decodable {
     struct Row: Decodable {
-        let ticker: String
         let date: String
         let close: Double
     }

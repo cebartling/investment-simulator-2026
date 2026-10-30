@@ -2,9 +2,18 @@ import Foundation
 import InvestmentSimulatorCore
 import Observation
 
-/// One open ticker in the Research window (ADR-0019): its quote and its
-/// price history chart, each with its own state, so one failing leaves the
-/// other showing.
+/// One Research section's progress (ADR-0019).
+public nonisolated enum ResearchSectionState<Value: Equatable>: Equatable {
+    case loading
+    case loaded(Value)
+    /// Equibles has nothing to show for this ticker.
+    case empty
+    case failed(MarketDataError)
+}
+
+/// One open ticker in the Research window (ADR-0019): its quote, price
+/// history chart and sections, each with its own state, so one failing
+/// leaves the others showing.
 @Observable
 public final class ResearchTabModel: Identifiable {
     public enum QuoteState: Equatable {
@@ -21,13 +30,23 @@ public final class ResearchTabModel: Identifiable {
         case failed(QuoteError)
     }
 
+    /// The parts of a ticker's research that load through a section port.
+    public nonisolated enum Section: CaseIterable, Sendable {
+        case profile
+        case multiples
+    }
+
     public let ticker: Ticker
     public private(set) var quoteState = QuoteState.loading
     public private(set) var chartRange = PriceRange.sixMonths
     public private(set) var chartState = ChartState.loading
+    public private(set) var profileState = ResearchSectionState<CompanyProfile>.loading
+    public private(set) var multiplesState = ResearchSectionState<ValuationMultiples>.loading
 
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
+    private let profiles: any CompanyProfileProviding
+    private let multiples: any ValuationMultiplesProviding
     private let clock: () -> Date
     /// Each range's points once loaded, so going back to it asks for nothing.
     private var charts: [PriceRange: [ChartPoint]] = [:]
@@ -36,11 +55,15 @@ public final class ResearchTabModel: Identifiable {
         ticker: Ticker,
         quotes: any QuoteProviding,
         dailyPrices: any DailyPriceProviding,
+        profiles: any CompanyProfileProviding,
+        multiples: any ValuationMultiplesProviding,
         clock: @escaping () -> Date,
     ) {
         self.ticker = ticker
         self.quotes = quotes
         self.dailyPrices = dailyPrices
+        self.profiles = profiles
+        self.multiples = multiples
         self.clock = clock
     }
 
@@ -53,14 +76,21 @@ public final class ResearchTabModel: Identifiable {
         quoteState == .failed(.missingAPIKey) || quoteState == .failed(.invalidAPIKey)
     }
 
-    /// Quotes the ticker and charts the current range at the same time,
-    /// forgetting the ranges loaded before. If the quote finds no such
-    /// ticker, the chart is cancelled rather than waited for.
+    /// Quotes the ticker, charts the current range and loads the sections at
+    /// the same time, forgetting the ranges loaded before. If the quote finds
+    /// no such ticker, the rest is cancelled rather than waited for. A load
+    /// cancelled before it starts changes nothing.
     public func load() async {
+        guard !Task.isCancelled else {
+            return
+        }
         charts = [:]
         let range = chartRange
         await withTaskGroup { group in
             group.addTask { await self.showRange(range) }
+            for section in Section.allCases {
+                group.addTask { await self.load(section) }
+            }
             await refresh()
             if case .failed(.unknownTicker) = quoteState {
                 group.cancelAll()
@@ -132,6 +162,43 @@ public final class ResearchTabModel: Identifiable {
 
     private func show(_ points: [ChartPoint]) {
         chartState = points.isEmpty ? .empty : .loaded(points)
+    }
+
+    /// Loads one section, leaving the rest as they are. A request cancelled
+    /// before it starts changes nothing; one cancelled while loading changes
+    /// nothing more.
+    public func load(_ section: Section) async {
+        switch section {
+        case .profile:
+            await load(\.profileState) { () async throws(MarketDataError) in
+                try await profiles.companyProfile(for: ticker)
+            }
+        case .multiples:
+            await load(\.multiplesState) { () async throws(MarketDataError) in
+                try await multiples.valuationMultiples(for: ticker)
+            }
+        }
+    }
+
+    private func load<Value>(
+        _ state: ReferenceWritableKeyPath<ResearchTabModel, ResearchSectionState<Value>>,
+        from request: () async throws(MarketDataError) -> Value,
+    ) async {
+        guard !Task.isCancelled else {
+            return
+        }
+        self[keyPath: state] = .loading
+        let outcome: ResearchSectionState<Value>
+        do throws(MarketDataError) {
+            outcome = try await .loaded(request())
+        } catch .noData {
+            outcome = .empty
+        } catch {
+            outcome = .failed(error)
+        }
+        if !Task.isCancelled {
+            self[keyPath: state] = outcome
+        }
     }
 }
 

@@ -88,11 +88,13 @@ struct ResearchWindowModelTests {
     }
 
     @Test(.timeLimit(.minutes(1)))
-    func `an unknown ticker is dropped without waiting for its chart`() async throws {
+    func `an unknown ticker is dropped without waiting for its sections`() async throws {
         let zzzzq = try Ticker("ZZZZQ")
         let model = ResearchWindowModel(
             quotes: FakeTickerQuotes(["ZZZZQ": .failure(.unknownTicker(zzzzq))]),
             dailyPrices: UntilCancelled(),
+            profiles: UntilCancelled(),
+            multiples: UntilCancelled(),
             clock: { Self.now },
         )
 
@@ -100,6 +102,22 @@ struct ResearchWindowModelTests {
 
         #expect(model.tabs.isEmpty)
         #expect(model.openError == .unknownTicker(zzzzq))
+    }
+
+    @Test func `an opened ticker loads its sections`() async throws {
+        let profile = CompanyProfile(name: "Vanguard", sector: nil, industry: nil, marketCap: nil)
+        let model = try ResearchWindowModel(
+            quotes: FakeTickerQuotes(["VTI": .success(makeQuote(ticker: "VTI", price: 12))]),
+            dailyPrices: FakeDailyPrices(),
+            profiles: FakeResearchData(profile: .success(profile)),
+            multiples: FakeResearchData(multiples: .failure(.dailyLimitReached)),
+            clock: { Self.now },
+        )
+
+        await open("VTI", in: model)
+
+        #expect(model.selectedTab?.profileState == .loaded(profile))
+        #expect(model.selectedTab?.multiplesState == .failed(.dailyLimitReached))
     }
 
     @Test func `typing clears the open error`() async throws {
@@ -254,7 +272,13 @@ struct ResearchWindowModelTests {
         _ quotes: some QuoteProviding,
         prices: FakeDailyPrices = FakeDailyPrices(),
     ) -> ResearchWindowModel {
-        ResearchWindowModel(quotes: quotes, dailyPrices: prices, clock: { Self.now })
+        ResearchWindowModel(
+            quotes: quotes,
+            dailyPrices: prices,
+            profiles: FakeResearchData(),
+            multiples: FakeResearchData(),
+            clock: { Self.now },
+        )
     }
 
     /// 2 PM in New York on 2026-10-29.
@@ -271,19 +295,33 @@ private final class Closed {
     var tab: ResearchTabModel?
 }
 
-/// A price request that never answers until its task is cancelled, as on a
-/// network that hangs.
-private final class UntilCancelled: DailyPriceProviding {
+/// Requests that never answer until their task is cancelled, as on a network
+/// that hangs.
+private final class UntilCancelled: DailyPriceProviding, CompanyProfileProviding, ValuationMultiplesProviding {
     func dailyBars(
         for _: Ticker,
         from _: String,
         through _: String,
         interval _: BarInterval,
     ) async throws(QuoteError) -> [DailyBar] {
+        await hang()
+        throw .unavailable("Cancelled")
+    }
+
+    func companyProfile(for _: Ticker) async throws(MarketDataError) -> CompanyProfile {
+        await hang()
+        throw .unavailable("Cancelled")
+    }
+
+    func valuationMultiples(for _: Ticker) async throws(MarketDataError) -> ValuationMultiples {
+        await hang()
+        throw .unavailable("Cancelled")
+    }
+
+    private func hang() async {
         // A stream nothing yields to ends only when its task is cancelled.
         let (stream, continuation) = AsyncStream<Never>.makeStream()
         for await _ in stream {}
         withExtendedLifetime(continuation) {}
-        throw .unavailable("Cancelled")
     }
 }

@@ -190,6 +190,53 @@ final class FakeDailyPrices: DailyPriceProviding {
     }
 }
 
+/// Answers every profile and multiples request with its result, and counts
+/// them. `whileAnswering` runs on the main actor during each request, as a
+/// change made while it waits.
+final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProviding {
+    private let profile: Result<CompanyProfile, MarketDataError>
+    private let multiples: Mutex<Result<ValuationMultiples, MarketDataError>>
+    private let sent = Mutex(0)
+    private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
+
+    init(
+        profile: Result<CompanyProfile, MarketDataError> = .failure(.noData),
+        multiples: Result<ValuationMultiples, MarketDataError> = .failure(.noData),
+    ) {
+        self.profile = profile
+        self.multiples = Mutex(multiples)
+    }
+
+    var requestCount: Int {
+        sent.withLock { $0 }
+    }
+
+    func answerMultiples(with result: Result<ValuationMultiples, MarketDataError>) {
+        multiples.withLock { $0 = result }
+    }
+
+    func whileAnswering(_ action: @escaping @MainActor @Sendable () -> Void) {
+        hook.withLock { $0 = action }
+    }
+
+    func companyProfile(for _: Ticker) async throws(MarketDataError) -> CompanyProfile {
+        await answering()
+        return try profile.get()
+    }
+
+    func valuationMultiples(for _: Ticker) async throws(MarketDataError) -> ValuationMultiples {
+        await answering()
+        return try multiples.withLock { $0 }.get()
+    }
+
+    private func answering() async {
+        sent.withLock { $0 += 1 }
+        if let action = hook.withLock({ $0 }) {
+            await action()
+        }
+    }
+}
+
 /// A bar for `session` whose high is `high`, with the low, open and close at 1.
 func makeDailyBar(session: String, high: Decimal) throws -> DailyBar {
     try DailyBar(sessionDate: session, open: 1, high: high, low: 1, close: 1)
