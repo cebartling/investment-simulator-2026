@@ -9,6 +9,11 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
     /// Enough for a weekly payer's year and its declared dividends, in one
     /// request. The default page of 20 isn't.
     private static let dividendLimit = 60
+    /// Equibles mixes transcripts and proxies in with the filings, and takes
+    /// one `documentType` per request, so one page is filtered here instead
+    /// of three requests.
+    private static let filingLimit = 50
+    private static let filingTypes: Set<String> = ["TenK", "TenQ", "EightK"]
 
     private let transport: any HTTPTransport
     private let credentials: any CredentialStoring
@@ -66,6 +71,71 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
             throw .noData
         }
         return try response.data.map { row throws(MarketDataError) in try dividend(from: row) }
+    }
+
+    public func pressReleases(for ticker: Ticker) async throws(MarketDataError) -> PressReleases {
+        let url = baseURL.appending(path: "stocks/\(ticker.symbol)/ir-news")
+        let response = try await get(IRNewsResponse.self, from: url)
+        return try PressReleases(
+            coverage: coverage(from: response.coverage.status),
+            releases: response.data.map { row throws(MarketDataError) in try pressRelease(from: row) },
+        )
+    }
+
+    public func filings(for ticker: Ticker) async throws(MarketDataError) -> [Filing] {
+        let url = baseURL.appending(path: "stocks/\(ticker.symbol)/filings")
+            .appending(queryItems: [URLQueryItem(name: "limit", value: String(Self.filingLimit))])
+        let response = try await get(FilingsResponse.self, from: url)
+        let rows = response.data.filter { Self.filingTypes.contains($0.documentType) }
+        guard !rows.isEmpty else {
+            throw .noData
+        }
+        return try rows.map { row throws(MarketDataError) in try filing(from: row) }
+    }
+
+    private func coverage(from status: String) throws(MarketDataError) -> PressReleaseCoverage {
+        switch status {
+        case "scraped": .scraped
+        case "attempted": .attempted
+        case "discovered": .discovered
+        case "none": .untracked
+        default: throw .unreadableResponse
+        }
+    }
+
+    private func pressRelease(from row: IRNewsResponse.Row) throws(MarketDataError) -> PressRelease {
+        guard let publishedAt = try? Date.ISO8601FormatStyle().parse(row.publishedAt) else {
+            throw .unreadableResponse
+        }
+        return try PressRelease(
+            publishedAt: publishedAt,
+            title: row.title,
+            url: webLink(from: row.url),
+            summary: row.summary,
+        )
+    }
+
+    private func filing(from row: FilingsResponse.Row) throws(MarketDataError) -> Filing {
+        guard let form = row.documentTypeName, let filedDate = row.filedDate else {
+            throw .unreadableResponse
+        }
+        let url = try webLink(from: row.url)
+        do {
+            return try Filing(form: form, filedDate: filedDate, reportingForDate: row.reportingForDate, url: url)
+        } catch {
+            throw .unreadableResponse
+        }
+    }
+
+    /// A link the user can click, so nothing but a web page: these come from
+    /// a third party and open in the system's handler for their scheme.
+    private func webLink(from text: String?) throws(MarketDataError) -> URL {
+        guard let text, let url = URL(string: text), let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme), url.host() != nil
+        else {
+            throw .unreadableResponse
+        }
+        return url
     }
 
     private func dividend(from row: DividendsResponse.Row) throws(MarketDataError) -> Dividend {
@@ -151,6 +221,8 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
     }
 }
 
+extension EquiblesResearchProvider: PressReleaseProviding, FilingProviding {}
+
 private extension MarketDataError {
     static let unreadableResponse = MarketDataError.unavailable("Equibles sent a response the app couldn't read.")
 }
@@ -190,6 +262,36 @@ private struct DividendsResponse: Decodable {
         let exDate: String
         let amountPerShare: Double
         let currency: String
+    }
+
+    let data: [Row]
+}
+
+private struct IRNewsResponse: Decodable {
+    struct Coverage: Decodable {
+        let status: String
+    }
+
+    struct Row: Decodable {
+        let publishedAt: String
+        let title: String
+        let url: String
+        let summary: String?
+    }
+
+    let coverage: Coverage
+    let data: [Row]
+}
+
+private struct FilingsResponse: Decodable {
+    /// Only `documentType` is required: a row the filter drops shouldn't
+    /// fail the rest of the page.
+    struct Row: Decodable {
+        let documentType: String
+        let documentTypeName: String?
+        let filedDate: String?
+        let reportingForDate: String?
+        let url: String?
     }
 
     let data: [Row]
