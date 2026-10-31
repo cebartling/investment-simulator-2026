@@ -30,4 +30,14 @@ public struct ResearchFigureFormatter {
         let parts = [profile.sector, profile.industry].compactMap(\.self)
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
+
+    /// A dividend in its own currency, such as "$0.27" or "$0.0975".
+    public func dividendAmount(_ amount: Decimal, currency: String) -> String {
+        amount.formatted(.currency(code: currency).precision(.fractionLength(2 ... 4)).locale(locale))
+    }
+
+    /// A yield given as a fraction, such as "3.97%" for `0.0397`.
+    public func yield(_ yield: Decimal?) -> String {
+        yield?.formatted(.percent.precision(.fractionLength(2)).locale(locale)) ?? Self.missing
+    }
 }

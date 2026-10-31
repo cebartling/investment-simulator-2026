@@ -300,8 +300,7 @@ private final class Closed {
 
 /// Requests that never answer until their task is cancelled, as on a network
 /// that hangs.
-private final class UntilCancelled: DailyPriceProviding, CompanyProfileProviding, ValuationMultiplesProviding,
-    DividendProviding {
+private final class UntilCancelled: DailyPriceProviding, CompanyProfileProviding, ValuationMultiplesProviding {
     func dailyBars(
         for _: Ticker,
         from _: String,
@@ -322,15 +321,17 @@ private final class UntilCancelled: DailyPriceProviding, CompanyProfileProviding
         throw .unavailable("Cancelled")
     }
 
-    func dividends(for _: Ticker) async throws(MarketDataError) -> [Dividend] {
-        await hang()
-        throw .unavailable("Cancelled")
-    }
-
-    private func hang() async {
+    fileprivate func hang() async {
         // A stream nothing yields to ends only when its task is cancelled.
         let (stream, continuation) = AsyncStream<Never>.makeStream()
         for await _ in stream {}
         withExtendedLifetime(continuation) {}
+    }
+}
+
+extension UntilCancelled: DividendProviding {
+    func dividends(for _: Ticker) async throws(MarketDataError) -> [Dividend] {
+        await hang()
+        throw .unavailable("Cancelled")
     }
 }

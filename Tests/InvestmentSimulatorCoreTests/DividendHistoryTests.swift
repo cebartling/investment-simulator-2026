@@ -62,9 +62,9 @@ struct DividendHistoryTests {
         #expect(history.trailingAmountPerShare == 0)
     }
 
-    @Test func `today is taken in New York`() {
+    @Test func `today is taken in New York`() throws {
         // 11:30 PM on October 30 in New York is already October 31 in UTC.
-        let lateEvening = ISO8601DateFormatter().date(from: "2026-10-31T03:30:00Z")!
+        let lateEvening = try #require(ISO8601DateFormatter().date(from: "2026-10-31T03:30:00Z"))
         let tomorrow = Self.dividend("2026-10-31", 1)
 
         let history = DividendHistory(dividends: [tomorrow], asOf: lateEvening)

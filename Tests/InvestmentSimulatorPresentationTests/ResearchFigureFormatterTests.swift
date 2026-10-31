@@ -49,4 +49,23 @@ struct ResearchFigureFormatterTests {
 
         #expect(formatter.classification(of: profile) == nil)
     }
+
+    @Test func `a dividend keeps fractions of a cent`() throws {
+        #expect(try formatter.dividendAmount(#require(Decimal(string: "0.27")), currency: "USD") == "$0.27")
+        #expect(try formatter.dividendAmount(#require(Decimal(string: "0.0975")), currency: "USD") == "$0.0975")
+        #expect(try formatter.dividendAmount(1, currency: "USD") == "$1.00")
+    }
+
+    @Test func `a dividend shows its own currency`() throws {
+        #expect(try formatter.dividendAmount(#require(Decimal(string: "0.25")), currency: "CAD") == "CA$0.25")
+    }
+
+    @Test func `a yield is a percentage with two decimal places`() throws {
+        #expect(try formatter.yield(#require(Decimal(string: "0.0397"))) == "3.97%")
+        #expect(formatter.yield(0) == "0.00%")
+    }
+
+    @Test func `a missing yield is a dash`() {
+        #expect(formatter.yield(nil) == "—")
+    }
 }

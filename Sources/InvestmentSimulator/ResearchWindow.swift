@@ -93,6 +93,13 @@ struct ResearchTickerView: View {
                     onRetry: { onRetry(.multiples) },
                     content: ResearchMultiplesView.init,
                 )
+                ResearchSection(
+                    title: "Dividends",
+                    state: tab.dividendsState,
+                    ticker: tab.ticker,
+                    onRetry: { onRetry(.dividends) },
+                    content: { ResearchDividendsView(history: $0, yield: tab.dividendYield) },
+                )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
@@ -260,6 +267,45 @@ struct ResearchMultiplesView: View {
                 Text(formatter.ratio(ratio.peerP75))
             }
             .monospaced()
+        }
+    }
+}
+
+/// The trailing yield, then dividends declared for later and those paid.
+struct ResearchDividendsView: View {
+    let history: DividendHistory
+    let yield: Decimal?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Trailing 12-month yield \(ResearchFigureFormatter().yield(yield))")
+            if !history.declared.isEmpty {
+                rows("Declared", history.declared)
+            }
+            if !history.paid.isEmpty {
+                rows("Paid", history.paid)
+            }
+        }
+    }
+
+    private func rows(_ title: String, _ dividends: [Dividend]) -> some View {
+        Grid(alignment: .trailing, horizontalSpacing: 20, verticalSpacing: 4) {
+            GridRow {
+                Text("\(title) Ex-Date")
+                    .gridColumnAlignment(.leading)
+                Text("Amount")
+            }
+            .foregroundStyle(.secondary)
+            ForEach(dividends, id: \.self) { dividend in
+                GridRow {
+                    Text(PriceDateFormatter().day(ofSession: dividend.exDate))
+                    Text(ResearchFigureFormatter().dividendAmount(
+                        dividend.amountPerShare,
+                        currency: dividend.currency,
+                    ))
+                    .monospaced()
+                }
+            }
         }
     }
 }
