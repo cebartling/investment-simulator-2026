@@ -340,6 +340,40 @@ func makeDailyBar(session: String, high: Decimal) throws -> DailyBar {
     try DailyBar(sessionDate: session, open: 1, high: high, low: 1, close: 1)
 }
 
+final class FakeContactEmail: ContactEmailStoring {
+    struct StoreError: Error {}
+
+    private let email: Mutex<String?>
+    private let failsToSave: Bool
+    private let reads = Mutex(0)
+
+    init(_ email: String? = nil, failsToSave: Bool = false) {
+        self.email = Mutex(email)
+        self.failsToSave = failsToSave
+    }
+
+    /// How many times the email itself was read.
+    var readCount: Int {
+        reads.withLock { $0 }
+    }
+
+    func contactEmail() throws -> String? {
+        reads.withLock { $0 += 1 }
+        return email.withLock { $0 }
+    }
+
+    func hasContactEmail() throws -> Bool {
+        email.withLock { $0 != nil }
+    }
+
+    func setContactEmail(_ newEmail: String?) throws {
+        if failsToSave {
+            throw StoreError()
+        }
+        email.withLock { $0 = newEmail }
+    }
+}
+
 final class FakeCredentials: CredentialStoring {
     struct StoreError: Error {}
 

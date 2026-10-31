@@ -18,12 +18,13 @@ struct InvestmentSimulatorApp: App {
 
     init() {
         let credentials = KeychainCredentialStore()
+        let contactEmails = KeychainContactEmailStore()
         let transport = URLSessionTransport()
         let equibles = EquiblesQuoteProvider(transport: transport, credentials: credentials)
         let researchData = EquiblesResearchProvider(transport: transport, credentials: credentials)
         quotes = equibles
         dailyPrices = equibles
-        _settings = State(initialValue: SettingsModel(credentials: credentials))
+        _settings = State(initialValue: SettingsModel(credentials: credentials, contactEmails: contactEmails))
         _research = State(initialValue: ResearchWindowModel(
             quotes: quotes,
             dailyPrices: dailyPrices,

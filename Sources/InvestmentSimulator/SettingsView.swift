@@ -1,7 +1,8 @@
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// The Settings window (⌘,): the Equibles API key used to price purchases.
+/// The Settings window (⌘,): the Equibles API key used to price purchases,
+/// and the contact email SEC EDGAR asks for.
 struct SettingsView: View {
     @Bindable var model: SettingsModel
 
@@ -32,9 +33,29 @@ struct SettingsView: View {
                     Link("Get an Equibles API key", destination: Self.apiKeysPage)
                 }
             }
+            Section {
+                LabeledContent("Status", value: model.hasStoredEmail ? "Email saved" : "No email")
+                TextField("Email", text: $model.emailText, prompt: Text("you@example.com"))
+                    .onSubmit(model.saveEmail)
+                HStack {
+                    Button("Save Email", action: model.saveEmail)
+                        .disabled(!model.canSaveEmail)
+                    Button("Remove Email", role: .destructive, action: model.removeEmail)
+                        .disabled(!model.hasStoredEmail)
+                }
+                if let message = model.emailMessage ?? model.emailErrorMessage {
+                    Text(message)
+                        .foregroundStyle(.red)
+                }
+            } header: {
+                Text("SEC EDGAR")
+            } footer: {
+                Text("SEC asks for a contact email with each request. Research's company search and exchange names need it. The email is stored in your Keychain.")
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         // A grouped form fills its window; size the window to the content.
-        .frame(width: 460, height: 260)
+        .frame(width: 460, height: 520)
     }
 }
