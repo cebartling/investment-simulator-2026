@@ -107,7 +107,7 @@ public final class ResearchWindowModel {
             symbolRejected = !searchText.isEmpty
             return nil
         }
-        return open(ticker)
+        return open(ticker, typed: symbolText)
     }
 
     /// Opens `ticker` and selects it, or selects it if it's already open.
@@ -115,6 +115,10 @@ public final class ResearchWindowModel {
     /// once its quote says so.
     @discardableResult
     public func open(_ ticker: Ticker) -> Task<Void, Never>? {
+        open(ticker, typed: nil)
+    }
+
+    private func open(_ ticker: Ticker, typed: String?) -> Task<Void, Never>? {
         symbolText = ""
         searchResults = []
         searchMessage = nil
@@ -132,7 +136,7 @@ public final class ResearchWindowModel {
         )
         tabs.append(tab)
         selection = ticker
-        return load(tab, reselecting: previous)
+        return load(tab, reselecting: previous, restoring: typed)
     }
 
     /// Loads an open ticker's quote, chart and sections again, replacing
@@ -204,7 +208,13 @@ public final class ResearchWindowModel {
 
     /// Loads `tab`, cancelling anything still loading for it. If its quote
     /// finds no such ticker, the tab is dropped and `openError` says why.
-    private func load(_ tab: ResearchTabModel, reselecting previous: Ticker?) -> Task<Void, Never> {
+    /// The `typed` text returns to an empty field, as it may have been a
+    /// company name, which brings back its matches or the search message.
+    private func load(
+        _ tab: ResearchTabModel,
+        reselecting previous: Ticker?,
+        restoring typed: String? = nil,
+    ) -> Task<Void, Never> {
         let ticker = tab.ticker
         cancelTasks(of: ticker)
         let task = Task {
@@ -213,6 +223,9 @@ public final class ResearchWindowModel {
                 return
             }
             drop(ticker, reselecting: previous)
+            if let typed, symbolText.isEmpty {
+                symbolText = typed
+            }
             openError = .unknownTicker(ticker)
         }
         tasks[ticker] = task

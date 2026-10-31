@@ -134,6 +134,65 @@ struct ResearchWindowModelSearchTests {
 
     /// The directory's top match could be another security, so Return
     /// never picks one.
+    @Test func `a company name entered as a ticker comes back with its matches`() async throws {
+        let unknown = try Ticker("APPLE")
+        let model = research(
+            FakeDirectory(.success([apple, hospitality])),
+            quotes: FakeTickerQuotes(["APPLE": .failure(.unknownTicker(unknown))]),
+        )
+        model.symbolText = "apple"
+        await model.search()
+
+        await model.open()?.value
+        await model.search()
+
+        #expect(model.tabs.isEmpty)
+        #expect(model.symbolText == "apple")
+        #expect(model.openError == .unknownTicker(unknown))
+        #expect(model.searchResults == [apple, hospitality])
+    }
+
+    @Test func `a company name entered without the email comes back saying Settings needs it`() async throws {
+        let unknown = try Ticker("APPLE")
+        let model = research(
+            FakeDirectory(.failure(.missingContactEmail)),
+            quotes: FakeTickerQuotes(["APPLE": .failure(.unknownTicker(unknown))]),
+        )
+        model.symbolText = "apple"
+        await model.search()
+
+        await model.open()?.value
+        await model.search()
+
+        #expect(model.openError == .unknownTicker(unknown))
+        #expect(model.searchMessage == "Add your SEC contact email in Settings to search by company name.")
+    }
+
+    @Test func `text typed while an unknown ticker loads is kept`() async throws {
+        let unknown = try Ticker("APPLE")
+        let quotes = FakeTickerQuotes(["APPLE": .failure(.unknownTicker(unknown))])
+        let model = research(FakeDirectory(), quotes: quotes)
+        model.symbolText = "apple"
+        let opening = model.open()
+
+        model.symbolText = "msft"
+        await opening?.value
+
+        #expect(model.symbolText == "msft")
+    }
+
+    @Test func `a chosen match that turns out unknown leaves the field empty`() async throws {
+        let quotes = try FakeTickerQuotes(["AAPL": .failure(.unknownTicker(Ticker("AAPL")))])
+        let model = research(FakeDirectory(.success([apple])), quotes: quotes)
+        model.symbolText = "apple"
+        await model.search()
+
+        await model.open(apple.ticker)?.value
+
+        #expect(model.symbolText.isEmpty)
+        #expect(model.openError != nil)
+    }
+
     @Test func `entering text opens what was typed, not the top match`() async throws {
         let quote = try makeQuote(ticker: "APP", price: 12)
         let model = research(
