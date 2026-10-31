@@ -17,7 +17,7 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
 
     private let transport: any HTTPTransport
     private let credentials: any CredentialStoring
-    private let baseURL: URL
+    let baseURL: URL
 
     public init(
         transport: any HTTPTransport,
@@ -164,7 +164,7 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
         )
     }
 
-    private func get<T: Decodable>(_: T.Type, from url: URL) async throws(MarketDataError) -> T {
+    func get<T: Decodable>(_: T.Type, from url: URL) async throws(MarketDataError) -> T {
         // Read on every request, so a key saved in Settings works at once.
         let key = try apiKey()
         var request = URLRequest(url: url)
@@ -209,7 +209,7 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
     /// `JSONDecoder` reads JSON numbers as `Double`. `String(Double)` is the
     /// shortest text that reads back as the same `Double`, so a figure sent
     /// with a few decimal places comes back exactly (ADR-0012).
-    private func requiredDecimal(from number: Double) throws(MarketDataError) -> Decimal {
+    func requiredDecimal(from number: Double) throws(MarketDataError) -> Decimal {
         guard let decimal = Decimal(string: String(number), locale: Locale(identifier: "en_US_POSIX")) else {
             throw .unreadableResponse
         }
@@ -226,7 +226,7 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
 
 extension EquiblesResearchProvider: PressReleaseProviding, FilingProviding {}
 
-private extension MarketDataError {
+extension MarketDataError {
     static let unreadableResponse = MarketDataError.unavailable("Equibles sent a response the app couldn't read.")
 }
 
