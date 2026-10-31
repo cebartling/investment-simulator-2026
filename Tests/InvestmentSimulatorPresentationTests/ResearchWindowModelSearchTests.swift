@@ -132,16 +132,57 @@ struct ResearchWindowModelSearchTests {
         #expect(model.selectedTab?.quoteState == .quoted(quote))
     }
 
-    /// The directory's top match could be another security, so Return
-    /// never picks one.
-    @Test func `a company name entered as a ticker comes back with its matches`() async throws {
+    @Test func `entering a company name opens its top match`() async throws {
+        let quote = try makeQuote(ticker: "AAPL", price: 12)
+        let model = research(
+            FakeDirectory(.success([apple, hospitality])),
+            quotes: FakeTickerQuotes(["AAPL": .success(quote)]),
+        )
+        model.symbolText = "apple"
+        await model.search()
+
+        await model.open()?.value
+
+        #expect(model.symbolText.isEmpty)
+        #expect(model.selection == apple.ticker)
+        #expect(model.selectedTab?.quoteState == .quoted(quote))
+    }
+
+    @Test func `entering a name with spaces opens its top match`() async throws {
+        let quote = try makeQuote(ticker: "AAPL", price: 12)
+        let model = research(
+            FakeDirectory(.success([apple])),
+            quotes: FakeTickerQuotes(["AAPL": .success(quote)]),
+        )
+        model.symbolText = "apple inc"
+        await model.search()
+
+        await model.open()?.value
+
+        #expect(model.selection == apple.ticker)
+        #expect(model.symbolMessage == nil)
+    }
+
+    @Test func `a top match that turns out unknown brings the name back`() async throws {
+        let quotes = try FakeTickerQuotes(["AAPL": .failure(.unknownTicker(Ticker("AAPL")))])
+        let model = research(FakeDirectory(.success([apple])), quotes: quotes)
+        model.symbolText = "apple"
+        await model.search()
+
+        await model.open()?.value
+
+        #expect(model.symbolText == "apple")
+        #expect(model.openError == .unknownTicker(apple.ticker))
+    }
+
+    /// The first search can still be downloading the directory.
+    @Test func `a company name entered before its search answers comes back with its matches`() async throws {
         let unknown = try Ticker("APPLE")
         let model = research(
             FakeDirectory(.success([apple, hospitality])),
             quotes: FakeTickerQuotes(["APPLE": .failure(.unknownTicker(unknown))]),
         )
         model.symbolText = "apple"
-        await model.search()
 
         await model.open()?.value
         await model.search()
@@ -150,6 +191,21 @@ struct ResearchWindowModelSearchTests {
         #expect(model.symbolText == "apple")
         #expect(model.openError == .unknownTicker(unknown))
         #expect(model.searchResults == [apple, hospitality])
+    }
+
+    @Test func `matches for earlier text are not opened`() async throws {
+        let quote = try makeQuote(ticker: "VTI", price: 12)
+        let model = research(
+            FakeDirectory(.success([apple])),
+            quotes: FakeTickerQuotes(["VTI": .success(quote)]),
+        )
+        model.symbolText = "apple"
+        await model.search()
+
+        model.symbolText = "vti"
+        await model.open()?.value
+
+        #expect(try model.selection == Ticker("VTI"))
     }
 
     @Test func `a company name entered without the email comes back saying Settings needs it`() async throws {
@@ -193,18 +249,20 @@ struct ResearchWindowModelSearchTests {
         #expect(model.openError != nil)
     }
 
-    @Test func `entering text opens what was typed, not the top match`() async throws {
-        let quote = try makeQuote(ticker: "APP", price: 12)
+    /// A ticker EDGAR lacks could otherwise open a security it merely starts.
+    @Test func `entering text that matches a symbol opens what was typed`() async throws {
+        let quote = try makeQuote(ticker: "VTI", price: 12)
+        let longerSymbol = try ListedSecurity(ticker: Ticker("VTIP"), name: "Other Co", exchange: "Nasdaq")
         let model = research(
-            FakeDirectory(.success([apple])),
-            quotes: FakeTickerQuotes(["APP": .success(quote)]),
+            FakeDirectory(.success([longerSymbol])),
+            quotes: FakeTickerQuotes(["VTI": .success(quote)]),
         )
-        model.symbolText = "app"
+        model.symbolText = "vti"
         await model.search()
 
         await model.open()?.value
 
-        #expect(try model.selection == Ticker("APP"))
+        #expect(try model.selection == Ticker("VTI"))
     }
 }
 

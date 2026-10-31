@@ -60,7 +60,8 @@ struct ResearchSidebar: View {
         }
     }
 
-    /// Clicking a match opens it. Return in the field opens what was typed.
+    /// Clicking a match opens it. Return in the field opens the top match
+    /// only when the text matches no symbol.
     private var searchResults: some View {
         List(model.searchResults, id: \.ticker) { security in
             Button {

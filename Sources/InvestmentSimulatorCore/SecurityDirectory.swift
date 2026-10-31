@@ -50,6 +50,14 @@ public extension [ListedSecurity] {
         return Array(ranks.joined().prefix(Self.matchLimit))
     }
 
+    /// The first of these matches for `text`, if none of them matches it by
+    /// symbol. A symbol match means `text` may be a ticker, which could be
+    /// one the directory lacks, so it is not a name to look up.
+    func topNameMatch(for text: String) -> ListedSecurity? {
+        let symbol = Self.comparableSymbol(text.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
+        return contains { Self.comparableSymbol($0.ticker.symbol).hasPrefix(symbol) } ? nil : first
+    }
+
     /// The row for `ticker`, however its share class is spelled: `BRK.B` is
     /// listed as `BRK-B`.
     func security(for ticker: Ticker) -> ListedSecurity? {

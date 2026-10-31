@@ -24,6 +24,32 @@ struct SecurityDirectoryTests {
         #expect(list.matching("meta") == [exact, symbolPrefix, namePrefix, contains])
     }
 
+    @Test func `the top name match is the first match when no symbol matches`() throws {
+        let first = try security("AAPL", "Apple Inc.")
+        let second = try security("APLE", "Apple Hospitality REIT")
+
+        #expect([first, second].topNameMatch(for: "apple") == first)
+    }
+
+    @Test func `there is no top name match when a symbol matches`() throws {
+        let name = try security("AAPL", "Vti Holdings")
+        let exact = try security("VTI", "Other Co")
+        let longer = try security("VTIP", "Other Co")
+
+        #expect([exact, name].topNameMatch(for: "vti") == nil)
+        #expect([longer, name].topNameMatch(for: " vti ") == nil)
+    }
+
+    @Test func `a symbol match counts however its share class is spelled`() throws {
+        let berkshire = try security("BRK-B", "Berkshire Hathaway")
+
+        #expect([berkshire].topNameMatch(for: "brk.b") == nil)
+    }
+
+    @Test func `no matches have no top name match`() {
+        #expect([ListedSecurity]().topNameMatch(for: "apple") == nil)
+    }
+
     @Test func `keeps the list's order within a rank`() throws {
         let first = try security("AAA", "Acme One")
         let second = try security("BBB", "Acme Two")

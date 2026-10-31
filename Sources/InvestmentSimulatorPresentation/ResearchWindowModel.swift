@@ -25,6 +25,8 @@ public final class ResearchWindowModel {
     public private(set) var searchResults: [ListedSecurity] = []
     public private(set) var searchMessage: String?
 
+    /// The text `searchResults` answer, which lags the field while searching.
+    private var resultsText = ""
     /// The field's text was entered, and it can't be a ticker. It may be a
     /// company name until then, so nothing is said while typing.
     private var symbolRejected = false
@@ -96,13 +98,18 @@ public final class ResearchWindowModel {
             return
         }
         searchResults = results
+        resultsText = text
         searchMessage = message
     }
 
-    /// Opens exactly what was typed, never the directory's top match, which
-    /// could be another security when the directory lacks this ticker.
+    /// Opens the top match when the text matches only company names, and
+    /// otherwise exactly what was typed: the text may be a ticker the
+    /// directory lacks, which must not become another security.
     @discardableResult
     public func open() -> Task<Void, Never>? {
+        if resultsText == searchText, let match = searchResults.topNameMatch(for: searchText) {
+            return open(match.ticker, typed: symbolText)
+        }
         guard let ticker else {
             symbolRejected = !searchText.isEmpty
             return nil
