@@ -53,3 +53,30 @@ final class FakeCredentials: CredentialStoring {
         key.withLock { $0 = newKey }
     }
 }
+
+struct ContactEmailReadFailure: Error {}
+
+final class FakeContactEmail: ContactEmailStoring {
+    private let email: Mutex<String?>
+    private let failsToRead: Bool
+
+    init(_ email: String?, failsToRead: Bool = false) {
+        self.email = Mutex(email)
+        self.failsToRead = failsToRead
+    }
+
+    func contactEmail() throws -> String? {
+        if failsToRead {
+            throw ContactEmailReadFailure()
+        }
+        return email.withLock { $0 }
+    }
+
+    func hasContactEmail() throws -> Bool {
+        email.withLock { $0 != nil }
+    }
+
+    func setContactEmail(_ newEmail: String?) throws {
+        email.withLock { $0 = newEmail }
+    }
+}
