@@ -14,14 +14,34 @@ struct ResearchWindowModelTests {
         #expect(model.open() == nil)
     }
 
-    @Test func `an invalid symbol explains itself and can't be opened`() {
+    @Test func `an invalid symbol explains itself once entered, and can't be opened`() {
         let model = research(FakeTickerQuotes([:]))
 
         model.symbolText = "VT I"
 
-        #expect(model.symbolMessage == "Enter a ticker symbol, such as VTI.")
+        #expect(model.symbolMessage == nil)
         #expect(model.open() == nil)
+        #expect(model.symbolMessage == "Enter a ticker symbol, such as VTI.")
         #expect(model.tabs.isEmpty)
+    }
+
+    @Test func `changing an invalid symbol clears its message`() {
+        let model = research(FakeTickerQuotes([:]))
+        model.symbolText = "VT I"
+        model.open()
+
+        model.symbolText = "VT"
+
+        #expect(model.symbolMessage == nil)
+    }
+
+    @Test func `entering only spaces says nothing`() {
+        let model = research(FakeTickerQuotes([:]))
+        model.symbolText = "   "
+
+        model.open()
+
+        #expect(model.symbolMessage == nil)
     }
 
     @Test func `opening adds the ticker, selects it and quotes it`() async throws {
@@ -100,6 +120,7 @@ struct ResearchWindowModelTests {
                 pressReleases: UntilCancelled(),
                 filings: UntilCancelled(),
                 statements: UntilCancelled(),
+                directory: FakeDirectory(),
             ),
             clock: { Self.now },
         )

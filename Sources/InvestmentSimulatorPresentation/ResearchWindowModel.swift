@@ -12,6 +12,7 @@ public final class ResearchWindowModel {
         didSet {
             if symbolText != oldValue {
                 openError = nil
+                symbolRejected = false
             }
         }
     }
@@ -20,7 +21,13 @@ public final class ResearchWindowModel {
     public private(set) var tabs: [ResearchTabModel] = []
     /// Why the last ticker opened was dropped: its quote found no such ticker.
     public private(set) var openError: QuoteError?
+    /// The best matches for the field's text, once searched.
+    public private(set) var searchResults: [ListedSecurity] = []
+    public private(set) var searchMessage: String?
 
+    /// The field's text was entered, and it can't be a ticker. It may be a
+    /// company name until then, so nothing is said while typing.
+    private var symbolRejected = false
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
     private let ports: ResearchSectionPorts
@@ -51,23 +58,66 @@ public final class ResearchWindowModel {
         try? Ticker(symbolText)
     }
 
+    private var searchText: String {
+        symbolText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     public var symbolMessage: String? {
-        symbolText.isEmpty || ticker != nil ? nil : "Enter a ticker symbol, such as VTI."
+        symbolRejected ? "Enter a ticker symbol, such as VTI." : nil
     }
 
     public var selectedTab: ResearchTabModel? {
         tabs.first { $0.ticker == selection }
     }
 
-    /// Opens the typed ticker and selects it, or selects it if it's already
-    /// open. Returns the new ticker's load task. An unknown ticker is
-    /// dropped again once its quote says so.
+    /// Finds the field's text in the directory. Results for text that has
+    /// changed since are dropped. Without the contact email search is off,
+    /// and typed tickers still open (ADR-0019).
+    public func search() async {
+        let text = searchText
+        guard !text.isEmpty else {
+            searchResults = []
+            searchMessage = nil
+            return
+        }
+        let results: [ListedSecurity]
+        let message: String?
+        do throws(MarketDataError) {
+            results = try await ports.directory.search(text)
+            message = nil
+        } catch .missingContactEmail {
+            results = []
+            message = "Add your SEC contact email in Settings to search by company name."
+        } catch {
+            results = []
+            message = error.localizedDescription
+        }
+        guard text == searchText else {
+            return
+        }
+        searchResults = results
+        searchMessage = message
+    }
+
+    /// Opens exactly what was typed, never the directory's top match, which
+    /// could be another security when the directory lacks this ticker.
     @discardableResult
     public func open() -> Task<Void, Never>? {
         guard let ticker else {
+            symbolRejected = !searchText.isEmpty
             return nil
         }
+        return open(ticker)
+    }
+
+    /// Opens `ticker` and selects it, or selects it if it's already open.
+    /// Returns the new ticker's load task. An unknown ticker is dropped again
+    /// once its quote says so.
+    @discardableResult
+    public func open(_ ticker: Ticker) -> Task<Void, Never>? {
         symbolText = ""
+        searchResults = []
+        searchMessage = nil
         guard !tabs.contains(where: { $0.ticker == ticker }) else {
             selection = ticker
             return nil

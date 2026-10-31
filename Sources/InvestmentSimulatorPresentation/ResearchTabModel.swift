@@ -52,6 +52,7 @@ public final class ResearchTabModel: Identifiable {
     /// The parts of a ticker's research that load through a section port.
     public nonisolated enum Section: CaseIterable, Sendable {
         case profile
+        case exchange
         case multiples
         case dividends
         case pressReleases
@@ -63,6 +64,8 @@ public final class ResearchTabModel: Identifiable {
     public private(set) var chartRange = PriceRange.sixMonths
     public private(set) var chartState = ChartState.loading
     public private(set) var profileState = ResearchSectionState<CompanyProfile>.loading
+    /// Empty when EDGAR doesn't list the ticker, or lists no exchange for it.
+    public private(set) var exchangeState = ResearchSectionState<String>.loading
     public private(set) var multiplesState = ResearchSectionState<ValuationMultiples>.loading
     public private(set) var dividendsState = ResearchSectionState<DividendHistory>.loading
     public private(set) var pressReleasesState = ResearchSectionState<[PressRelease]>.loading
@@ -104,6 +107,15 @@ public final class ResearchTabModel: Identifiable {
     /// True when the quote failed for want of a working API key.
     public var needsAPIKey: Bool {
         quoteState == .failed(.missingAPIKey) || quoteState == .failed(.invalidAPIKey)
+    }
+
+    /// Why the profile shows no exchange, when that's worth saying.
+    public var exchangeMessage: String? {
+        switch exchangeState {
+        case .failed(.missingContactEmail): "Add your SEC contact email in Settings to see the exchange."
+        case let .failed(error): error.localizedDescription
+        case .loading, .loaded, .empty: nil
+        }
     }
 
     /// The trailing dividend yield at the current quote, or nil until both
@@ -269,6 +281,13 @@ public final class ResearchTabModel: Identifiable {
         case .profile:
             await load(\.profileState) { () async throws(MarketDataError) in
                 try await .loaded(ports.profiles.companyProfile(for: ticker))
+            }
+        case .exchange:
+            await load(\.exchangeState) { () async throws(MarketDataError) in
+                guard let exchange = try await ports.directory.security(for: ticker)?.exchange else {
+                    return .empty(.noData)
+                }
+                return .loaded(exchange)
             }
         case .multiples:
             await load(\.multiplesState) { () async throws(MarketDataError) in

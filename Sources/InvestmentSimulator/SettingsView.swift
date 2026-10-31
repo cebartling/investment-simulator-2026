@@ -50,8 +50,11 @@ struct SettingsView: View {
             } header: {
                 Text("SEC EDGAR")
             } footer: {
-                Text("SEC asks for a contact email with each request. Research's company search and exchange names need it. The email is stored in your Keychain.")
-                    .foregroundStyle(.secondary)
+                Text("""
+                SEC asks for a contact email with each request. Research's company search and \
+                exchange names need it. The email is stored in your Keychain.
+                """)
+                .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

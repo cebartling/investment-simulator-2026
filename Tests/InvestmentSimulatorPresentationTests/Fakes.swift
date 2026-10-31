@@ -200,6 +200,7 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
     private let dividends: Mutex<Result<[Dividend], MarketDataError>>
     private let pressReleases: Mutex<Result<PressReleases, MarketDataError>>
     private let filings: Mutex<Result<[Filing], MarketDataError>>
+    private let directory: FakeDirectory
     private let sent = Mutex(0)
     private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
 
@@ -209,7 +210,9 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
         dividends: Result<[Dividend], MarketDataError> = .failure(.noData),
         pressReleases: Result<PressReleases, MarketDataError> = .failure(.noData),
         filings: Result<[Filing], MarketDataError> = .failure(.noData),
+        directory: FakeDirectory = FakeDirectory(),
     ) {
+        self.directory = directory
         self.profile = profile
         self.multiples = Mutex(multiples)
         self.dividends = Mutex(dividends)
@@ -284,6 +287,7 @@ extension FakeResearchData: DividendProviding, PressReleaseProviding, FilingProv
             pressReleases: self,
             filings: self,
             statements: FakeStatements(),
+            directory: directory,
         )
     }
 }
@@ -338,40 +342,6 @@ final class FakeStatements: FinancialStatementProviding {
 /// A bar for `session` whose high is `high`, with the low, open and close at 1.
 func makeDailyBar(session: String, high: Decimal) throws -> DailyBar {
     try DailyBar(sessionDate: session, open: 1, high: high, low: 1, close: 1)
-}
-
-final class FakeContactEmail: ContactEmailStoring {
-    struct StoreError: Error {}
-
-    private let email: Mutex<String?>
-    private let failsToSave: Bool
-    private let reads = Mutex(0)
-
-    init(_ email: String? = nil, failsToSave: Bool = false) {
-        self.email = Mutex(email)
-        self.failsToSave = failsToSave
-    }
-
-    /// How many times the email itself was read.
-    var readCount: Int {
-        reads.withLock { $0 }
-    }
-
-    func contactEmail() throws -> String? {
-        reads.withLock { $0 += 1 }
-        return email.withLock { $0 }
-    }
-
-    func hasContactEmail() throws -> Bool {
-        email.withLock { $0 != nil }
-    }
-
-    func setContactEmail(_ newEmail: String?) throws {
-        if failsToSave {
-            throw StoreError()
-        }
-        email.withLock { $0 = newEmail }
-    }
 }
 
 final class FakeCredentials: CredentialStoring {

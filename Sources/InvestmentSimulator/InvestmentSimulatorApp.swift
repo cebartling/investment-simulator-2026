@@ -35,6 +35,7 @@ struct InvestmentSimulatorApp: App {
                 pressReleases: researchData,
                 filings: researchData,
                 statements: researchData,
+                directory: EdgarSecurityDirectory(transport: transport, contactEmails: contactEmails),
             ),
         ))
     }

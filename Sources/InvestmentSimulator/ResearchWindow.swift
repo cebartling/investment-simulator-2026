@@ -10,40 +10,7 @@ struct ResearchWindow: View {
 
     var body: some View {
         NavigationSplitView {
-            VStack(alignment: .leading, spacing: 4) {
-                TextField("Ticker", text: $model.symbolText, prompt: Text("Open ticker…"))
-                    .onSubmit { model.open() }
-                if let message = model.symbolMessage ?? model.openError?.localizedDescription {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.top, 8)
-            List(model.tabs, selection: $model.selection) { tab in
-                HStack {
-                    Text(tab.ticker.symbol)
-                    Spacer()
-                    Button("Close \(tab.ticker.symbol)", systemImage: "xmark") {
-                        model.close(tab.ticker)
-                    }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .help("Close \(tab.ticker.symbol)")
-                }
-            }
-            .contextMenu(forSelectionType: Ticker.self) { tickers in
-                if let ticker = tickers.first {
-                    Button("Close") { model.close(ticker) }
-                }
-            }
-            .onDeleteCommand {
-                if let ticker = model.selection {
-                    model.close(ticker)
-                }
-            }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            ResearchSidebar(model: model)
         } detail: {
             if let tab = model.selectedTab {
                 ResearchTickerView(
@@ -59,7 +26,7 @@ struct ResearchWindow: View {
                 ContentUnavailableView(
                     model.tabs.isEmpty ? "No Ticker Open" : "No Ticker Selected",
                     systemImage: "magnifyingglass",
-                    description: Text("Type a ticker symbol, such as VTI, to research it."),
+                    description: Text("Type a ticker symbol or company name to research it."),
                 )
             }
         }
@@ -88,7 +55,13 @@ struct ResearchTickerView: View {
                     state: tab.profileState,
                     ticker: tab.ticker,
                     onRetry: { onRetry(.profile) },
-                    content: ResearchProfileView.init,
+                    content: {
+                        ResearchProfileView(
+                            profile: $0,
+                            exchangeState: tab.exchangeState,
+                            exchangeMessage: tab.exchangeMessage,
+                        )
+                    },
                 )
                 ResearchSection(
                     title: "Valuation Multiples",
@@ -212,6 +185,8 @@ struct ResearchChartSection: View {
 /// Who the company is and what it's worth.
 struct ResearchProfileView: View {
     let profile: CompanyProfile
+    let exchangeState: ResearchSectionState<String>
+    let exchangeMessage: String?
 
     var body: some View {
         let formatter = ResearchFigureFormatter()
@@ -221,7 +196,16 @@ struct ResearchProfileView: View {
                 Text(classification)
                     .foregroundStyle(.secondary)
             }
+            if case let .loaded(exchange) = exchangeState {
+                Text(exchange)
+                    .foregroundStyle(.secondary)
+            }
             Text("Market cap \(formatter.marketCap(profile.marketCap))")
+            if let exchangeMessage {
+                Text(exchangeMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }
