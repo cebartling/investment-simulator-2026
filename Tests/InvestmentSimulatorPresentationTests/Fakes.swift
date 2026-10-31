@@ -190,21 +190,24 @@ final class FakeDailyPrices: DailyPriceProviding {
     }
 }
 
-/// Answers every profile and multiples request with its result, and counts
-/// them. `whileAnswering` runs on the main actor during each request, as a
-/// change made while it waits.
-final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProviding {
+/// Answers every profile, multiples and dividends request with its result,
+/// and counts them. `whileAnswering` runs on the main actor during each
+/// request, as a change made while it waits.
+final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProviding, DividendProviding {
     private let profile: Result<CompanyProfile, MarketDataError>
     private let multiples: Mutex<Result<ValuationMultiples, MarketDataError>>
+    private let dividends: Mutex<Result<[Dividend], MarketDataError>>
     private let sent = Mutex(0)
     private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
 
     init(
         profile: Result<CompanyProfile, MarketDataError> = .failure(.noData),
         multiples: Result<ValuationMultiples, MarketDataError> = .failure(.noData),
+        dividends: Result<[Dividend], MarketDataError> = .failure(.noData),
     ) {
         self.profile = profile
         self.multiples = Mutex(multiples)
+        self.dividends = Mutex(dividends)
     }
 
     var requestCount: Int {
@@ -213,6 +216,10 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
 
     func answerMultiples(with result: Result<ValuationMultiples, MarketDataError>) {
         multiples.withLock { $0 = result }
+    }
+
+    func answerDividends(with result: Result<[Dividend], MarketDataError>) {
+        dividends.withLock { $0 = result }
     }
 
     func whileAnswering(_ action: @escaping @MainActor @Sendable () -> Void) {
@@ -227,6 +234,11 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
     func valuationMultiples(for _: Ticker) async throws(MarketDataError) -> ValuationMultiples {
         await answering()
         return try multiples.withLock { $0 }.get()
+    }
+
+    func dividends(for _: Ticker) async throws(MarketDataError) -> [Dividend] {
+        await answering()
+        return try dividends.withLock { $0 }.get()
     }
 
     private func answering() async {

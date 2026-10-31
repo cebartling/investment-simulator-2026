@@ -29,6 +29,7 @@ struct InvestmentSimulatorApp: App {
             dailyPrices: dailyPrices,
             profiles: researchData,
             multiples: researchData,
+            dividends: researchData,
         ))
     }
 

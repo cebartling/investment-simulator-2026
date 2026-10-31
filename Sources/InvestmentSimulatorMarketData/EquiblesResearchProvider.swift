@@ -5,7 +5,11 @@ import InvestmentSimulatorCore
 /// means no data: the tab's quote has already validated the ticker, and
 /// Equibles answers the same way for an unknown ticker and for one with
 /// nothing to show.
-public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultiplesProviding {
+public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultiplesProviding, DividendProviding {
+    /// Enough for a weekly payer's year and its declared dividends, in one
+    /// request. The default page of 20 isn't.
+    private static let dividendLimit = 60
+
     private let transport: any HTTPTransport
     private let credentials: any CredentialStoring
     private let baseURL: URL
@@ -51,6 +55,26 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
             ),
             evToEbit: ratio(response.evToEbit, peers?.evToEbitMedian, peers?.evToEbitP25, peers?.evToEbitP75),
         )
+    }
+
+    public func dividends(for ticker: Ticker) async throws(MarketDataError) -> [Dividend] {
+        let url = baseURL.appending(path: "stocks/\(ticker.symbol)/dividends")
+            .appending(queryItems: [URLQueryItem(name: "limit", value: String(Self.dividendLimit))])
+        let response = try await get(DividendsResponse.self, from: url)
+        // A stock that pays no dividend is a 200 with no rows.
+        guard !response.data.isEmpty else {
+            throw .noData
+        }
+        return try response.data.map { row throws(MarketDataError) in try dividend(from: row) }
+    }
+
+    private func dividend(from row: DividendsResponse.Row) throws(MarketDataError) -> Dividend {
+        let amount = try requiredDecimal(from: row.amountPerShare)
+        do {
+            return try Dividend(exDate: row.exDate, amountPerShare: amount, currency: row.currency)
+        } catch {
+            throw .unreadableResponse
+        }
     }
 
     private func ratio(
@@ -112,14 +136,18 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
     /// `JSONDecoder` reads JSON numbers as `Double`. `String(Double)` is the
     /// shortest text that reads back as the same `Double`, so a figure sent
     /// with a few decimal places comes back exactly (ADR-0012).
-    private func decimal(from number: Double?) throws(MarketDataError) -> Decimal? {
-        guard let number else {
-            return nil
-        }
+    private func requiredDecimal(from number: Double) throws(MarketDataError) -> Decimal {
         guard let decimal = Decimal(string: String(number), locale: Locale(identifier: "en_US_POSIX")) else {
             throw .unreadableResponse
         }
         return decimal
+    }
+
+    private func decimal(from number: Double?) throws(MarketDataError) -> Decimal? {
+        guard let number else {
+            return nil
+        }
+        return try requiredDecimal(from: number)
     }
 }
 
@@ -155,6 +183,16 @@ private struct ValuationResponse: Decodable {
     let evToRevenue: Double?
     let evToEbit: Double?
     let industryContext: Peers?
+}
+
+private struct DividendsResponse: Decodable {
+    struct Row: Decodable {
+        let exDate: String
+        let amountPerShare: Double
+        let currency: String
+    }
+
+    let data: [Row]
 }
 
 /// Core doesn't format display strings, so the adapter describes the

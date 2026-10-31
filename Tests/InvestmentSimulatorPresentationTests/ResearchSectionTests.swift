@@ -17,6 +17,12 @@ struct ResearchSectionTests {
         return ValuationMultiples(peRatio: ratio, evToRevenue: ratio, evToEbit: ratio)
     }()
 
+    private static let now = Date(timeIntervalSince1970: 1_793_000_000)
+
+    private static func dividends() throws -> [Dividend] {
+        try [Dividend(exDate: "2026-08-10", amountPerShare: 3, currency: "USD")]
+    }
+
     @Test func `sections start loading`() throws {
         let tab = try tab(FakeResearchData())
 
@@ -74,9 +80,9 @@ struct ResearchSectionTests {
 
     @Test func `loading again shows loading in place of a failure`() async throws {
         let data = FakeResearchData(multiples: .failure(.dailyLimitReached))
-        // Its own fake for profiles, so the check runs during the multiples
-        // request and not before that section has started.
-        let tab = try tab(data, profiles: FakeResearchData())
+        // Its own fake for the other sections, so the check runs during the
+        // multiples request and not before that section has started.
+        let tab = try tab(data, otherSections: FakeResearchData())
         await tab.load()
         #expect(tab.multiplesState == .failed(.dailyLimitReached))
         data.whileAnswering { #expect(tab.multiplesState == .loading) }
@@ -95,6 +101,78 @@ struct ResearchSectionTests {
 
         #expect(tab.profileState == .loading)
         #expect(tab.multiplesState == .loading)
+        #expect(tab.dividendsState == .loading)
+    }
+
+    @Test func `dividends start loading`() throws {
+        let tab = try tab(FakeResearchData())
+
+        #expect(tab.dividendsState == .loading)
+    }
+
+    @Test func `loading fills in the dividends as of the clock's date`() async throws {
+        let tab = try tab(FakeResearchData(dividends: .success(Self.dividends())))
+
+        await tab.load()
+
+        #expect(try tab.dividendsState == .loaded(DividendHistory(dividends: Self.dividends(), asOf: Self.now)))
+    }
+
+    @Test func `no dividends is an empty section`() async throws {
+        let tab = try tab(FakeResearchData())
+
+        await tab.load()
+
+        #expect(tab.dividendsState == .empty)
+    }
+
+    @Test func `a dividends failure stays in its own section`() async throws {
+        let tab = try tab(FakeResearchData(profile: .success(Self.profile), dividends: .failure(.dailyLimitReached)))
+
+        await tab.load()
+
+        #expect(tab.dividendsState == .failed(.dailyLimitReached))
+        #expect(tab.profileState == .loaded(Self.profile))
+    }
+
+    @Test func `the yield divides the trailing dividends by the quote`() async throws {
+        let quote = try makeQuote(ticker: "VTI", price: 12)
+        let tab = try tab(FakeResearchData(dividends: .success(Self.dividends())), quotes: FakeQuotes(.success(quote)))
+
+        await tab.load()
+
+        #expect(tab.dividendYield == 0.25)
+    }
+
+    @Test func `there's no yield without a quote`() async throws {
+        let tab = try tab(FakeResearchData(dividends: .success(Self.dividends())))
+
+        await tab.load()
+
+        #expect(tab.dividendYield == nil)
+    }
+
+    @Test func `there's no yield without dividends`() async throws {
+        let quote = try makeQuote(ticker: "VTI", price: 12)
+        let tab = try tab(FakeResearchData(), quotes: FakeQuotes(.success(quote)))
+
+        await tab.load()
+
+        #expect(tab.dividendYield == nil)
+    }
+
+    @Test func `a new quote updates the yield from the dividends already loaded`() async throws {
+        let data = try FakeResearchData(dividends: .success(Self.dividends()))
+        let quotes = try FakeQuotes(.success(makeQuote(ticker: "VTI", price: 12)))
+        let tab = try tab(data, quotes: quotes)
+        await tab.load()
+        let before = data.requestCount
+        try quotes.answer(with: .success(makeQuote(ticker: "VTI", price: 6)))
+
+        await tab.refresh()
+
+        #expect(tab.dividendYield == 0.5)
+        #expect(data.requestCount == before)
     }
 
     @Test func `a load cancelled before it starts asks for nothing`() async throws {
@@ -131,7 +209,7 @@ struct ResearchSectionTests {
 
     private func tab(
         _ data: FakeResearchData,
-        profiles: FakeResearchData? = nil,
+        otherSections: FakeResearchData? = nil,
         quotes: some QuoteProviding = FakeQuotes(.failure(.missingAPIKey)),
         prices: FakeDailyPrices = FakeDailyPrices(),
     ) throws -> ResearchTabModel {
@@ -139,9 +217,10 @@ struct ResearchSectionTests {
             ticker: Ticker("VTI"),
             quotes: quotes,
             dailyPrices: prices,
-            profiles: profiles ?? data,
+            profiles: otherSections ?? data,
             multiples: data,
-            clock: { Date(timeIntervalSince1970: 1_793_000_000) },
+            dividends: otherSections ?? data,
+            clock: { Self.now },
         )
     }
 }

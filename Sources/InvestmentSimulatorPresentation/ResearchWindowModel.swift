@@ -25,6 +25,7 @@ public final class ResearchWindowModel {
     private let dailyPrices: any DailyPriceProviding
     private let profiles: any CompanyProfileProviding
     private let multiples: any ValuationMultiplesProviding
+    private let dividends: any DividendProviding
     private let clock: () -> Date
     private var tasks: [Ticker: Task<Void, Never>] = [:]
     /// Each ticker's chart range still loading, apart from its first load.
@@ -32,18 +33,21 @@ public final class ResearchWindowModel {
     /// Each ticker's section retries still loading.
     private var retryTasks: [Ticker: [ResearchTabModel.Section: Task<Void, Never>]] = [:]
 
-    /// `clock` tells the time chart ranges reach back from.
+    /// `clock` tells the time chart ranges and trailing dividends reach back
+    /// from.
     public init(
         quotes: any QuoteProviding,
         dailyPrices: any DailyPriceProviding,
         profiles: any CompanyProfileProviding,
         multiples: any ValuationMultiplesProviding,
+        dividends: any DividendProviding,
         clock: @escaping () -> Date = Date.init,
     ) {
         self.quotes = quotes
         self.dailyPrices = dailyPrices
         self.profiles = profiles
         self.multiples = multiples
+        self.dividends = dividends
         self.clock = clock
     }
 
@@ -79,6 +83,7 @@ public final class ResearchWindowModel {
             dailyPrices: dailyPrices,
             profiles: profiles,
             multiples: multiples,
+            dividends: dividends,
             clock: clock,
         )
         tabs.append(tab)
