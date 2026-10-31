@@ -33,7 +33,7 @@ public struct ResearchFigureFormatter {
 
     /// A dividend in its own currency, such as "$0.27" or "$0.0975".
     public func dividendAmount(_ amount: Decimal, currency: String) -> String {
-        amount.formatted(.currency(code: currency).precision(.fractionLength(2 ... 4)).locale(locale))
+        amount.formatted(.currency(code: currency).precision(.fractionLength(2 ... 6)).locale(locale))
     }
 
     /// A yield given as a fraction, such as "3.97%" for `0.0397`.

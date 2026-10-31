@@ -31,7 +31,7 @@ struct ResearchWindowModelRetryTests {
 
     @Test func `retrying dividends reloads them`() async throws {
         let vti = try Ticker("VTI")
-        let dividends = [Dividend(exDate: "2026-08-10", amountPerShare: 1, currency: "USD")]
+        let dividends = try [Dividend(exDate: "2026-08-10", amountPerShare: 1, currency: "USD")]
         let data = FakeResearchData(dividends: .failure(.unavailable("Down")))
         let model = research(FakeTickerQuotes(["VTI": .failure(.missingAPIKey)]), data: data)
         await open("VTI", in: model)

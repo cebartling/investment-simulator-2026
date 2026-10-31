@@ -65,14 +65,16 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
         guard !response.data.isEmpty else {
             throw .noData
         }
-        var dividends: [Dividend] = []
-        for row in response.data {
-            guard let amount = try decimal(from: row.amountPerShare) else {
-                throw .unreadableResponse
-            }
-            dividends.append(Dividend(exDate: row.exDate, amountPerShare: amount, currency: row.currency))
+        return try response.data.map { row throws(MarketDataError) in try dividend(from: row) }
+    }
+
+    private func dividend(from row: DividendsResponse.Row) throws(MarketDataError) -> Dividend {
+        let amount = try requiredDecimal(from: row.amountPerShare)
+        do {
+            return try Dividend(exDate: row.exDate, amountPerShare: amount, currency: row.currency)
+        } catch {
+            throw .unreadableResponse
         }
-        return dividends
     }
 
     private func ratio(
@@ -134,14 +136,18 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
     /// `JSONDecoder` reads JSON numbers as `Double`. `String(Double)` is the
     /// shortest text that reads back as the same `Double`, so a figure sent
     /// with a few decimal places comes back exactly (ADR-0012).
-    private func decimal(from number: Double?) throws(MarketDataError) -> Decimal? {
-        guard let number else {
-            return nil
-        }
+    private func requiredDecimal(from number: Double) throws(MarketDataError) -> Decimal {
         guard let decimal = Decimal(string: String(number), locale: Locale(identifier: "en_US_POSIX")) else {
             throw .unreadableResponse
         }
         return decimal
+    }
+
+    private func decimal(from number: Double?) throws(MarketDataError) -> Decimal? {
+        guard let number else {
+            return nil
+        }
+        return try requiredDecimal(from: number)
     }
 }
 

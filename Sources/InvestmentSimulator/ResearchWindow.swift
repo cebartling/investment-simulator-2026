@@ -289,21 +289,21 @@ struct ResearchDividendsView: View {
     }
 
     private func rows(_ title: String, _ dividends: [Dividend]) -> some View {
-        Grid(alignment: .trailing, horizontalSpacing: 20, verticalSpacing: 4) {
+        let dates = PriceDateFormatter()
+        let figures = ResearchFigureFormatter()
+        return Grid(alignment: .trailing, horizontalSpacing: 20, verticalSpacing: 4) {
             GridRow {
                 Text("\(title) Ex-Date")
                     .gridColumnAlignment(.leading)
                 Text("Amount")
             }
             .foregroundStyle(.secondary)
-            ForEach(dividends, id: \.self) { dividend in
+            // By position: two dividends can match in every field.
+            ForEach(Array(dividends.enumerated()), id: \.offset) { _, dividend in
                 GridRow {
-                    Text(PriceDateFormatter().day(ofSession: dividend.exDate))
-                    Text(ResearchFigureFormatter().dividendAmount(
-                        dividend.amountPerShare,
-                        currency: dividend.currency,
-                    ))
-                    .monospaced()
+                    Text(dates.day(ofSession: dividend.exDate))
+                    Text(figures.dividendAmount(dividend.amountPerShare, currency: dividend.currency))
+                        .monospaced()
                 }
             }
         }

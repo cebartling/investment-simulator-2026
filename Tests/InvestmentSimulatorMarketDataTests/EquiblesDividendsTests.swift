@@ -35,7 +35,7 @@ struct EquiblesDividendsTests {
         let dividends = try await provider(transport).dividends(for: aapl)
 
         let amount = try #require(Decimal(string: "0.27"))
-        #expect(dividends == [
+        #expect(try dividends == [
             Dividend(exDate: "2026-08-10", amountPerShare: amount, currency: "USD"),
             Dividend(exDate: "2026-05-11", amountPerShare: amount, currency: "USD"),
         ])
@@ -105,6 +105,17 @@ struct EquiblesDividendsTests {
 
     @Test func `an unreadable body is unavailable`() async throws {
         let transport = FakeTransport([Self.path: (200, "<html>")])
+
+        await #expect(throws: MarketDataError.unavailable("Equibles sent a response the app couldn't read.")) {
+            try await provider(transport).dividends(for: aapl)
+        }
+    }
+
+    @Test func `an ex-date that isn't a date is unavailable`() async throws {
+        let body = #"""
+        {"data": [{"exDate": "2026-08-10T00:00:00Z", "amountPerShare": 0.27, "currency": "USD"}]}
+        """#
+        let transport = FakeTransport([Self.path: (200, body)])
 
         await #expect(throws: MarketDataError.unavailable("Equibles sent a response the app couldn't read.")) {
             try await provider(transport).dividends(for: aapl)

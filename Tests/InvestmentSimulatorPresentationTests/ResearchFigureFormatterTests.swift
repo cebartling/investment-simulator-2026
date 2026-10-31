@@ -53,6 +53,8 @@ struct ResearchFigureFormatterTests {
     @Test func `a dividend keeps fractions of a cent`() throws {
         #expect(try formatter.dividendAmount(#require(Decimal(string: "0.27")), currency: "USD") == "$0.27")
         #expect(try formatter.dividendAmount(#require(Decimal(string: "0.0975")), currency: "USD") == "$0.0975")
+        #expect(try formatter.dividendAmount(#require(Decimal(string: "0.82792")), currency: "USD") == "$0.82792")
+        #expect(try formatter.dividendAmount(#require(Decimal(string: "0.061255")), currency: "USD") == "$0.061255")
         #expect(try formatter.dividendAmount(1, currency: "USD") == "$1.00")
     }
 

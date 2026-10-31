@@ -8,11 +8,18 @@ public struct Dividend: Sendable, Hashable {
     public let amountPerShare: Decimal
     public let currency: String
 
-    public init(exDate: String, amountPerShare: Decimal, currency: String) {
+    public init(exDate: String, amountPerShare: Decimal, currency: String) throws(DividendError) {
+        guard isSessionDate(exDate) else {
+            throw .invalidExDate(exDate)
+        }
         self.exDate = exDate
         self.amountPerShare = amountPerShare
         self.currency = currency
     }
+}
+
+public enum DividendError: Error, Equatable {
+    case invalidExDate(String)
 }
 
 /// Driven port for a ticker's dividends (ADR-0019). `async` because adapters
