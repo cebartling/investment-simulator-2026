@@ -4,8 +4,8 @@ import Observation
 
 /// Drives the app-wide Research window (ADR-0019): the open tickers, in the
 /// order opened, and the selected one. It outlives the window, so it owns
-/// each ticker's load, chart range and section retry tasks rather than a
-/// view's `.task`.
+/// each ticker's load, chart range, statement and section retry tasks rather
+/// than a view's `.task`.
 @Observable
 public final class ResearchWindowModel {
     public var symbolText = "" {

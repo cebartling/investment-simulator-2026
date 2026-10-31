@@ -58,10 +58,27 @@ struct ResearchWindowModelStatementsTests {
             run.task = model.showStatements(Self.balance, for: vti)
         }
 
-        await model.showStatements(Self.quarterly, for: vti)?.value
+        let superseded = model.showStatements(Self.quarterly, for: vti)
+        await superseded?.value
         await run.task?.value
 
+        #expect(superseded?.isCancelled == true)
+        #expect(model.selectedTab?.statementSelection == Self.balance)
         #expect(model.selectedTab?.statementState == .loaded(Self.table()))
+    }
+
+    @Test func `hiding statements cancels the one loading`() async throws {
+        let statements = Self.statements()
+        let model = research(statements)
+        await model.open()?.value
+        let vti = try Ticker("VTI")
+        let tab = try #require(model.selectedTab)
+        statements.whileAnswering { model.hideStatements(for: vti) }
+
+        await model.showStatements(Self.quarterly, for: vti)?.value
+
+        #expect(tab.statementState == .loading)
+        #expect(tab.statementsShown == false)
     }
 
     @Test func `closing a ticker cancels its statements`() async throws {

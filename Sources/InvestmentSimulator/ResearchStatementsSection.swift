@@ -30,7 +30,8 @@ struct ResearchStatementsSection: View {
                 ResearchSectionContent(
                     state: tab.statementState,
                     ticker: tab.ticker,
-                    subject: "financial statements",
+                    // A company can have years but no quarters, or the reverse.
+                    subject: "\(tab.statementSelection.cadence.label.lowercased()) financial statements",
                     // A failed table isn't kept, so showing it again retries it.
                     onRetry: { onShow(tab.statementSelection) },
                     content: ResearchStatementTableView.init,
