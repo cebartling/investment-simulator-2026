@@ -5,7 +5,11 @@ import InvestmentSimulatorCore
 /// means no data: the tab's quote has already validated the ticker, and
 /// Equibles answers the same way for an unknown ticker and for one with
 /// nothing to show.
-public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultiplesProviding {
+public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultiplesProviding, DividendProviding {
+    /// Enough for a weekly payer's year and its declared dividends, in one
+    /// request. The default page of 20 isn't.
+    private static let dividendLimit = 60
+
     private let transport: any HTTPTransport
     private let credentials: any CredentialStoring
     private let baseURL: URL
@@ -51,6 +55,24 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
             ),
             evToEbit: ratio(response.evToEbit, peers?.evToEbitMedian, peers?.evToEbitP25, peers?.evToEbitP75),
         )
+    }
+
+    public func dividends(for ticker: Ticker) async throws(MarketDataError) -> [Dividend] {
+        let url = baseURL.appending(path: "stocks/\(ticker.symbol)/dividends")
+            .appending(queryItems: [URLQueryItem(name: "limit", value: String(Self.dividendLimit))])
+        let response = try await get(DividendsResponse.self, from: url)
+        // A stock that pays no dividend is a 200 with no rows.
+        guard !response.data.isEmpty else {
+            throw .noData
+        }
+        var dividends: [Dividend] = []
+        for row in response.data {
+            guard let amount = try decimal(from: row.amountPerShare) else {
+                throw .unreadableResponse
+            }
+            dividends.append(Dividend(exDate: row.exDate, amountPerShare: amount, currency: row.currency))
+        }
+        return dividends
     }
 
     private func ratio(
@@ -155,6 +177,16 @@ private struct ValuationResponse: Decodable {
     let evToRevenue: Double?
     let evToEbit: Double?
     let industryContext: Peers?
+}
+
+private struct DividendsResponse: Decodable {
+    struct Row: Decodable {
+        let exDate: String
+        let amountPerShare: Double
+        let currency: String
+    }
+
+    let data: [Row]
 }
 
 /// Core doesn't format display strings, so the adapter describes the
