@@ -4,7 +4,7 @@ import InvestmentSimulatorCore
 /// Words for a Research section's figures. A figure Equibles didn't send
 /// shows as a dash.
 public struct ResearchFigureFormatter {
-    private static let missing = "—"
+    public static let missing = "—"
 
     private let locale: Locale
 

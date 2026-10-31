@@ -111,7 +111,9 @@ struct ResearchTickerView: View {
                     title: "SEC Filings",
                     state: tab.filingsState,
                     ticker: tab.ticker,
-                    subject: "SEC filings",
+                    // Only these forms are kept: a fund or foreign issuer
+                    // files others, so "no SEC filings" would be untrue.
+                    subject: "10-K, 10-Q or 8-K filings",
                     onRetry: { onRetry(.filings) },
                     content: ResearchFilingsView.init,
                 )
@@ -338,7 +340,12 @@ struct ResearchPressReleasesView: View {
             // By position: two releases can match in every field.
             ForEach(Array(releases.enumerated()), id: \.offset) { _, release in
                 VStack(alignment: .leading, spacing: 2) {
-                    Link(release.title, destination: release.url)
+                    // Link's title initializer centers a title that wraps,
+                    // whatever the environment's alignment.
+                    Link(destination: release.url) {
+                        Text(release.title)
+                            .multilineTextAlignment(.leading)
+                    }
                     Text(dates.marketDay(of: release.publishedAt))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -370,7 +377,7 @@ struct ResearchFilingsView: View {
                 GridRow {
                     Link(filing.form, destination: filing.url)
                     Text(dates.day(ofSession: filing.filedDate))
-                    Text(filing.reportingForDate.map(dates.day(ofSession:)) ?? "—")
+                    Text(filing.reportingForDate.map(dates.day(ofSession:)) ?? ResearchFigureFormatter.missing)
                 }
             }
         }

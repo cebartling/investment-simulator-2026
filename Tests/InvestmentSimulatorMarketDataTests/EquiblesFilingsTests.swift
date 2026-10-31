@@ -13,6 +13,27 @@ struct EquiblesFilingsTests {
     static let path = "/v1/stocks/AAPL/filings"
     static let unreadable = MarketDataError.unavailable("Equibles sent a response the app couldn't read.")
 
+    static let recordedURL = "https://equibles.com/stocks/aapl/documents/dd7d5e88-69c1-4130-9da8-58bacc4b9d96"
+
+    /// As Equibles sent it (`docs/spikes/PIN-413/equibles/filings-AAPL.json`).
+    static let recordedFiling = #"""
+    {"id": "dd7d5e88-69c1-4130-9da8-58bacc4b9d96", "ticker": "AAPL", "companyName": "Apple Inc.",
+     "documentType": "TenQ", "documentTypeName": "10-Q", "filedDate": "2026-07-31", "summary": null,
+     "reportingForDate": "2026-06-27", "itemNumbers": [], "lineCount": 1207,
+     "accessionNumber": "0000320193-26-000020", "acceptedAt": null,
+     "ingestedAt": "2026-07-31T10:12:55.276575Z", "url": "\#(recordedURL)"}
+    """#
+
+    /// As Equibles sent it, from the same page. A transcript has no
+    /// accession number.
+    static let recordedTranscript = #"""
+    {"id": "2a43f09c-d782-4787-89b8-bc8365d8521f", "ticker": "AAPL", "companyName": "Apple Inc.",
+     "documentType": "EarningsCallTranscript", "documentTypeName": "Earnings Call", "filedDate": "2026-07-30",
+     "summary": null, "reportingForDate": "2026-06-30", "itemNumbers": [], "lineCount": 187,
+     "accessionNumber": null, "acceptedAt": null, "ingestedAt": "2026-08-06T00:27:11.159048Z",
+     "url": "https://equibles.com/stocks/aapl/documents/2a43f09c-d782-4787-89b8-bc8365d8521f"}
+    """#
+
     static func row(
         _ type: String,
         _ name: String,
@@ -42,6 +63,21 @@ struct EquiblesFilingsTests {
                 filedDate: "2026-07-31",
                 reportingForDate: "2026-06-27",
                 url: #require(URL(string: "https://equibles.com/stocks/aapl/documents/1")),
+            ),
+        ])
+    }
+
+    @Test func `rows as Equibles sends them are read`() async throws {
+        let transport = FakeTransport([Self.path: (200, Self.body(Self.recordedFiling, Self.recordedTranscript))])
+
+        let filings = try await provider(transport).filings(for: aapl)
+
+        #expect(try filings == [
+            Filing(
+                form: "10-Q",
+                filedDate: "2026-07-31",
+                reportingForDate: "2026-06-27",
+                url: #require(URL(string: Self.recordedURL)),
             ),
         ])
     }

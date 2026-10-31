@@ -15,8 +15,8 @@ struct EquiblesPressReleasesTests {
 
     static let releaseURL = "https://www.ir.plugpower.com/press-releases/news-details/2026/lead/default.aspx"
 
-    /// As Equibles sent it on 2026-10-29 (`docs/spikes/PIN-413`), trimmed to
-    /// one row.
+    /// Shaped as Equibles sent it on 2026-10-29 (`docs/spikes/PIN-413`),
+    /// trimmed to one row with a shorter title and link.
     static let plugPower = #"""
     {"coverage": {"status": "scraped", "lastScrapedAt": "2026-10-29T11:04:13.49419Z"},
      "data": [{"publishedAt": "2026-10-19T11:00:00Z",
