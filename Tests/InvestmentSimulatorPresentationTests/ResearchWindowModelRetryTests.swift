@@ -26,7 +26,24 @@ struct ResearchWindowModelRetryTests {
         #expect(tab.chartState == chart)
         #expect(quotes.requests == ["VTI"])
         #expect(prices.requests.count == 1)
-        #expect(data.requestCount == 3)
+        #expect(data.requestCount == 4)
+    }
+
+    @Test func `retrying dividends reloads them`() async throws {
+        let vti = try Ticker("VTI")
+        let dividends = [Dividend(exDate: "2026-08-10", amountPerShare: 1, currency: "USD")]
+        let data = FakeResearchData(dividends: .failure(.unavailable("Down")))
+        let model = research(FakeTickerQuotes(["VTI": .failure(.missingAPIKey)]), data: data)
+        await open("VTI", in: model)
+        let tab = try #require(model.selectedTab)
+        data.answerDividends(with: .success(dividends))
+
+        await model.retry(.dividends, for: vti)?.value
+
+        #expect(tab.dividendsState == .loaded(DividendHistory(
+            dividends: dividends,
+            asOf: Date(timeIntervalSince1970: 1_793_000_000),
+        )))
     }
 
     @Test func `retrying a section of a closed ticker does nothing`() throws {
@@ -85,6 +102,7 @@ struct ResearchWindowModelRetryTests {
             dailyPrices: prices,
             profiles: data,
             multiples: data,
+            dividends: data,
             clock: { Date(timeIntervalSince1970: 1_793_000_000) },
         )
     }

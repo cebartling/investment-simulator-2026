@@ -34,6 +34,7 @@ public final class ResearchTabModel: Identifiable {
     public nonisolated enum Section: CaseIterable, Sendable {
         case profile
         case multiples
+        case dividends
     }
 
     public let ticker: Ticker
@@ -42,11 +43,13 @@ public final class ResearchTabModel: Identifiable {
     public private(set) var chartState = ChartState.loading
     public private(set) var profileState = ResearchSectionState<CompanyProfile>.loading
     public private(set) var multiplesState = ResearchSectionState<ValuationMultiples>.loading
+    public private(set) var dividendsState = ResearchSectionState<DividendHistory>.loading
 
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
     private let profiles: any CompanyProfileProviding
     private let multiples: any ValuationMultiplesProviding
+    private let dividends: any DividendProviding
     private let clock: () -> Date
     /// Each range's points once loaded, so going back to it asks for nothing.
     private var charts: [PriceRange: [ChartPoint]] = [:]
@@ -57,6 +60,7 @@ public final class ResearchTabModel: Identifiable {
         dailyPrices: any DailyPriceProviding,
         profiles: any CompanyProfileProviding,
         multiples: any ValuationMultiplesProviding,
+        dividends: any DividendProviding,
         clock: @escaping () -> Date,
     ) {
         self.ticker = ticker
@@ -64,6 +68,7 @@ public final class ResearchTabModel: Identifiable {
         self.dailyPrices = dailyPrices
         self.profiles = profiles
         self.multiples = multiples
+        self.dividends = dividends
         self.clock = clock
     }
 
@@ -74,6 +79,15 @@ public final class ResearchTabModel: Identifiable {
     /// True when the quote failed for want of a working API key.
     public var needsAPIKey: Bool {
         quoteState == .failed(.missingAPIKey) || quoteState == .failed(.invalidAPIKey)
+    }
+
+    /// The trailing dividend yield at the current quote, or nil until both
+    /// are in. Worked out here so a refreshed quote updates it.
+    public var dividendYield: Decimal? {
+        guard case let .loaded(history) = dividendsState, case let .quoted(quote) = quoteState else {
+            return nil
+        }
+        return history.trailingYield(atPrice: quote.price)
     }
 
     /// Quotes the ticker, charts the current range and loads the sections at
@@ -176,6 +190,10 @@ public final class ResearchTabModel: Identifiable {
         case .multiples:
             await load(\.multiplesState) { () async throws(MarketDataError) in
                 try await multiples.valuationMultiples(for: ticker)
+            }
+        case .dividends:
+            await load(\.dividendsState) { () async throws(MarketDataError) in
+                try await DividendHistory(dividends: dividends.dividends(for: ticker), asOf: clock())
             }
         }
     }

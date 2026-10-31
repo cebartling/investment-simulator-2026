@@ -95,6 +95,7 @@ struct ResearchWindowModelTests {
             dailyPrices: UntilCancelled(),
             profiles: UntilCancelled(),
             multiples: UntilCancelled(),
+            dividends: UntilCancelled(),
             clock: { Self.now },
         )
 
@@ -111,6 +112,7 @@ struct ResearchWindowModelTests {
             dailyPrices: FakeDailyPrices(),
             profiles: FakeResearchData(profile: .success(profile)),
             multiples: FakeResearchData(multiples: .failure(.dailyLimitReached)),
+            dividends: FakeResearchData(),
             clock: { Self.now },
         )
 
@@ -277,6 +279,7 @@ struct ResearchWindowModelTests {
             dailyPrices: prices,
             profiles: FakeResearchData(),
             multiples: FakeResearchData(),
+            dividends: FakeResearchData(),
             clock: { Self.now },
         )
     }
@@ -297,7 +300,8 @@ private final class Closed {
 
 /// Requests that never answer until their task is cancelled, as on a network
 /// that hangs.
-private final class UntilCancelled: DailyPriceProviding, CompanyProfileProviding, ValuationMultiplesProviding {
+private final class UntilCancelled: DailyPriceProviding, CompanyProfileProviding, ValuationMultiplesProviding,
+    DividendProviding {
     func dailyBars(
         for _: Ticker,
         from _: String,
@@ -314,6 +318,11 @@ private final class UntilCancelled: DailyPriceProviding, CompanyProfileProviding
     }
 
     func valuationMultiples(for _: Ticker) async throws(MarketDataError) -> ValuationMultiples {
+        await hang()
+        throw .unavailable("Cancelled")
+    }
+
+    func dividends(for _: Ticker) async throws(MarketDataError) -> [Dividend] {
         await hang()
         throw .unavailable("Cancelled")
     }
