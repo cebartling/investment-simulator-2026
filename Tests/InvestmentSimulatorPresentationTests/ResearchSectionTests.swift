@@ -236,6 +236,7 @@ struct ResearchSectionTests {
                 dividends: otherSections ?? data,
                 pressReleases: otherSections ?? data,
                 filings: otherSections ?? data,
+                statements: FakeStatements(),
             ),
             clock: { Self.now },
         )

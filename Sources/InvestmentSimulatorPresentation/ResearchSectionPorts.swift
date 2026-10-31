@@ -8,6 +8,7 @@ public nonisolated struct ResearchSectionPorts: Sendable {
     let dividends: any DividendProviding
     let pressReleases: any PressReleaseProviding
     let filings: any FilingProviding
+    let statements: any FinancialStatementProviding
 
     public init(
         profiles: any CompanyProfileProviding,
@@ -15,11 +16,13 @@ public nonisolated struct ResearchSectionPorts: Sendable {
         dividends: any DividendProviding,
         pressReleases: any PressReleaseProviding,
         filings: any FilingProviding,
+        statements: any FinancialStatementProviding,
     ) {
         self.profiles = profiles
         self.multiples = multiples
         self.dividends = dividends
         self.pressReleases = pressReleases
         self.filings = filings
+        self.statements = statements
     }
 }

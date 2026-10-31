@@ -67,6 +67,10 @@ public final class ResearchTabModel: Identifiable {
     public private(set) var dividendsState = ResearchSectionState<DividendHistory>.loading
     public private(set) var pressReleasesState = ResearchSectionState<[PressRelease]>.loading
     public private(set) var filingsState = ResearchSectionState<[Filing]>.loading
+    public private(set) var statementSelection = StatementSelection(kind: .income, cadence: .quarterly)
+    public private(set) var statementState = ResearchSectionState<StatementTable>.loading
+    /// Statements load only once shown, as each costs several requests.
+    public private(set) var statementsShown = false
 
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
@@ -74,6 +78,10 @@ public final class ResearchTabModel: Identifiable {
     private let clock: () -> Date
     /// Each range's points once loaded, so going back to it asks for nothing.
     private var charts: [PriceRange: [ChartPoint]] = [:]
+    /// Each table once loaded, so going back to it asks for nothing.
+    private var tables: [StatementSelection: StatementTable] = [:]
+    /// Each statement's newest period, where the walk back starts from.
+    private var latestStatements: [StatementKind: FinancialStatement] = [:]
 
     public init(
         ticker: Ticker,
@@ -108,7 +116,8 @@ public final class ResearchTabModel: Identifiable {
     }
 
     /// Quotes the ticker, charts the current range and loads the sections at
-    /// the same time, forgetting the ranges loaded before. If the quote finds
+    /// the same time, forgetting the ranges and statements loaded before.
+    /// Statements reload only if they're showing. If the quote finds
     /// no such ticker, the rest is cancelled rather than waited for. A load
     /// cancelled before it starts changes nothing.
     public func load() async {
@@ -116,9 +125,15 @@ public final class ResearchTabModel: Identifiable {
             return
         }
         charts = [:]
+        tables = [:]
+        latestStatements = [:]
         let range = chartRange
+        let selection = statementsShown ? statementSelection : nil
         await withTaskGroup { group in
             group.addTask { await self.showRange(range) }
+            if let selection {
+                group.addTask { await self.showStatements(selection) }
+            }
             for section in Section.allCases {
                 group.addTask { await self.load(section) }
             }
@@ -193,6 +208,57 @@ public final class ResearchTabModel: Identifiable {
 
     private func show(_ points: [ChartPoint]) {
         chartState = points.isEmpty ? .empty : .loaded(points)
+    }
+
+    /// Shows a statement's table, from memory if it was loaded before. A
+    /// request cancelled before it starts changes nothing; one cancelled or
+    /// superseded while loading changes nothing more.
+    public func showStatements(_ selection: StatementSelection) async {
+        guard !Task.isCancelled else {
+            return
+        }
+        statementsShown = true
+        statementSelection = selection
+        if let table = tables[selection] {
+            statementState = .loaded(table)
+            return
+        }
+        statementState = .loading
+        let outcome: ResearchSectionState<StatementTable>
+        do throws(MarketDataError) {
+            let table = try await table(for: selection)
+            guard !Task.isCancelled else {
+                return
+            }
+            tables[selection] = table
+            outcome = .loaded(table)
+        } catch .noData {
+            outcome = .empty(.noData)
+        } catch {
+            outcome = .failed(error)
+        }
+        if !Task.isCancelled, statementSelection == selection {
+            statementState = outcome
+        }
+    }
+
+    /// Stops showing statements, keeping the tables loaded.
+    public func hideStatements() {
+        statementsShown = false
+    }
+
+    private func table(for selection: StatementSelection) async throws(MarketDataError) -> StatementTable {
+        let loader = StatementTableLoader(statements: ports.statements, ticker: ticker)
+        let latest: FinancialStatement
+        if let known = latestStatements[selection.kind] {
+            latest = known
+        } else {
+            latest = try await loader.latest(selection.kind)
+            if !Task.isCancelled {
+                latestStatements[selection.kind] = latest
+            }
+        }
+        return try await loader.table(selection, endingAt: latest)
     }
 
     /// Loads one section, leaving the rest as they are. A request cancelled

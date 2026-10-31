@@ -36,6 +36,33 @@ public struct ResearchFigureFormatter {
         amount.formatted(.currency(code: currency).precision(.fractionLength(2 ... 6)).locale(locale))
     }
 
+    /// A statement's figure: dollars and share counts compact, such as
+    /// "$109.42B" and "14.66B", and per-share amounts in full, such as "$2.03".
+    public func statementFigure(_ figure: StatementFigure?) -> String {
+        switch figure {
+        case let .money(money):
+            marketCap(money)
+        case let .perShare(amount):
+            dividendAmount(amount, currency: "USD")
+        case let .shares(count):
+            count.formatted(.number.notation(.compactName).precision(.fractionLength(2)).locale(locale))
+        case nil:
+            Self.missing
+        }
+    }
+
+    /// A column's fiscal period, such as "Q3 FY2026" or "FY2025".
+    public func period(_ period: FiscalPeriod) -> String {
+        let year = "FY\(period.year)"
+        switch period.part {
+        case .q1: return "Q1 \(year)"
+        case .q2: return "Q2 \(year)"
+        case .q3: return "Q3 \(year)"
+        case .q4: return "Q4 \(year)"
+        case .fullYear: return year
+        }
+    }
+
     /// A yield given as a fraction, such as "3.97%" for `0.0397`.
     public func yield(_ yield: Decimal?) -> String {
         yield?.formatted(.percent.precision(.fractionLength(2)).locale(locale)) ?? Self.missing
