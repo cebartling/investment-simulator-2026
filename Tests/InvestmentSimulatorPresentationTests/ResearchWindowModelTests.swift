@@ -93,11 +93,13 @@ struct ResearchWindowModelTests {
         let model = ResearchWindowModel(
             quotes: FakeTickerQuotes(["ZZZZQ": .failure(.unknownTicker(zzzzq))]),
             dailyPrices: UntilCancelled(),
-            profiles: UntilCancelled(),
-            multiples: UntilCancelled(),
-            dividends: UntilCancelled(),
-            pressReleases: UntilCancelled(),
-            filings: UntilCancelled(),
+            ports: ResearchSectionPorts(
+                profiles: UntilCancelled(),
+                multiples: UntilCancelled(),
+                dividends: UntilCancelled(),
+                pressReleases: UntilCancelled(),
+                filings: UntilCancelled(),
+            ),
             clock: { Self.now },
         )
 
@@ -112,11 +114,7 @@ struct ResearchWindowModelTests {
         let model = try ResearchWindowModel(
             quotes: FakeTickerQuotes(["VTI": .success(makeQuote(ticker: "VTI", price: 12))]),
             dailyPrices: FakeDailyPrices(),
-            profiles: FakeResearchData(profile: .success(profile)),
-            multiples: FakeResearchData(multiples: .failure(.dailyLimitReached)),
-            dividends: FakeResearchData(),
-            pressReleases: FakeResearchData(),
-            filings: FakeResearchData(),
+            ports: FakeResearchData(profile: .success(profile), multiples: .failure(.dailyLimitReached)).ports,
             clock: { Self.now },
         )
 
@@ -281,11 +279,7 @@ struct ResearchWindowModelTests {
         ResearchWindowModel(
             quotes: quotes,
             dailyPrices: prices,
-            profiles: FakeResearchData(),
-            multiples: FakeResearchData(),
-            dividends: FakeResearchData(),
-            pressReleases: FakeResearchData(),
-            filings: FakeResearchData(),
+            ports: FakeResearchData().ports,
             clock: { Self.now },
         )
     }

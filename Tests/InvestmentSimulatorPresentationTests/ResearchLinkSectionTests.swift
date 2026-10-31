@@ -109,11 +109,7 @@ struct ResearchLinkSectionTests {
             ticker: Ticker("VTI"),
             quotes: FakeQuotes(.failure(.missingAPIKey)),
             dailyPrices: FakeDailyPrices(),
-            profiles: data,
-            multiples: data,
-            dividends: data,
-            pressReleases: data,
-            filings: data,
+            ports: data.ports,
             clock: { Date(timeIntervalSince1970: 1_793_000_000) },
         )
     }

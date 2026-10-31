@@ -1,5 +1,6 @@
 import Foundation
 import InvestmentSimulatorCore
+import InvestmentSimulatorPresentation
 import Synchronization
 import Testing
 
@@ -273,7 +274,18 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
     }
 }
 
-extension FakeResearchData: DividendProviding, PressReleaseProviding, FilingProviding {}
+extension FakeResearchData: DividendProviding, PressReleaseProviding, FilingProviding {
+    /// This one fake behind every section.
+    var ports: ResearchSectionPorts {
+        ResearchSectionPorts(
+            profiles: self,
+            multiples: self,
+            dividends: self,
+            pressReleases: self,
+            filings: self,
+        )
+    }
+}
 
 /// A bar for `session` whose high is `high`, with the low, open and close at 1.
 func makeDailyBar(session: String, high: Decimal) throws -> DailyBar {

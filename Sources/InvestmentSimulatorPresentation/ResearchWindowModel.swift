@@ -23,11 +23,7 @@ public final class ResearchWindowModel {
 
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
-    private let profiles: any CompanyProfileProviding
-    private let multiples: any ValuationMultiplesProviding
-    private let dividends: any DividendProviding
-    private let pressReleases: any PressReleaseProviding
-    private let filings: any FilingProviding
+    private let ports: ResearchSectionPorts
     private let clock: () -> Date
     private var tasks: [Ticker: Task<Void, Never>] = [:]
     /// Each ticker's chart range still loading, apart from its first load.
@@ -40,20 +36,12 @@ public final class ResearchWindowModel {
     public init(
         quotes: any QuoteProviding,
         dailyPrices: any DailyPriceProviding,
-        profiles: any CompanyProfileProviding,
-        multiples: any ValuationMultiplesProviding,
-        dividends: any DividendProviding,
-        pressReleases: any PressReleaseProviding,
-        filings: any FilingProviding,
+        ports: ResearchSectionPorts,
         clock: @escaping () -> Date = Date.init,
     ) {
         self.quotes = quotes
         self.dailyPrices = dailyPrices
-        self.profiles = profiles
-        self.multiples = multiples
-        self.dividends = dividends
-        self.pressReleases = pressReleases
-        self.filings = filings
+        self.ports = ports
         self.clock = clock
     }
 
@@ -87,11 +75,7 @@ public final class ResearchWindowModel {
             ticker: ticker,
             quotes: quotes,
             dailyPrices: dailyPrices,
-            profiles: profiles,
-            multiples: multiples,
-            dividends: dividends,
-            pressReleases: pressReleases,
-            filings: filings,
+            ports: ports,
             clock: clock,
         )
         tabs.append(tab)

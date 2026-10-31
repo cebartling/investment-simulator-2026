@@ -27,11 +27,13 @@ struct InvestmentSimulatorApp: App {
         _research = State(initialValue: ResearchWindowModel(
             quotes: quotes,
             dailyPrices: dailyPrices,
-            profiles: researchData,
-            multiples: researchData,
-            dividends: researchData,
-            pressReleases: researchData,
-            filings: researchData,
+            ports: ResearchSectionPorts(
+                profiles: researchData,
+                multiples: researchData,
+                dividends: researchData,
+                pressReleases: researchData,
+                filings: researchData,
+            ),
         ))
     }
 

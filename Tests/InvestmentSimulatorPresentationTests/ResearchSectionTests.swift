@@ -230,11 +230,13 @@ struct ResearchSectionTests {
             ticker: Ticker("VTI"),
             quotes: quotes,
             dailyPrices: prices,
-            profiles: otherSections ?? data,
-            multiples: data,
-            dividends: otherSections ?? data,
-            pressReleases: otherSections ?? data,
-            filings: otherSections ?? data,
+            ports: ResearchSectionPorts(
+                profiles: otherSections ?? data,
+                multiples: data,
+                dividends: otherSections ?? data,
+                pressReleases: otherSections ?? data,
+                filings: otherSections ?? data,
+            ),
             clock: { Self.now },
         )
     }
