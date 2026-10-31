@@ -44,8 +44,8 @@ struct ResearchSectionTests {
 
         await tab.load()
 
-        #expect(tab.profileState == .empty)
-        #expect(tab.multiplesState == .empty)
+        #expect(tab.profileState == .empty(.noData))
+        #expect(tab.multiplesState == .empty(.noData))
     }
 
     @Test func `a failure stays in its own section`() async throws {
@@ -123,7 +123,7 @@ struct ResearchSectionTests {
 
         await tab.load()
 
-        #expect(tab.dividendsState == .empty)
+        #expect(tab.dividendsState == .empty(.noData))
     }
 
     @Test func `a dividends failure stays in its own section`() async throws {
@@ -205,6 +205,15 @@ struct ResearchSectionTests {
         await tab.showRange(.sixMonths)
 
         #expect(prices.requests.count == 1)
+    }
+
+    @Test(arguments: [
+        (ResearchEmptyReason.noData, "No press releases for PLUG."),
+        (.nonePublished, "No press releases published for PLUG."),
+        (.notCovered, "Equibles doesn't cover PLUG's press releases."),
+    ])
+    func `each empty reason reads differently`(reason: ResearchEmptyReason, expected: String) throws {
+        #expect(try reason.message(subject: "press releases", ticker: Ticker("PLUG")) == expected)
     }
 
     private func tab(

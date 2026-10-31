@@ -193,6 +193,9 @@ struct ResearchSection<Value: Equatable, Content: View>: View {
     let title: String
     let state: ResearchSectionState<Value>
     let ticker: Ticker
+    /// What the section shows, for its empty text, if not its title in
+    /// lowercase.
+    var subject: String?
     let onRetry: () -> Void
     @ViewBuilder let content: (Value) -> Content
 
@@ -206,8 +209,8 @@ struct ResearchSection<Value: Equatable, Content: View>: View {
                     .controlSize(.small)
             case let .loaded(value):
                 content(value)
-            case .empty:
-                Text("No \(title.lowercased()) for \(ticker.symbol).")
+            case let .empty(reason):
+                Text(reason.message(subject: subject ?? title.lowercased(), ticker: ticker))
                     .foregroundStyle(.secondary)
             case let .failed(error):
                 Text(error.localizedDescription)

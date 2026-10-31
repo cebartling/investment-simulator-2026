@@ -2,12 +2,31 @@ import Foundation
 import InvestmentSimulatorCore
 import Observation
 
+/// Why a Research section has nothing to show (ADR-0019).
+public nonisolated enum ResearchEmptyReason: Equatable, Sendable {
+    /// Equibles has nothing to show for this ticker.
+    case noData
+    /// Equibles covers the company, and it published nothing.
+    case nonePublished
+    /// Equibles' coverage of the company is missing or incomplete.
+    case notCovered
+
+    /// What the section says, where `subject` names what it shows, such as
+    /// "press releases".
+    public func message(subject: String, ticker: Ticker) -> String {
+        switch self {
+        case .noData: "No \(subject) for \(ticker.symbol)."
+        case .nonePublished: "No \(subject) published for \(ticker.symbol)."
+        case .notCovered: "Equibles doesn't cover \(ticker.symbol)'s \(subject)."
+        }
+    }
+}
+
 /// One Research section's progress (ADR-0019).
 public nonisolated enum ResearchSectionState<Value: Equatable>: Equatable {
     case loading
     case loaded(Value)
-    /// Equibles has nothing to show for this ticker.
-    case empty
+    case empty(ResearchEmptyReason)
     case failed(MarketDataError)
 }
 
@@ -185,22 +204,22 @@ public final class ResearchTabModel: Identifiable {
         switch section {
         case .profile:
             await load(\.profileState) { () async throws(MarketDataError) in
-                try await profiles.companyProfile(for: ticker)
+                try await .loaded(profiles.companyProfile(for: ticker))
             }
         case .multiples:
             await load(\.multiplesState) { () async throws(MarketDataError) in
-                try await multiples.valuationMultiples(for: ticker)
+                try await .loaded(multiples.valuationMultiples(for: ticker))
             }
         case .dividends:
             await load(\.dividendsState) { () async throws(MarketDataError) in
-                try await DividendHistory(dividends: dividends.dividends(for: ticker), asOf: clock())
+                try await .loaded(DividendHistory(dividends: dividends.dividends(for: ticker), asOf: clock()))
             }
         }
     }
 
     private func load<Value>(
         _ state: ReferenceWritableKeyPath<ResearchTabModel, ResearchSectionState<Value>>,
-        from request: () async throws(MarketDataError) -> Value,
+        from request: () async throws(MarketDataError) -> ResearchSectionState<Value>,
     ) async {
         guard !Task.isCancelled else {
             return
@@ -208,9 +227,9 @@ public final class ResearchTabModel: Identifiable {
         self[keyPath: state] = .loading
         let outcome: ResearchSectionState<Value>
         do throws(MarketDataError) {
-            outcome = try await .loaded(request())
+            outcome = try await request()
         } catch .noData {
-            outcome = .empty
+            outcome = .empty(.noData)
         } catch {
             outcome = .failed(error)
         }
