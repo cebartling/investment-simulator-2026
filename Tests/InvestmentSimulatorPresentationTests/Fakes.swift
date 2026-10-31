@@ -283,7 +283,55 @@ extension FakeResearchData: DividendProviding, PressReleaseProviding, FilingProv
             dividends: self,
             pressReleases: self,
             filings: self,
+            statements: FakeStatements(),
         )
+    }
+}
+
+/// Answers each request for a statement with its result, or no data, and
+/// records them. `whileAnswering` runs on the main actor during each request.
+final class FakeStatements: FinancialStatementProviding {
+    struct Request: Hashable {
+        let kind: StatementKind
+        let period: FiscalPeriod?
+
+        init(_ kind: StatementKind, _ period: FiscalPeriod?) {
+            self.kind = kind
+            self.period = period
+        }
+    }
+
+    private let answers: Mutex<[Request: Result<FinancialStatement, MarketDataError>]>
+    private let sent = Mutex<[Request]>([])
+    private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
+
+    init(_ answers: [Request: Result<FinancialStatement, MarketDataError>] = [:]) {
+        self.answers = Mutex(answers)
+    }
+
+    var requests: [Request] {
+        sent.withLock { $0 }
+    }
+
+    func answer(_ request: Request, with result: Result<FinancialStatement, MarketDataError>) {
+        answers.withLock { $0[request] = result }
+    }
+
+    func whileAnswering(_ action: @escaping @MainActor @Sendable () -> Void) {
+        hook.withLock { $0 = action }
+    }
+
+    func financialStatement(
+        _ kind: StatementKind,
+        for _: Ticker,
+        period: FiscalPeriod?,
+    ) async throws(MarketDataError) -> FinancialStatement {
+        let request = Request(kind, period)
+        sent.withLock { $0.append(request) }
+        if let action = hook.withLock({ $0 }) {
+            await action()
+        }
+        return try (answers.withLock { $0[request] } ?? .failure(.noData)).get()
     }
 }
 

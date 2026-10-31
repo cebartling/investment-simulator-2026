@@ -99,6 +99,7 @@ struct ResearchWindowModelTests {
                 dividends: UntilCancelled(),
                 pressReleases: UntilCancelled(),
                 filings: UntilCancelled(),
+                statements: UntilCancelled(),
             ),
             clock: { Self.now },
         )
@@ -343,6 +344,17 @@ extension UntilCancelled: PressReleaseProviding, FilingProviding {
     }
 
     func filings(for _: Ticker) async throws(MarketDataError) -> [Filing] {
+        await hang()
+        throw .unavailable("Cancelled")
+    }
+}
+
+extension UntilCancelled: FinancialStatementProviding {
+    func financialStatement(
+        _: StatementKind,
+        for _: Ticker,
+        period _: FiscalPeriod?,
+    ) async throws(MarketDataError) -> FinancialStatement {
         await hang()
         throw .unavailable("Cancelled")
     }

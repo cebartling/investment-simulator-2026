@@ -4,8 +4,8 @@ import Observation
 
 /// Drives the app-wide Research window (ADR-0019): the open tickers, in the
 /// order opened, and the selected one. It outlives the window, so it owns
-/// each ticker's load, chart range and section retry tasks rather than a
-/// view's `.task`.
+/// each ticker's load, chart range, statement and section retry tasks rather
+/// than a view's `.task`.
 @Observable
 public final class ResearchWindowModel {
     public var symbolText = "" {
@@ -28,6 +28,8 @@ public final class ResearchWindowModel {
     private var tasks: [Ticker: Task<Void, Never>] = [:]
     /// Each ticker's chart range still loading, apart from its first load.
     private var chartTasks: [Ticker: Task<Void, Never>] = [:]
+    /// Each ticker's statement table still loading.
+    private var statementTasks: [Ticker: Task<Void, Never>] = [:]
     /// Each ticker's section retries still loading.
     private var retryTasks: [Ticker: [ResearchTabModel.Section: Task<Void, Never>]] = [:]
 
@@ -106,6 +108,24 @@ public final class ResearchWindowModel {
         return task
     }
 
+    /// Shows a statement for an open ticker, replacing one still loading.
+    @discardableResult
+    public func showStatements(_ selection: StatementSelection, for ticker: Ticker) -> Task<Void, Never>? {
+        guard let tab = tabs.first(where: { $0.ticker == ticker }) else {
+            return nil
+        }
+        statementTasks[ticker]?.cancel()
+        let task = Task { await tab.showStatements(selection) }
+        statementTasks[ticker] = task
+        return task
+    }
+
+    /// Stops showing an open ticker's statements, and loading them.
+    public func hideStatements(for ticker: Ticker) {
+        statementTasks.removeValue(forKey: ticker)?.cancel()
+        tabs.first { $0.ticker == ticker }?.hideStatements()
+    }
+
     /// Loads one section of an open ticker again, leaving what has already
     /// loaded as it is, and replacing a retry of that section still loading.
     @discardableResult
@@ -157,6 +177,7 @@ public final class ResearchWindowModel {
     /// Cancels what loads one part of a ticker, apart from its full load.
     private func cancelPartialTasks(of ticker: Ticker) {
         chartTasks.removeValue(forKey: ticker)?.cancel()
+        statementTasks.removeValue(forKey: ticker)?.cancel()
         retryTasks.removeValue(forKey: ticker)?.values.forEach { $0.cancel() }
     }
 

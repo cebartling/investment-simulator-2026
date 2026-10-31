@@ -51,6 +51,8 @@ struct ResearchWindow: View {
                     onRefresh: { model.refresh(tab.ticker) },
                     onShowRange: { model.showRange($0, for: tab.ticker) },
                     onRetry: { model.retry($0, for: tab.ticker) },
+                    onShowStatements: { model.showStatements($0, for: tab.ticker) },
+                    onHideStatements: { model.hideStatements(for: tab.ticker) },
                 )
             } else {
                 // A sidebar list can be deselected with tickers still open.
@@ -61,7 +63,7 @@ struct ResearchWindow: View {
                 )
             }
         }
-        .frame(minWidth: 720, minHeight: 480)
+        .frame(minWidth: 900, minHeight: 480)
     }
 }
 
@@ -71,6 +73,8 @@ struct ResearchTickerView: View {
     let onRefresh: () -> Void
     let onShowRange: @MainActor (PriceRange) -> Void
     let onRetry: @MainActor (ResearchTabModel.Section) -> Void
+    let onShowStatements: @MainActor (StatementSelection) -> Void
+    let onHideStatements: @MainActor () -> Void
 
     var body: some View {
         ScrollView {
@@ -93,6 +97,7 @@ struct ResearchTickerView: View {
                     onRetry: { onRetry(.multiples) },
                     content: ResearchMultiplesView.init,
                 )
+                ResearchStatementsSection(tab: tab, onShow: onShowStatements, onHide: onHideStatements)
                 ResearchSection(
                     title: "Dividends",
                     state: tab.dividendsState,
@@ -200,40 +205,6 @@ struct ResearchChartSection: View {
                 Button("Retry") { onShowRange(tab.chartRange) }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-}
-
-/// A titled section of a ticker's research, with its own loading, empty and
-/// error states.
-struct ResearchSection<Value: Equatable, Content: View>: View {
-    let title: String
-    let state: ResearchSectionState<Value>
-    let ticker: Ticker
-    /// What the section shows, for its empty text, if not its title in
-    /// lowercase.
-    var subject: String?
-    let onRetry: () -> Void
-    @ViewBuilder let content: (Value) -> Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.headline)
-            switch state {
-            case .loading:
-                ProgressView()
-                    .controlSize(.small)
-            case let .loaded(value):
-                content(value)
-            case let .empty(reason):
-                Text(reason.message(subject: subject ?? title.lowercased(), ticker: ticker))
-                    .foregroundStyle(.secondary)
-            case let .failed(error):
-                Text(error.localizedDescription)
-                    .foregroundStyle(.red)
-                Button("Retry", action: onRetry)
-            }
         }
     }
 }
