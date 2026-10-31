@@ -100,6 +100,21 @@ struct ResearchTickerView: View {
                     onRetry: { onRetry(.dividends) },
                     content: { ResearchDividendsView(history: $0, yield: tab.dividendYield) },
                 )
+                ResearchSection(
+                    title: "Press Releases",
+                    state: tab.pressReleasesState,
+                    ticker: tab.ticker,
+                    onRetry: { onRetry(.pressReleases) },
+                    content: ResearchPressReleasesView.init,
+                )
+                ResearchSection(
+                    title: "SEC Filings",
+                    state: tab.filingsState,
+                    ticker: tab.ticker,
+                    subject: "SEC filings",
+                    onRetry: { onRetry(.filings) },
+                    content: ResearchFilingsView.init,
+                )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
@@ -307,6 +322,55 @@ struct ResearchDividendsView: View {
                     Text(dates.day(ofSession: dividend.exDate))
                     Text(figures.dividendAmount(dividend.amountPerShare, currency: dividend.currency))
                         .monospaced()
+                }
+            }
+        }
+    }
+}
+
+/// The company's own releases, each opening in the browser.
+struct ResearchPressReleasesView: View {
+    let releases: [PressRelease]
+
+    var body: some View {
+        let dates = PriceDateFormatter()
+        VStack(alignment: .leading, spacing: 8) {
+            // By position: two releases can match in every field.
+            ForEach(Array(releases.enumerated()), id: \.offset) { _, release in
+                VStack(alignment: .leading, spacing: 2) {
+                    Link(release.title, destination: release.url)
+                    Text(dates.marketDay(of: release.publishedAt))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if let summary = release.summary {
+                        Text(summary)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Recent filings, each opening on its Equibles page in the browser.
+struct ResearchFilingsView: View {
+    let filings: [Filing]
+
+    var body: some View {
+        let dates = PriceDateFormatter()
+        Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 4) {
+            GridRow {
+                Text("Form")
+                Text("Filed")
+                Text("Reporting For")
+            }
+            .foregroundStyle(.secondary)
+            // By position: two filings can match in every field.
+            ForEach(Array(filings.enumerated()), id: \.offset) { _, filing in
+                GridRow {
+                    Link(filing.form, destination: filing.url)
+                    Text(dates.day(ofSession: filing.filedDate))
+                    Text(filing.reportingForDate.map(dates.day(ofSession:)) ?? "—")
                 }
             }
         }

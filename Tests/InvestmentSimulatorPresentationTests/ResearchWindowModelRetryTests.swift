@@ -26,7 +26,7 @@ struct ResearchWindowModelRetryTests {
         #expect(tab.chartState == chart)
         #expect(quotes.requests == ["VTI"])
         #expect(prices.requests.count == 1)
-        #expect(data.requestCount == 4)
+        #expect(data.requestCount == 6)
     }
 
     @Test func `retrying dividends reloads them`() async throws {
@@ -44,6 +44,38 @@ struct ResearchWindowModelRetryTests {
             dividends: dividends,
             asOf: Date(timeIntervalSince1970: 1_793_000_000),
         )))
+    }
+
+    @Test func `retrying press releases reloads them`() async throws {
+        let vti = try Ticker("VTI")
+        let data = FakeResearchData(pressReleases: .failure(.unavailable("Down")))
+        let model = research(FakeTickerQuotes(["VTI": .failure(.missingAPIKey)]), data: data)
+        await open("VTI", in: model)
+        let tab = try #require(model.selectedTab)
+        data.answerPressReleases(with: .success(PressReleases(coverage: .attempted, releases: [])))
+
+        await model.retry(.pressReleases, for: vti)?.value
+
+        #expect(tab.pressReleasesState == .empty(.notCovered))
+    }
+
+    @Test func `retrying filings reloads them`() async throws {
+        let vti = try Ticker("VTI")
+        let filing = try Filing(
+            form: "10-K",
+            filedDate: "2026-07-31",
+            reportingForDate: nil,
+            url: #require(URL(string: "https://example.com/filing")),
+        )
+        let data = FakeResearchData(filings: .failure(.unavailable("Down")))
+        let model = research(FakeTickerQuotes(["VTI": .failure(.missingAPIKey)]), data: data)
+        await open("VTI", in: model)
+        let tab = try #require(model.selectedTab)
+        data.answerFilings(with: .success([filing]))
+
+        await model.retry(.filings, for: vti)?.value
+
+        #expect(tab.filingsState == .loaded([filing]))
     }
 
     @Test func `retrying a section of a closed ticker does nothing`() throws {
@@ -103,6 +135,8 @@ struct ResearchWindowModelRetryTests {
             profiles: data,
             multiples: data,
             dividends: data,
+            pressReleases: data,
+            filings: data,
             clock: { Date(timeIntervalSince1970: 1_793_000_000) },
         )
     }

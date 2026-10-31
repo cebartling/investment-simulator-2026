@@ -96,6 +96,8 @@ struct ResearchWindowModelTests {
             profiles: UntilCancelled(),
             multiples: UntilCancelled(),
             dividends: UntilCancelled(),
+            pressReleases: UntilCancelled(),
+            filings: UntilCancelled(),
             clock: { Self.now },
         )
 
@@ -113,6 +115,8 @@ struct ResearchWindowModelTests {
             profiles: FakeResearchData(profile: .success(profile)),
             multiples: FakeResearchData(multiples: .failure(.dailyLimitReached)),
             dividends: FakeResearchData(),
+            pressReleases: FakeResearchData(),
+            filings: FakeResearchData(),
             clock: { Self.now },
         )
 
@@ -280,6 +284,8 @@ struct ResearchWindowModelTests {
             profiles: FakeResearchData(),
             multiples: FakeResearchData(),
             dividends: FakeResearchData(),
+            pressReleases: FakeResearchData(),
+            filings: FakeResearchData(),
             clock: { Self.now },
         )
     }
@@ -331,6 +337,18 @@ private final class UntilCancelled: DailyPriceProviding, CompanyProfileProviding
 
 extension UntilCancelled: DividendProviding {
     func dividends(for _: Ticker) async throws(MarketDataError) -> [Dividend] {
+        await hang()
+        throw .unavailable("Cancelled")
+    }
+}
+
+extension UntilCancelled: PressReleaseProviding, FilingProviding {
+    func pressReleases(for _: Ticker) async throws(MarketDataError) -> PressReleases {
+        await hang()
+        throw .unavailable("Cancelled")
+    }
+
+    func filings(for _: Ticker) async throws(MarketDataError) -> [Filing] {
         await hang()
         throw .unavailable("Cancelled")
     }

@@ -190,13 +190,15 @@ final class FakeDailyPrices: DailyPriceProviding {
     }
 }
 
-/// Answers every profile, multiples and dividends request with its result,
-/// and counts them. `whileAnswering` runs on the main actor during each
-/// request, as a change made while it waits.
-final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProviding, DividendProviding {
+/// Answers every section's request with its result, and counts them.
+/// `whileAnswering` runs on the main actor during each request, as a change
+/// made while it waits.
+final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProviding {
     private let profile: Result<CompanyProfile, MarketDataError>
     private let multiples: Mutex<Result<ValuationMultiples, MarketDataError>>
     private let dividends: Mutex<Result<[Dividend], MarketDataError>>
+    private let pressReleases: Mutex<Result<PressReleases, MarketDataError>>
+    private let filings: Mutex<Result<[Filing], MarketDataError>>
     private let sent = Mutex(0)
     private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
 
@@ -204,10 +206,14 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
         profile: Result<CompanyProfile, MarketDataError> = .failure(.noData),
         multiples: Result<ValuationMultiples, MarketDataError> = .failure(.noData),
         dividends: Result<[Dividend], MarketDataError> = .failure(.noData),
+        pressReleases: Result<PressReleases, MarketDataError> = .failure(.noData),
+        filings: Result<[Filing], MarketDataError> = .failure(.noData),
     ) {
         self.profile = profile
         self.multiples = Mutex(multiples)
         self.dividends = Mutex(dividends)
+        self.pressReleases = Mutex(pressReleases)
+        self.filings = Mutex(filings)
     }
 
     var requestCount: Int {
@@ -220,6 +226,14 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
 
     func answerDividends(with result: Result<[Dividend], MarketDataError>) {
         dividends.withLock { $0 = result }
+    }
+
+    func answerPressReleases(with result: Result<PressReleases, MarketDataError>) {
+        pressReleases.withLock { $0 = result }
+    }
+
+    func answerFilings(with result: Result<[Filing], MarketDataError>) {
+        filings.withLock { $0 = result }
     }
 
     func whileAnswering(_ action: @escaping @MainActor @Sendable () -> Void) {
@@ -241,6 +255,16 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
         return try dividends.withLock { $0 }.get()
     }
 
+    func pressReleases(for _: Ticker) async throws(MarketDataError) -> PressReleases {
+        await answering()
+        return try pressReleases.withLock { $0 }.get()
+    }
+
+    func filings(for _: Ticker) async throws(MarketDataError) -> [Filing] {
+        await answering()
+        return try filings.withLock { $0 }.get()
+    }
+
     private func answering() async {
         sent.withLock { $0 += 1 }
         if let action = hook.withLock({ $0 }) {
@@ -248,6 +272,8 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
         }
     }
 }
+
+extension FakeResearchData: DividendProviding, PressReleaseProviding, FilingProviding {}
 
 /// A bar for `session` whose high is `high`, with the low, open and close at 1.
 func makeDailyBar(session: String, high: Decimal) throws -> DailyBar {

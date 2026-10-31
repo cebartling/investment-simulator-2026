@@ -45,6 +45,12 @@ struct PriceDateFormatterTests {
         #expect(formatter.day(ofSession: "2026-10-23") == "Oct 23, 2026")
     }
 
+    @Test func `a time is dated by its New York day wherever the user is`() throws {
+        let lateInNewYork = try #require(ISO8601DateFormatter().date(from: "2026-10-20T02:00:00Z"))
+
+        #expect(formatter.marketDay(of: lateInNewYork) == "Oct 19, 2026")
+    }
+
     private func makeQuote(at date: Date, source: PriceSource) throws -> Quote {
         try Quote(ticker: Ticker("VTI"), price: 373.01, asOf: date, source: source)
     }

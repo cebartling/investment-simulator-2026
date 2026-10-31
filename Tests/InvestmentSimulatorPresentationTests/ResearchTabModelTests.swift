@@ -143,6 +143,8 @@ struct ResearchTabModelTests {
             profiles: FakeResearchData(),
             multiples: FakeResearchData(),
             dividends: FakeResearchData(),
+            pressReleases: FakeResearchData(),
+            filings: FakeResearchData(),
             clock: { Self.now },
         )
         prices.beforeAnsweringFirst { await tab.showRange(.sixMonths) }
@@ -164,6 +166,8 @@ struct ResearchTabModelTests {
             profiles: FakeResearchData(),
             multiples: FakeResearchData(),
             dividends: FakeResearchData(),
+            pressReleases: FakeResearchData(),
+            filings: FakeResearchData(),
             clock: { Self.now },
         )
         prices.beforeAnsweringFirst { await tab.showRange(.oneYear) }
@@ -256,6 +260,8 @@ struct ResearchTabModelTests {
             profiles: FakeResearchData(),
             multiples: FakeResearchData(),
             dividends: FakeResearchData(),
+            pressReleases: FakeResearchData(),
+            filings: FakeResearchData(),
             clock: { Self.now },
         )
     }

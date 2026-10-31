@@ -28,6 +28,8 @@ struct ResearchSectionTests {
 
         #expect(tab.profileState == .loading)
         #expect(tab.multiplesState == .loading)
+        #expect(tab.pressReleasesState == .loading)
+        #expect(tab.filingsState == .loading)
     }
 
     @Test func `loading fills in the profile and multiples`() async throws {
@@ -102,6 +104,8 @@ struct ResearchSectionTests {
         #expect(tab.profileState == .loading)
         #expect(tab.multiplesState == .loading)
         #expect(tab.dividendsState == .loading)
+        #expect(tab.pressReleasesState == .loading)
+        #expect(tab.filingsState == .loading)
     }
 
     @Test func `dividends start loading`() throws {
@@ -229,6 +233,8 @@ struct ResearchSectionTests {
             profiles: otherSections ?? data,
             multiples: data,
             dividends: otherSections ?? data,
+            pressReleases: otherSections ?? data,
+            filings: otherSections ?? data,
             clock: { Self.now },
         )
     }

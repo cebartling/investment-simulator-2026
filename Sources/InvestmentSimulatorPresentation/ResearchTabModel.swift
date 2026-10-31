@@ -54,6 +54,8 @@ public final class ResearchTabModel: Identifiable {
         case profile
         case multiples
         case dividends
+        case pressReleases
+        case filings
     }
 
     public let ticker: Ticker
@@ -63,12 +65,16 @@ public final class ResearchTabModel: Identifiable {
     public private(set) var profileState = ResearchSectionState<CompanyProfile>.loading
     public private(set) var multiplesState = ResearchSectionState<ValuationMultiples>.loading
     public private(set) var dividendsState = ResearchSectionState<DividendHistory>.loading
+    public private(set) var pressReleasesState = ResearchSectionState<[PressRelease]>.loading
+    public private(set) var filingsState = ResearchSectionState<[Filing]>.loading
 
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
     private let profiles: any CompanyProfileProviding
     private let multiples: any ValuationMultiplesProviding
     private let dividends: any DividendProviding
+    private let pressReleases: any PressReleaseProviding
+    private let filings: any FilingProviding
     private let clock: () -> Date
     /// Each range's points once loaded, so going back to it asks for nothing.
     private var charts: [PriceRange: [ChartPoint]] = [:]
@@ -80,6 +86,8 @@ public final class ResearchTabModel: Identifiable {
         profiles: any CompanyProfileProviding,
         multiples: any ValuationMultiplesProviding,
         dividends: any DividendProviding,
+        pressReleases: any PressReleaseProviding,
+        filings: any FilingProviding,
         clock: @escaping () -> Date,
     ) {
         self.ticker = ticker
@@ -88,6 +96,8 @@ public final class ResearchTabModel: Identifiable {
         self.profiles = profiles
         self.multiples = multiples
         self.dividends = dividends
+        self.pressReleases = pressReleases
+        self.filings = filings
         self.clock = clock
     }
 
@@ -214,7 +224,24 @@ public final class ResearchTabModel: Identifiable {
             await load(\.dividendsState) { () async throws(MarketDataError) in
                 try await .loaded(DividendHistory(dividends: dividends.dividends(for: ticker), asOf: clock()))
             }
+        case .pressReleases:
+            await load(\.pressReleasesState) { () async throws(MarketDataError) in
+                try await state(of: pressReleases.pressReleases(for: ticker))
+            }
+        case .filings:
+            await load(\.filingsState) { () async throws(MarketDataError) in
+                try await .loaded(filings.filings(for: ticker).sorted { $0.filedDate > $1.filedDate })
+            }
         }
+    }
+
+    /// Only Equibles having read a company's site makes an empty list mean
+    /// nothing was published.
+    private func state(of result: PressReleases) -> ResearchSectionState<[PressRelease]> {
+        guard !result.releases.isEmpty else {
+            return .empty(result.coverage == .scraped ? .nonePublished : .notCovered)
+        }
+        return .loaded(result.releases.sorted { $0.publishedAt > $1.publishedAt })
     }
 
     private func load<Value>(

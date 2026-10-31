@@ -30,6 +30,8 @@ struct InvestmentSimulatorApp: App {
             profiles: researchData,
             multiples: researchData,
             dividends: researchData,
+            pressReleases: researchData,
+            filings: researchData,
         ))
     }
 
