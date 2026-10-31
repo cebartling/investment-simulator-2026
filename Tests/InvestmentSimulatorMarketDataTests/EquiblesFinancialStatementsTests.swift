@@ -52,7 +52,7 @@ struct EquiblesFinancialStatementsTests {
 
         let eps = try #require(Decimal(string: "2.03"))
         #expect(statement == FinancialStatement(
-            period: FiscalPeriod(year: 2026, part: .q3),
+            period: FiscalPeriod(year: 2026, part: .quarter3),
             lines: [
                 StatementLine(name: "Revenue", figure: .money(Money(109_417_000_000))),
                 StatementLine(name: "EPS (Basic)", figure: .perShare(eps)),
@@ -73,7 +73,7 @@ struct EquiblesFinancialStatementsTests {
 
     @Test func `a quarter asks for its year and period`() async throws {
         let transport = FakeTransport(["\(Self.income)?year=2025&period=Q4": (200, Self.derivedQ4)])
-        let period = FiscalPeriod(year: 2025, part: .q4)
+        let period = FiscalPeriod(year: 2025, part: .quarter4)
 
         let statement = try await provider(transport).financialStatement(.income, for: aapl, period: period)
 

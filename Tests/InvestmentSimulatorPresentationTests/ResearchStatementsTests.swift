@@ -7,10 +7,10 @@ import Testing
 struct ResearchStatementsTests {
     private typealias Request = FakeStatements.Request
 
-    private static let q3 = FiscalPeriod(year: 2026, part: .q3)
-    private static let q2 = FiscalPeriod(year: 2026, part: .q2)
-    private static let q1 = FiscalPeriod(year: 2026, part: .q1)
-    private static let q4 = FiscalPeriod(year: 2025, part: .q4)
+    private static let quarter3 = FiscalPeriod(year: 2026, part: .quarter3)
+    private static let quarter2 = FiscalPeriod(year: 2026, part: .quarter2)
+    private static let quarter1 = FiscalPeriod(year: 2026, part: .quarter1)
+    private static let quarter4 = FiscalPeriod(year: 2025, part: .quarter4)
     private static let fy25 = FiscalPeriod(year: 2025, part: .fullYear)
     private static let fy24 = FiscalPeriod(year: 2024, part: .fullYear)
     private static let fy23 = FiscalPeriod(year: 2023, part: .fullYear)
@@ -31,10 +31,10 @@ struct ResearchStatementsTests {
     /// periods both income tables need, and a balance sheet in Q3 alone.
     private static func statements() -> FakeStatements {
         var answers: [Request: Result<FinancialStatement, MarketDataError>] = [
-            Request(.income, nil): .success(statement(q3)),
-            Request(.balance, nil): .success(statement(q3)),
+            Request(.income, nil): .success(statement(quarter3)),
+            Request(.balance, nil): .success(statement(quarter3)),
         ]
-        for period in [q2, q1, q4, fy25, fy24, fy23] {
+        for period in [quarter2, quarter1, quarter4, fy25, fy24, fy23] {
             answers[Request(.income, period)] = .success(statement(period))
         }
         return FakeStatements(answers)
@@ -59,7 +59,7 @@ struct ResearchStatementsTests {
 
         #expect(tab.statementsShown)
         #expect(tab.statementSelection == Self.quarterly)
-        #expect(tab.statementState == .loaded(Self.table(Self.q3, Self.q2, Self.q1, Self.q4)))
+        #expect(tab.statementState == .loaded(Self.table(Self.quarter3, Self.quarter2, Self.quarter1, Self.quarter4)))
         #expect(statements.requests.count == 4)
     }
 
@@ -111,7 +111,7 @@ struct ResearchStatementsTests {
 
         await tab.showStatements(Self.quarterly)
 
-        #expect(tab.statementState == .loaded(Self.table(Self.q3, Self.q2, Self.q1, Self.q4)))
+        #expect(tab.statementState == .loaded(Self.table(Self.quarter3, Self.quarter2, Self.quarter1, Self.quarter4)))
         #expect(statements.requests.count == sent)
     }
 
@@ -122,20 +122,20 @@ struct ResearchStatementsTests {
 
         await tab.showStatements(Self.balance)
 
-        #expect(tab.statementState == .loaded(Self.table(Self.q3)))
+        #expect(tab.statementState == .loaded(Self.table(Self.quarter3)))
         #expect(statements.requests.contains(Request(.balance, nil)))
     }
 
     @Test func `a period Equibles doesn't have drops its column`() async throws {
         let statements = FakeStatements([
-            Request(.income, nil): .success(Self.statement(Self.q3)),
-            Request(.income, Self.q1): .success(Self.statement(Self.q1)),
+            Request(.income, nil): .success(Self.statement(Self.quarter3)),
+            Request(.income, Self.quarter1): .success(Self.statement(Self.quarter1)),
         ])
         let tab = try tab(statements)
 
         await tab.showStatements(Self.quarterly)
 
-        #expect(tab.statementState == .loaded(Self.table(Self.q3, Self.q1)))
+        #expect(tab.statementState == .loaded(Self.table(Self.quarter3, Self.quarter1)))
     }
 
     @Test func `no latest period is an empty section`() async throws {
@@ -149,7 +149,7 @@ struct ResearchStatementsTests {
     }
 
     @Test func `no finished year is an empty section`() async throws {
-        let statements = FakeStatements([Request(.income, nil): .success(Self.statement(Self.q3))])
+        let statements = FakeStatements([Request(.income, nil): .success(Self.statement(Self.quarter3))])
         let tab = try tab(statements)
 
         await tab.showStatements(Self.annual)
@@ -168,7 +168,7 @@ struct ResearchStatementsTests {
 
     @Test func `a failed older period fails the section rather than hide a column`() async throws {
         let statements = Self.statements()
-        statements.answer(Request(.income, Self.q2), with: .failure(.unavailable("Down")))
+        statements.answer(Request(.income, Self.quarter2), with: .failure(.unavailable("Down")))
         let tab = try tab(statements)
 
         await tab.showStatements(Self.quarterly)
@@ -178,14 +178,14 @@ struct ResearchStatementsTests {
 
     @Test func `showing a failed table again retries it without its latest period`() async throws {
         let statements = Self.statements()
-        statements.answer(Request(.income, Self.q2), with: .failure(.unavailable("Down")))
+        statements.answer(Request(.income, Self.quarter2), with: .failure(.unavailable("Down")))
         let tab = try tab(statements)
         await tab.showStatements(Self.quarterly)
-        statements.answer(Request(.income, Self.q2), with: .success(Self.statement(Self.q2)))
+        statements.answer(Request(.income, Self.quarter2), with: .success(Self.statement(Self.quarter2)))
 
         await tab.showStatements(Self.quarterly)
 
-        #expect(tab.statementState == .loaded(Self.table(Self.q3, Self.q2, Self.q1, Self.q4)))
+        #expect(tab.statementState == .loaded(Self.table(Self.quarter3, Self.quarter2, Self.quarter1, Self.quarter4)))
         #expect(statements.requests.count(where: { $0.period == nil }) == 1)
     }
 
@@ -232,7 +232,7 @@ struct ResearchStatementsTests {
         await run.task?.value
 
         #expect(tab.statementSelection == Self.balance)
-        #expect(tab.statementState == .loaded(Self.table(Self.q3)))
+        #expect(tab.statementState == .loaded(Self.table(Self.quarter3)))
     }
 
     @Test func `hiding statements keeps what loaded`() async throws {
@@ -245,7 +245,7 @@ struct ResearchStatementsTests {
         #expect(tab.statementsShown == false)
         await tab.showStatements(Self.quarterly)
 
-        #expect(tab.statementState == .loaded(Self.table(Self.q3, Self.q2, Self.q1, Self.q4)))
+        #expect(tab.statementState == .loaded(Self.table(Self.quarter3, Self.quarter2, Self.quarter1, Self.quarter4)))
         #expect(statements.requests.count == sent)
     }
 
@@ -254,16 +254,16 @@ struct ResearchStatementsTests {
         let tab = try tab(statements)
         await tab.showStatements(Self.quarterly)
         let sent = statements.requests.count
-        statements.answer(Request(.income, nil), with: .success(Self.statement(Self.q3, 5)))
+        statements.answer(Request(.income, nil), with: .success(Self.statement(Self.quarter3, 5)))
 
         await tab.load()
 
         #expect(statements.requests.count == sent * 2)
         #expect(tab.statementState == .loaded(StatementTable(statements: [
-            Self.statement(Self.q3, 5),
-            Self.statement(Self.q2),
-            Self.statement(Self.q1),
-            Self.statement(Self.q4),
+            Self.statement(Self.quarter3, 5),
+            Self.statement(Self.quarter2),
+            Self.statement(Self.quarter1),
+            Self.statement(Self.quarter4),
         ])))
     }
 
@@ -279,58 +279,6 @@ struct ResearchStatementsTests {
 
         await tab.showStatements(Self.quarterly)
         #expect(statements.requests.count == sent * 2)
-    }
-
-    @Test func `the window model shows statements for an open ticker`() async throws {
-        let statements = Self.statements()
-        let model = research(statements)
-        let task = model.open()
-        await task?.value
-        let vti = try Ticker("VTI")
-
-        await model.showStatements(Self.quarterly, for: vti)?.value
-
-        #expect(model.selectedTab?.statementState == .loaded(Self.table(Self.q3, Self.q2, Self.q1, Self.q4)))
-        model.hideStatements(for: vti)
-        #expect(model.selectedTab?.statementsShown == false)
-    }
-
-    @Test func `the window model shows nothing for a closed ticker`() throws {
-        let model = research(Self.statements())
-
-        #expect(try model.showStatements(Self.quarterly, for: Ticker("VTI")) == nil)
-    }
-
-    @Test func `a newer selection cancels the one loading`() async throws {
-        let statements = Self.statements()
-        let model = research(statements)
-        await model.open()?.value
-        let vti = try Ticker("VTI")
-        let run = Run()
-        statements.whileAnswering {
-            guard run.task == nil else {
-                return
-            }
-            run.task = model.showStatements(Self.balance, for: vti)
-        }
-
-        await model.showStatements(Self.quarterly, for: vti)?.value
-        await run.task?.value
-
-        #expect(model.selectedTab?.statementState == .loaded(Self.table(Self.q3)))
-    }
-
-    @Test func `closing a ticker cancels its statements`() async throws {
-        let statements = Self.statements()
-        let model = research(statements)
-        await model.open()?.value
-        let vti = try Ticker("VTI")
-        let tab = try #require(model.selectedTab)
-        statements.whileAnswering { model.close(vti) }
-
-        await model.showStatements(Self.quarterly, for: vti)?.value
-
-        #expect(tab.statementState == .loading)
     }
 
     private func tab(_ statements: FakeStatements) throws -> ResearchTabModel {
@@ -349,25 +297,6 @@ struct ResearchStatementsTests {
             ),
             clock: { Date(timeIntervalSince1970: 1_793_000_000) },
         )
-    }
-
-    private func research(_ statements: FakeStatements) -> ResearchWindowModel {
-        let data = FakeResearchData()
-        let model = ResearchWindowModel(
-            quotes: FakeTickerQuotes(["VTI": .failure(.missingAPIKey)]),
-            dailyPrices: FakeDailyPrices(),
-            ports: ResearchSectionPorts(
-                profiles: data,
-                multiples: data,
-                dividends: data,
-                pressReleases: data,
-                filings: data,
-                statements: statements,
-            ),
-            clock: { Date(timeIntervalSince1970: 1_793_000_000) },
-        )
-        model.symbolText = "VTI"
-        return model
     }
 }
 

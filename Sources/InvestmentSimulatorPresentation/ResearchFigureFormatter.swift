@@ -55,10 +55,10 @@ public struct ResearchFigureFormatter {
     public func period(_ period: FiscalPeriod) -> String {
         let year = "FY\(period.year)"
         switch period.part {
-        case .q1: return "Q1 \(year)"
-        case .q2: return "Q2 \(year)"
-        case .q3: return "Q3 \(year)"
-        case .q4: return "Q4 \(year)"
+        case .quarter1: return "Q1 \(year)"
+        case .quarter2: return "Q2 \(year)"
+        case .quarter3: return "Q3 \(year)"
+        case .quarter4: return "Q4 \(year)"
         case .fullYear: return year
         }
     }

@@ -14,14 +14,14 @@ public enum StatementCadence: Sendable, Hashable, CaseIterable {
 /// A quarter or a whole year of a company's fiscal calendar.
 public struct FiscalPeriod: Sendable, Hashable {
     public enum Part: Sendable, Hashable {
-        case q1
-        case q2
-        case q3
-        case q4
+        case quarter1
+        case quarter2
+        case quarter3
+        case quarter4
         case fullYear
     }
 
-    private static let quarters: [Part] = [.q1, .q2, .q3, .q4]
+    private static let quarters: [Part] = [.quarter1, .quarter2, .quarter3, .quarter4]
     private static let quartersShown = 4
     private static let yearsShown = 3
 
@@ -46,7 +46,7 @@ public struct FiscalPeriod: Sendable, Hashable {
                 return FiscalPeriod(year: index / quarters.count, part: quarters[index % quarters.count])
             }
         case .annual:
-            let finished = [.q4, .fullYear].contains(latest.part)
+            let finished = [.quarter4, .fullYear].contains(latest.part)
             let newest = finished ? latest.year : latest.year - 1
             return (0 ..< yearsShown).map { FiscalPeriod(year: newest - $0, part: .fullYear) }
         }

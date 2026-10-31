@@ -44,7 +44,7 @@ struct ResearchFigureFormatterTests {
     }
 
     @Test func `a quarter's label names its fiscal year`() {
-        #expect(formatter.period(FiscalPeriod(year: 2026, part: .q3)) == "Q3 FY2026")
+        #expect(formatter.period(FiscalPeriod(year: 2026, part: .quarter3)) == "Q3 FY2026")
     }
 
     @Test func `a year's label is its fiscal year`() {

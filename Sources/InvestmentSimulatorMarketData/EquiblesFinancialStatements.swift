@@ -40,20 +40,20 @@ extension EquiblesResearchProvider: FinancialStatementProviding {
 
     private func name(of part: FiscalPeriod.Part) -> String {
         switch part {
-        case .q1: "Q1"
-        case .q2: "Q2"
-        case .q3: "Q3"
-        case .q4: "Q4"
+        case .quarter1: "Q1"
+        case .quarter2: "Q2"
+        case .quarter3: "Q3"
+        case .quarter4: "Q4"
         case .fullYear: "FY"
         }
     }
 
     private func part(named name: String?) -> FiscalPeriod.Part? {
         switch name {
-        case "Q1": .q1
-        case "Q2": .q2
-        case "Q3": .q3
-        case "Q4": .q4
+        case "Q1": .quarter1
+        case "Q2": .quarter2
+        case "Q3": .quarter3
+        case "Q4": .quarter4
         case "FY": .fullYear
         default: nil
         }
