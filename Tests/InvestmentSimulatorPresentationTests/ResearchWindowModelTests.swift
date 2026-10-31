@@ -93,9 +93,13 @@ struct ResearchWindowModelTests {
         let model = ResearchWindowModel(
             quotes: FakeTickerQuotes(["ZZZZQ": .failure(.unknownTicker(zzzzq))]),
             dailyPrices: UntilCancelled(),
-            profiles: UntilCancelled(),
-            multiples: UntilCancelled(),
-            dividends: UntilCancelled(),
+            ports: ResearchSectionPorts(
+                profiles: UntilCancelled(),
+                multiples: UntilCancelled(),
+                dividends: UntilCancelled(),
+                pressReleases: UntilCancelled(),
+                filings: UntilCancelled(),
+            ),
             clock: { Self.now },
         )
 
@@ -110,9 +114,7 @@ struct ResearchWindowModelTests {
         let model = try ResearchWindowModel(
             quotes: FakeTickerQuotes(["VTI": .success(makeQuote(ticker: "VTI", price: 12))]),
             dailyPrices: FakeDailyPrices(),
-            profiles: FakeResearchData(profile: .success(profile)),
-            multiples: FakeResearchData(multiples: .failure(.dailyLimitReached)),
-            dividends: FakeResearchData(),
+            ports: FakeResearchData(profile: .success(profile), multiples: .failure(.dailyLimitReached)).ports,
             clock: { Self.now },
         )
 
@@ -277,9 +279,7 @@ struct ResearchWindowModelTests {
         ResearchWindowModel(
             quotes: quotes,
             dailyPrices: prices,
-            profiles: FakeResearchData(),
-            multiples: FakeResearchData(),
-            dividends: FakeResearchData(),
+            ports: FakeResearchData().ports,
             clock: { Self.now },
         )
     }
@@ -331,6 +331,18 @@ private final class UntilCancelled: DailyPriceProviding, CompanyProfileProviding
 
 extension UntilCancelled: DividendProviding {
     func dividends(for _: Ticker) async throws(MarketDataError) -> [Dividend] {
+        await hang()
+        throw .unavailable("Cancelled")
+    }
+}
+
+extension UntilCancelled: PressReleaseProviding, FilingProviding {
+    func pressReleases(for _: Ticker) async throws(MarketDataError) -> PressReleases {
+        await hang()
+        throw .unavailable("Cancelled")
+    }
+
+    func filings(for _: Ticker) async throws(MarketDataError) -> [Filing] {
         await hang()
         throw .unavailable("Cancelled")
     }

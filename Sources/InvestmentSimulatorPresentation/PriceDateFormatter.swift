@@ -35,6 +35,13 @@ public struct PriceDateFormatter {
         return noon.formatted(style(date: .abbreviated, time: .omitted, source: .close(sessionDate: sessionDate)))
     }
 
+    /// The New York day at `date`, such as "Oct 23, 2026", so a timestamp
+    /// reads as the same day wherever the user is.
+    public func marketDay(of date: Date) -> String {
+        let style = Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale, timeZone: Self.marketTimeZone)
+        return date.formatted(style)
+    }
+
     /// Where a quote's price came from and when.
     public func label(for quote: Quote) -> String {
         let when = quote.asOf.formatted(style(date: .abbreviated, time: .shortened, source: quote.source))
