@@ -146,7 +146,21 @@ struct EquiblesFilingsTests {
         }
     }
 
-    @Test func `a filing date that isn't a date is unavailable`() async throws {
+    @Test(arguments: [
+        row("TenK", "10-K", filed: "soon"),
+        row("TenK", "10-K", reporting: "June"),
+        row("TenK", "10-K", url: "file:///etc/hosts"),
+        #"{"documentType": "TenK", "documentTypeName": "10-K", "filedDate": "2026-07-31", "url": null}"#,
+    ])
+    func `a kept row that can't be read is left out`(row: String) async throws {
+        let transport = FakeTransport([Self.path: (200, Self.body(row, Self.row("TenQ", "10-Q")))])
+
+        let filings = try await provider(transport).filings(for: aapl)
+
+        #expect(filings.map(\.form) == ["10-Q"])
+    }
+
+    @Test func `a lone filing date that isn't a date is unavailable`() async throws {
         let transport = FakeTransport([Self.path: (200, Self.body(Self.row("TenK", "10-K", filed: "soon")))])
 
         await #expect(throws: Self.unreadable) {

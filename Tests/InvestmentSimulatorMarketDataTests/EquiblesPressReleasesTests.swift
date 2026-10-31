@@ -117,15 +117,34 @@ struct EquiblesPressReleasesTests {
         #expect(transport.requests.isEmpty)
     }
 
-    @Test func `an unknown coverage status is unavailable`() async throws {
+    @Test func `an unknown coverage status keeps its rows and reads as untracked`() async throws {
         let transport = FakeTransport([Self.path: (200, Self.body(status: "pending"))])
 
-        await #expect(throws: Self.unreadable) {
-            try await provider(transport).pressReleases(for: plug)
-        }
+        let result = try await provider(transport).pressReleases(for: plug)
+
+        #expect(result.coverage == .untracked)
+        #expect(result.releases.count == 1)
     }
 
-    @Test func `a date that isn't a timestamp is unavailable`() async throws {
+    @Test(arguments: [
+        #"{"publishedAt": "soon", "title": "A", "url": "https://x.test/a"}"#,
+        #"{"publishedAt": null, "title": "A", "url": "https://x.test/a"}"#,
+        #"{"publishedAt": "2026-10-19T11:00:00Z", "title": null, "url": "https://x.test/a"}"#,
+        #"{"publishedAt": "2026-10-19T11:00:00Z", "title": "A", "url": "/news/a"}"#,
+        #"{"publishedAt": "2026-10-19T11:00:00Z", "title": "A", "url": "file:///etc/hosts"}"#,
+        #"{"publishedAt": "2026-10-19T11:00:00Z", "title": "A", "url": null}"#,
+    ])
+    func `a row that can't be read is left out`(row: String) async throws {
+        let good = #"{"publishedAt": "2026-10-19T11:00:00Z", "title": "Good", "url": "https://x.test/good"}"#
+        let body = #"{"coverage": {"status": "scraped"}, "data": [\#(row), \#(good)]}"#
+        let transport = FakeTransport([Self.path: (200, body)])
+
+        let result = try await provider(transport).pressReleases(for: plug)
+
+        #expect(result.releases.map(\.title) == ["Good"])
+    }
+
+    @Test func `no readable rows is unavailable, not none published`() async throws {
         let transport = FakeTransport([Self.path: (200, Self.body(status: "scraped", publishedAt: "soon"))])
 
         await #expect(throws: Self.unreadable) {
@@ -134,7 +153,7 @@ struct EquiblesPressReleasesTests {
     }
 
     @Test(arguments: ["file:///etc/hosts", "javascript:alert(1)", "not a link"])
-    func `a link that can't open in a browser is unavailable`(url: String) async throws {
+    func `a lone link that can't open in a browser is unavailable`(url: String) async throws {
         let transport = FakeTransport([Self.path: (200, Self.body(status: "scraped", url: url))])
 
         await #expect(throws: Self.unreadable) {

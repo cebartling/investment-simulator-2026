@@ -23,7 +23,7 @@ public enum PressReleaseCoverage: Sendable, Hashable {
     case attempted
     /// Found, but not read yet.
     case discovered
-    /// Unknown to Equibles.
+    /// Unknown to Equibles, or a status the app doesn't know.
     case untracked
 }
 

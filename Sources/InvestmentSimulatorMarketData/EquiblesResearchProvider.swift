@@ -73,15 +73,21 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
         return try response.data.map { row throws(MarketDataError) in try dividend(from: row) }
     }
 
+    /// Rows come from scraping company sites, so one that can't be read is
+    /// left out rather than losing the rest. If none can, that's a failure:
+    /// an empty list would read as nothing published.
     public func pressReleases(for ticker: Ticker) async throws(MarketDataError) -> PressReleases {
         let url = baseURL.appending(path: "stocks/\(ticker.symbol)/ir-news")
         let response = try await get(IRNewsResponse.self, from: url)
-        return try PressReleases(
-            coverage: coverage(from: response.coverage.status),
-            releases: response.data.map { row throws(MarketDataError) in try pressRelease(from: row) },
-        )
+        let releases = response.data.compactMap(pressRelease(from:))
+        guard response.data.isEmpty || !releases.isEmpty else {
+            throw .unreadableResponse
+        }
+        return PressReleases(coverage: coverage(from: response.coverage.status), releases: releases)
     }
 
+    /// As with press releases, a filing that can't be read is left out,
+    /// unless that leaves none.
     public func filings(for ticker: Ticker) async throws(MarketDataError) -> [Filing] {
         let url = baseURL.appending(path: "stocks/\(ticker.symbol)/filings")
             .appending(queryItems: [URLQueryItem(name: "limit", value: String(Self.filingLimit))])
@@ -90,50 +96,47 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
         guard !rows.isEmpty else {
             throw .noData
         }
-        return try rows.map { row throws(MarketDataError) in try filing(from: row) }
+        let filings = rows.compactMap(filing(from:))
+        guard !filings.isEmpty else {
+            throw .unreadableResponse
+        }
+        return filings
     }
 
-    private func coverage(from status: String) throws(MarketDataError) -> PressReleaseCoverage {
+    /// Coverage only says how to read an empty list, so a status added later
+    /// reads as not covered, not as a failure.
+    private func coverage(from status: String) -> PressReleaseCoverage {
         switch status {
         case "scraped": .scraped
         case "attempted": .attempted
         case "discovered": .discovered
-        case "none": .untracked
-        default: throw .unreadableResponse
+        default: .untracked
         }
     }
 
-    private func pressRelease(from row: IRNewsResponse.Row) throws(MarketDataError) -> PressRelease {
-        guard let publishedAt = try? Date.ISO8601FormatStyle().parse(row.publishedAt) else {
-            throw .unreadableResponse
+    private func pressRelease(from row: IRNewsResponse.Row) -> PressRelease? {
+        guard let title = row.title, let url = webLink(from: row.url), let text = row.publishedAt,
+              let publishedAt = try? Date.ISO8601FormatStyle().parse(text)
+        else {
+            return nil
         }
-        return try PressRelease(
-            publishedAt: publishedAt,
-            title: row.title,
-            url: webLink(from: row.url),
-            summary: row.summary,
-        )
+        return PressRelease(publishedAt: publishedAt, title: title, url: url, summary: row.summary)
     }
 
-    private func filing(from row: FilingsResponse.Row) throws(MarketDataError) -> Filing {
-        guard let form = row.documentTypeName, let filedDate = row.filedDate else {
-            throw .unreadableResponse
+    private func filing(from row: FilingsResponse.Row) -> Filing? {
+        guard let form = row.documentTypeName, let filedDate = row.filedDate, let url = webLink(from: row.url) else {
+            return nil
         }
-        let url = try webLink(from: row.url)
-        do {
-            return try Filing(form: form, filedDate: filedDate, reportingForDate: row.reportingForDate, url: url)
-        } catch {
-            throw .unreadableResponse
-        }
+        return try? Filing(form: form, filedDate: filedDate, reportingForDate: row.reportingForDate, url: url)
     }
 
     /// A link the user can click, so nothing but a web page: these come from
     /// a third party and open in the system's handler for their scheme.
-    private func webLink(from text: String?) throws(MarketDataError) -> URL {
+    private func webLink(from text: String?) -> URL? {
         guard let text, let url = URL(string: text), let scheme = url.scheme?.lowercased(),
               ["http", "https"].contains(scheme), url.host() != nil
         else {
-            throw .unreadableResponse
+            return nil
         }
         return url
     }
@@ -272,10 +275,12 @@ private struct IRNewsResponse: Decodable {
         let status: String
     }
 
+    /// All optional, so a row with a missing field is left out on its own
+    /// and doesn't fail the decoding of the page.
     struct Row: Decodable {
-        let publishedAt: String
-        let title: String
-        let url: String
+        let publishedAt: String?
+        let title: String?
+        let url: String?
         let summary: String?
     }
 
@@ -284,8 +289,8 @@ private struct IRNewsResponse: Decodable {
 }
 
 private struct FilingsResponse: Decodable {
-    /// Only `documentType` is required: a row the filter drops shouldn't
-    /// fail the rest of the page.
+    /// Only `documentType` is required, so a row with a missing field is
+    /// left out on its own and doesn't fail the decoding of the page.
     struct Row: Decodable {
         let documentType: String
         let documentTypeName: String?
