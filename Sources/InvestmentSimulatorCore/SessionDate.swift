@@ -4,7 +4,8 @@ import Foundation
 /// one time zone. Holds one `Calendar`, so mapping a whole chart builds one.
 public nonisolated struct SessionDateParser: Sendable {
     /// New York, the market's time zone.
-    public static let market = SessionDateParser(timeZone: TimeZone(identifier: "America/New_York")!)
+    public static let marketTimeZone = TimeZone(identifier: "America/New_York")!
+    public static let market = SessionDateParser(timeZone: marketTimeZone)
 
     private let calendar: Calendar
 
@@ -36,7 +37,7 @@ public nonisolated struct SessionDateParser: Sendable {
 /// The Gregorian calendar in New York, the market's time zone.
 let marketCalendar: Calendar = {
     var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = TimeZone(identifier: "America/New_York")!
+    calendar.timeZone = SessionDateParser.marketTimeZone
     return calendar
 }()
 

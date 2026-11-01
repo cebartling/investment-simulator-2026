@@ -5,7 +5,7 @@ import InvestmentSimulatorCore
 /// by its New York session, so it reads as the same day wherever the user is; a live quote
 /// shows the user's own time.
 public struct PriceDateFormatter {
-    private static let marketTimeZone = TimeZone(identifier: "America/New_York")!
+    private static let marketTimeZone = SessionDateParser.marketTimeZone
 
     private let timeZone: TimeZone
     private let locale: Locale

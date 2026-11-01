@@ -194,7 +194,6 @@ struct ResearchChartSection: View {
                 }
             }
             .chartYScale(domain: .automatic(includesZero: false))
-            .environment(\.timeZone, timeZone)
         case .empty:
             Text("No price history for \(tab.ticker.symbol).")
                 .foregroundStyle(.secondary)
