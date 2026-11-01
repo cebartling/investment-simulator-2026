@@ -210,7 +210,7 @@ public final class ResearchTabModel: Identifiable {
         guard !Task.isCancelled else {
             return
         }
-        let points = bars.sorted { $0.sessionDate < $1.sessionDate }.map(ChartPoint.init)
+        let points = bars.sorted { $0.sessionDate < $1.sessionDate }.map { ChartPoint(bar: $0) }
         charts[range] = points
         if chartRange == range {
             show(points)
@@ -359,21 +359,18 @@ public extension ResearchTabModel {
     }
 }
 
-/// One bar's close, placed at noon of its New York session, so no daylight
-/// saving change moves it to another day.
+/// One bar's close, placed at noon of its session's day in the user's time
+/// zone, so the chart axis, which uses that zone, shows the session's own day,
+/// and no daylight saving change moves it to another day.
 public nonisolated struct ChartPoint: Equatable, Sendable {
     public let date: Date
     public let close: Decimal
 
-    private static let marketCalendar: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "America/New_York")!
-        return calendar
-    }()
-
-    init(bar: DailyBar) {
+    public init(bar: DailyBar, timeZone: TimeZone = .current) {
         let parts = bar.sessionDate.split(separator: "-").compactMap { Int($0) }
-        date = Self.marketCalendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2], hour: 12))!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        date = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2], hour: 12))!
         close = bar.close
     }
 }
