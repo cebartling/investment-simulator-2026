@@ -10,9 +10,12 @@ extension MainWindowModelTests {
 
         try model.beginPurchase(of: Ticker("VTI"))
 
+        let purchase = try #require(model.purchase)
         #expect(model.isShowingPurchase)
-        #expect(model.purchase?.tickerText == "VTI")
-        #expect(model.purchase?.availableCash == Money(500))
+        #expect(purchase.tickerText == "VTI")
+        #expect(purchase.priceState == .none)
+        #expect(purchase.canGetPrice)
+        #expect(purchase.availableCash == Money(500))
         #expect(model.raiseCount == 1)
     }
 
@@ -21,9 +24,12 @@ extension MainWindowModelTests {
 
         try model.beginBuyLimitOrder(of: Ticker("VTI"))
 
+        let order = try #require(model.buyLimitOrder)
         #expect(model.isShowingBuyLimitOrder)
-        #expect(model.buyLimitOrder?.tickerText == "VTI")
-        #expect(model.buyLimitOrder?.availableCash == Money(500))
+        #expect(order.tickerText == "VTI")
+        #expect(order.quoteState == .none)
+        #expect(order.canGetQuote)
+        #expect(order.availableCash == Money(500))
         #expect(model.raiseCount == 1)
     }
 

@@ -119,11 +119,7 @@ public final class MainWindowModel {
     }
 
     public func beginPurchase() {
-        showPurchase(of: nil)
-    }
-
-    private func showPurchase(of ticker: Ticker?) {
-        purchase = PurchaseModel(availableCash: experiment.availableCash(at: clock()), quotes: quotes, ticker: ticker)
+        purchase = PurchaseModel(availableCash: experiment.availableCash(at: clock()), quotes: quotes)
         isShowingPurchase = true
     }
 
@@ -223,14 +219,9 @@ public final class MainWindowModel {
     }
 
     public func beginBuyLimitOrder() {
-        showBuyLimitOrder(on: nil)
-    }
-
-    private func showBuyLimitOrder(on ticker: Ticker?) {
         buyLimitOrder = BuyLimitOrderModel(
             availableCash: experiment.availableCash(at: clock()),
             quotes: quotes,
-            ticker: ticker,
             clock: clock,
         )
         isShowingBuyLimitOrder = true
@@ -297,11 +288,17 @@ public extension MainWindowModel {
     }
 
     func beginPurchase(of ticker: Ticker) {
-        handOff { showPurchase(of: ticker) }
+        handOff {
+            beginPurchase()
+            purchase?.tickerText = ticker.symbol
+        }
     }
 
     func beginBuyLimitOrder(of ticker: Ticker) {
-        handOff { showBuyLimitOrder(on: ticker) }
+        handOff {
+            beginBuyLimitOrder()
+            buyLimitOrder?.tickerText = ticker.symbol
+        }
     }
 
     /// Does nothing while a sheet shows. The sheets live in the Experiment

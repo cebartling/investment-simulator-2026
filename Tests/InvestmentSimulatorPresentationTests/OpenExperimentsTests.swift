@@ -56,6 +56,7 @@ struct OpenExperimentsTests {
             needsSetup: false,
             quotes: FakeQuotes(.failure(.missingAPIKey)),
             dailyPrices: FakeDailyPrices(),
+            clock: { fixedNow },
         )
     }
 }

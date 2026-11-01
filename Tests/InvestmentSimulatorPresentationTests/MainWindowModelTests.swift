@@ -285,7 +285,7 @@ struct MainWindowModelTests {
         cashBalance: Decimal = 0,
         needsSetup: Bool = false,
         quotes: FakeQuotes = FakeQuotes(.failure(.missingAPIKey)),
-        clock: @escaping () -> Date = Date.init,
+        clock: @escaping () -> Date = { fixedNow },
     ) throws -> MainWindowModel {
         try MainWindowModel(
             experiment: Experiment(cashBalance: Money(cashBalance)),

@@ -16,11 +16,11 @@ struct WindowRaiser: NSViewRepresentable {
     }
 
     func updateNSView(_ view: NSView, context: Context) {
-        guard raiseCount != context.coordinator.raiseCount else {
+        guard raiseCount != context.coordinator.raiseCount, let window = view.window else {
             return
         }
         context.coordinator.raiseCount = raiseCount
-        view.window?.makeKeyAndOrderFront(nil)
+        window.makeKeyAndOrderFront(nil)
     }
 
     final class Coordinator {
