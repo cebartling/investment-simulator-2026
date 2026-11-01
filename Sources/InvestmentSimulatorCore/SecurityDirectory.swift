@@ -5,11 +5,14 @@ public struct ListedSecurity: Sendable, Hashable {
     public let ticker: Ticker
     /// As the directory spells it, which can be all capitals.
     public let name: String
+    /// SEC's company ID, which sec.gov filing links need.
+    public let cik: Int
     public let exchange: String?
 
-    public init(ticker: Ticker, name: String, exchange: String?) {
+    public init(ticker: Ticker, name: String, cik: Int, exchange: String?) {
         self.ticker = ticker
         self.name = name
+        self.cik = cik
         self.exchange = exchange
     }
 }

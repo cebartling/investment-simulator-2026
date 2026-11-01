@@ -19,6 +19,7 @@ struct ResearchLinkSectionTests {
             form: "10-Q",
             filedDate: filedDate,
             reportingForDate: nil,
+            accessionNumber: nil,
             url: URL(string: "https://example.com/\(filedDate)")!,
         )
     }

@@ -90,13 +90,14 @@ public actor EdgarSecurityDirectory: SecurityDirectory {
 /// `company_tickers_exchange.json`: rows of `[cik, name, ticker, exchange]`.
 private struct TickerList: Decodable {
     struct Row: Decodable {
+        let cik: Int
         let name: String?
         let ticker: String?
         let exchange: String?
 
         init(from decoder: any Decoder) throws {
             var columns = try decoder.unkeyedContainer()
-            _ = try columns.decode(Int.self)
+            cik = try columns.decode(Int.self)
             name = try columns.decodeIfPresent(String.self)
             ticker = try columns.decodeIfPresent(String.self)
             exchange = try columns.decodeIfPresent(String.self)
@@ -111,7 +112,7 @@ private struct TickerList: Decodable {
             guard let name = row.name, let symbol = row.ticker, let ticker = try? Ticker(symbol) else {
                 return nil
             }
-            return ListedSecurity(ticker: ticker, name: name, exchange: row.exchange)
+            return ListedSecurity(ticker: ticker, name: name, cik: row.cik, exchange: row.exchange)
         }
     }
 }

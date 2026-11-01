@@ -3,7 +3,7 @@ import Testing
 
 struct SecurityDirectoryTests {
     private func security(_ symbol: String, _ name: String, _ exchange: String? = "Nasdaq") throws -> ListedSecurity {
-        try ListedSecurity(ticker: Ticker(symbol), name: name, exchange: exchange)
+        try ListedSecurity(ticker: Ticker(symbol), name: name, cik: 1, exchange: exchange)
     }
 
     @Test func `matches a name or symbol in any case`() throws {

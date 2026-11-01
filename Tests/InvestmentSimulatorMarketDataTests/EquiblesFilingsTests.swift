@@ -62,6 +62,7 @@ struct EquiblesFilingsTests {
                 form: "10-Q",
                 filedDate: "2026-07-31",
                 reportingForDate: "2026-06-27",
+                accessionNumber: nil,
                 url: #require(URL(string: "https://equibles.com/stocks/aapl/documents/1")),
             ),
         ])
@@ -77,6 +78,7 @@ struct EquiblesFilingsTests {
                 form: "10-Q",
                 filedDate: "2026-07-31",
                 reportingForDate: "2026-06-27",
+                accessionNumber: "0000320193-26-000020",
                 url: #require(URL(string: Self.recordedURL)),
             ),
         ])

@@ -127,7 +127,13 @@ public struct EquiblesResearchProvider: CompanyProfileProviding, ValuationMultip
         guard let form = row.documentTypeName, let filedDate = row.filedDate, let url = webLink(from: row.url) else {
             return nil
         }
-        return try? Filing(form: form, filedDate: filedDate, reportingForDate: row.reportingForDate, url: url)
+        return try? Filing(
+            form: form,
+            filedDate: filedDate,
+            reportingForDate: row.reportingForDate,
+            accessionNumber: row.accessionNumber,
+            url: url,
+        )
     }
 
     /// A link the user can click, so nothing but a web page: these come from
@@ -296,6 +302,7 @@ private struct FilingsResponse: Decodable {
         let documentTypeName: String?
         let filedDate: String?
         let reportingForDate: String?
+        let accessionNumber: String?
         let url: String?
     }
 
