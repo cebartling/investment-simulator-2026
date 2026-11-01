@@ -105,7 +105,7 @@ struct LimitOrderTests {
         #expect(!filled.isOpen(at: filled.placedAt))
     }
 
-    @Test(arguments: ["", "2026-10-2", "10/23/2026"])
+    @Test(arguments: ["", "2026-10-2", "10/23/2026", "2026-02-30", "2026-13-10"])
     func `fill session date must be yyyy-MM-dd`(session: String) throws {
         let order = try makeLimitOrder()
 

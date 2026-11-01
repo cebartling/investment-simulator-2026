@@ -123,7 +123,7 @@ struct DividendHistoryTests {
         #expect(history.trailingAmountPerShare == Self.exactly("0.1"))
     }
 
-    @Test(arguments: ["", "10/23/2026", "2026-08-10T00:00:00Z"])
+    @Test(arguments: ["", "10/23/2026", "2026-08-10T00:00:00Z", "2026-02-30", "2026-13-10"])
     func `an ex-date must be yyyy-MM-dd`(exDate: String) {
         #expect(throws: DividendError.invalidExDate(exDate)) {
             try Dividend(exDate: exDate, amountPerShare: 1, currency: "USD")

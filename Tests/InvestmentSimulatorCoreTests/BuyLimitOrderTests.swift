@@ -58,7 +58,7 @@ struct BuyLimitOrderTests {
         #expect(!filled.isOpen(at: order.placedAt))
     }
 
-    @Test(arguments: ["", "2026-10-2", "10/23/2026"])
+    @Test(arguments: ["", "2026-10-2", "10/23/2026", "2026-02-30", "2026-13-10"])
     func `fill session date must be yyyy-MM-dd`(session: String) throws {
         #expect(throws: LimitOrderError.invalidSessionDate(session)) {
             try makeBuyLimitOrder().filled(on: session)
