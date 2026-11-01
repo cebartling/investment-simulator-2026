@@ -140,4 +140,3 @@ ADR-0004 gives each screen one `@Observable` model, built by a composition root.
   - Caching, and Free-plan budgeting, if a 100-request day runs out after a few tabs.
   - Reordering tickers, and restoring them at launch.
   - Third-party news (Finnhub) as its own issue.
-  - Whether "Buy in experiment…" (ADR-0020, PIN-421) changes how this window reaches document windows.
