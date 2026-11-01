@@ -65,6 +65,7 @@ struct ResearchWindowModelRetryTests {
             form: "10-K",
             filedDate: "2026-07-31",
             reportingForDate: nil,
+            accessionNumber: nil,
             url: #require(URL(string: "https://example.com/filing")),
         )
         let data = FakeResearchData(filings: .failure(.unavailable("Down")))
