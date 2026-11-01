@@ -34,15 +34,17 @@ struct FilingTests {
         #expect(try filing().reportingForDate == nil)
     }
 
-    @Test func `a filed date must be a date`() {
-        #expect(throws: FilingError.invalidDate("2026-07-31T00:00:00Z")) {
-            try filing(filed: "2026-07-31T00:00:00Z")
+    @Test(arguments: ["2026-07-31T00:00:00Z", "2026-02-30", "2026-13-10"])
+    func `a filed date must be a date`(filed: String) {
+        #expect(throws: FilingError.invalidDate(filed)) {
+            try filing(filed: filed)
         }
     }
 
-    @Test func `a reporting date must be a date`() {
-        #expect(throws: FilingError.invalidDate("June")) {
-            try filing(reporting: "June")
+    @Test(arguments: ["June", "2026-02-30", "2026-13-10"])
+    func `a reporting date must be a date`(reporting: String) {
+        #expect(throws: FilingError.invalidDate(reporting)) {
+            try filing(reporting: reporting)
         }
     }
 

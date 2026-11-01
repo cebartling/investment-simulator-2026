@@ -17,11 +17,38 @@ struct ChartPointTests {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
 
-        let point = try ChartPoint(bar: bar("2026-10-28", close: 100), timeZone: timeZone)
+        let points = try ChartPoint.plot([ChartPoint(bar: bar("2026-10-28", close: 100))], in: timeZone)
 
+        let point = try #require(points.first)
         let day = calendar.dateComponents([.year, .month, .day], from: point.date)
         #expect(day == DateComponents(year: 2026, month: 10, day: 28))
         #expect(point.close == 100)
+    }
+
+    @Test func `the same points plot on the same day after the time zone changes`() throws {
+        let tokyo = try #require(TimeZone(identifier: "Asia/Tokyo"))
+        let honolulu = try #require(TimeZone(identifier: "Pacific/Honolulu"))
+        let points = try [ChartPoint(bar: bar("2026-10-28", close: 100))]
+
+        for timeZone in [tokyo, honolulu] {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = timeZone
+            let plotted = try #require(ChartPoint.plot(points, in: timeZone).first)
+            let day = calendar.dateComponents([.year, .month, .day], from: plotted.date)
+            #expect(day == DateComponents(year: 2026, month: 10, day: 28))
+        }
+    }
+
+    @Test func `a point whose session date is not a real date is left off the chart`() {
+        let points = [
+            ChartPoint(sessionDate: "2026-10-27", close: 99),
+            ChartPoint(sessionDate: "not a date", close: 1),
+            ChartPoint(sessionDate: "2026-10-28", close: 100),
+        ]
+
+        let plotted = ChartPoint.plot(points, in: .gmt)
+
+        #expect(plotted.map(\.close) == [99, 100])
     }
 
     @Test(arguments: [
@@ -37,8 +64,9 @@ struct ChartPointTests {
         calendar.timeZone = timeZone
         let parts = session.split(separator: "-").compactMap { Int($0) }
 
-        let point = try ChartPoint(bar: bar(session, close: 100), timeZone: timeZone)
+        let points = try ChartPoint.plot([ChartPoint(bar: bar(session, close: 100))], in: timeZone)
 
+        let point = try #require(points.first)
         let day = calendar.dateComponents([.year, .month, .day], from: point.date)
         #expect(day == DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }

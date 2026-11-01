@@ -161,6 +161,8 @@ struct ResearchTickerView: View {
 struct ResearchChartSection: View {
     let tab: ResearchTabModel
     let onShowRange: @MainActor (PriceRange) -> Void
+    /// The one zone that places the points and lays out the axis.
+    @Environment(\.timeZone) private var timeZone
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -183,10 +185,11 @@ struct ResearchChartSection: View {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case let .loaded(points):
-            Chart(points, id: \.date) { point in
+            let plotted = ChartPoint.plot(points, in: timeZone)
+            Chart(plotted, id: \.date) { point in
                 LineMark(x: .value("Date", point.date), y: .value("Close", point.close))
                 // A line through one point draws nothing.
-                if points.count == 1 {
+                if plotted.count == 1 {
                     PointMark(x: .value("Date", point.date), y: .value("Close", point.close))
                 }
             }
