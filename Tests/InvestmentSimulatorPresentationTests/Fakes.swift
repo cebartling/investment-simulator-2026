@@ -200,6 +200,7 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
     private let dividends: Mutex<Result<[Dividend], MarketDataError>>
     private let pressReleases: Mutex<Result<PressReleases, MarketDataError>>
     private let filings: Mutex<Result<[Filing], MarketDataError>>
+    private let directory: FakeDirectory
     private let sent = Mutex(0)
     private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
 
@@ -209,7 +210,9 @@ final class FakeResearchData: CompanyProfileProviding, ValuationMultiplesProvidi
         dividends: Result<[Dividend], MarketDataError> = .failure(.noData),
         pressReleases: Result<PressReleases, MarketDataError> = .failure(.noData),
         filings: Result<[Filing], MarketDataError> = .failure(.noData),
+        directory: FakeDirectory = FakeDirectory(),
     ) {
+        self.directory = directory
         self.profile = profile
         self.multiples = Mutex(multiples)
         self.dividends = Mutex(dividends)
@@ -284,6 +287,7 @@ extension FakeResearchData: DividendProviding, PressReleaseProviding, FilingProv
             pressReleases: self,
             filings: self,
             statements: FakeStatements(),
+            directory: directory,
         )
     }
 }

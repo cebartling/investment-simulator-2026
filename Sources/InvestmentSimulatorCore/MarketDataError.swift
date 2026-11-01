@@ -9,4 +9,6 @@ public enum MarketDataError: Error, Equatable {
     /// Nothing to show for a ticker the quote has already validated. An
     /// empty state, not an error.
     case noData
+    /// An EDGAR request with no contact email saved.
+    case missingContactEmail
 }

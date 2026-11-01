@@ -9,6 +9,7 @@ public nonisolated struct ResearchSectionPorts: Sendable {
     let pressReleases: any PressReleaseProviding
     let filings: any FilingProviding
     let statements: any FinancialStatementProviding
+    let directory: any SecurityDirectory
 
     public init(
         profiles: any CompanyProfileProviding,
@@ -17,6 +18,7 @@ public nonisolated struct ResearchSectionPorts: Sendable {
         pressReleases: any PressReleaseProviding,
         filings: any FilingProviding,
         statements: any FinancialStatementProviding,
+        directory: any SecurityDirectory,
     ) {
         self.profiles = profiles
         self.multiples = multiples
@@ -24,5 +26,6 @@ public nonisolated struct ResearchSectionPorts: Sendable {
         self.pressReleases = pressReleases
         self.filings = filings
         self.statements = statements
+        self.directory = directory
     }
 }

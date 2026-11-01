@@ -106,6 +106,7 @@ struct ResearchWindowModelStatementsTests {
                 pressReleases: data,
                 filings: data,
                 statements: statements,
+                directory: FakeDirectory(),
             ),
             clock: { Date(timeIntervalSince1970: 1_793_000_000) },
         )

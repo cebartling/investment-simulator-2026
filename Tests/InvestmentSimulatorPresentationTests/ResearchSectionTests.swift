@@ -237,6 +237,7 @@ struct ResearchSectionTests {
                 pressReleases: otherSections ?? data,
                 filings: otherSections ?? data,
                 statements: FakeStatements(),
+                directory: FakeDirectory(),
             ),
             clock: { Self.now },
         )
