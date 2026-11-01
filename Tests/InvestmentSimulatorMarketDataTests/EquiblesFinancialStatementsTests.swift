@@ -43,7 +43,8 @@ struct EquiblesFinancialStatementsTests {
 
     /// A balance sheet's fourth quarter, as Equibles sent it on 2026-11-01
     /// (`docs/spikes/PIN-413`, PIN-452), trimmed to one line. It's the
-    /// reported 10-K balance sheet, equal to the FY response line for line.
+    /// reported balance sheet (`basis: "reported"`; some lines cite a later
+    /// 10-Q as `form`, the rest the 10-K), equal to the FY response line for line.
     static let balanceQ4 = #"""
     {"fiscalYear": 2025, "fiscalPeriod": "Q4",
      "data": [{"lineItem": "Total Assets", "value": 359241000000.0, "unit": "USD", "basis": "reported",
