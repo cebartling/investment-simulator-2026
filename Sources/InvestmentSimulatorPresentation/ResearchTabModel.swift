@@ -359,18 +359,36 @@ public extension ResearchTabModel {
     }
 }
 
-/// One bar's close, placed at noon of its session's day in the user's time
-/// zone, so the chart axis, which uses that zone, shows the session's own day,
-/// and no daylight saving change moves it to another day.
+/// One bar's close and the session day it belongs to. It holds no time zone,
+/// so a cached range stays right when the Mac's zone changes; `plot` places it
+/// on the chart's axis in the zone the view names.
 public nonisolated struct ChartPoint: Equatable, Sendable {
-    public let date: Date
+    public let sessionDate: String
     public let close: Decimal
 
-    public init(bar: DailyBar, timeZone: TimeZone = .current) {
-        let parts = bar.sessionDate.split(separator: "-").compactMap { Int($0) }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = timeZone
-        date = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2], hour: 12))!
-        close = bar.close
+    public init(bar: DailyBar) {
+        self.init(sessionDate: bar.sessionDate, close: bar.close)
+    }
+
+    public init(sessionDate: String, close: Decimal) {
+        self.sessionDate = sessionDate
+        self.close = close
+    }
+
+    /// A close at its place on a chart axis.
+    public struct Plotted: Equatable, Sendable {
+        public let date: Date
+        public let close: Decimal
+    }
+
+    /// Places each close at noon of its session's day in `timeZone`, which
+    /// must be the zone the chart axis uses, so the axis shows the session's
+    /// own day and no daylight saving change moves it to another day. A point
+    /// whose session date isn't a real date is left out.
+    public static func plot(_ points: [ChartPoint], in timeZone: TimeZone) -> [Plotted] {
+        let parser = SessionDateParser(timeZone: timeZone)
+        return points.compactMap { point in
+            parser.date(of: point.sessionDate, hour: 12).map { Plotted(date: $0, close: point.close) }
+        }
     }
 }

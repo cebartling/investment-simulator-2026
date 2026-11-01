@@ -19,7 +19,7 @@ struct DailyBarTests {
         #expect(try bar.close == #require(Decimal(string: "347.725")))
     }
 
-    @Test(arguments: ["", "2026-10-2", "10/23/2026", "2026-10-23T16:00"])
+    @Test(arguments: ["", "2026-10-2", "10/23/2026", "2026-10-23T16:00", "2026-13-45", "2026-02-30"])
     func `session date must be yyyy-MM-dd`(session: String) {
         #expect(throws: DailyBarError.invalidSessionDate(session)) {
             try makeDailyBar(session: session)
