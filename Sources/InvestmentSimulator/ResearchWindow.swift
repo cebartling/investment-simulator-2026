@@ -101,7 +101,7 @@ struct ResearchTickerView: View {
                     // files others, so "no SEC filings" would be untrue.
                     subject: "10-K, 10-Q or 8-K filings",
                     onRetry: { onRetry(.filings) },
-                    content: ResearchFilingsView.init,
+                    content: { ResearchFilingsView(filings: $0, link: tab.link(for:)) },
                 )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -342,9 +342,11 @@ struct ResearchPressReleasesView: View {
     }
 }
 
-/// Recent filings, each opening on its Equibles page in the browser.
+/// Recent filings, each opening in the browser on the page `link` gives:
+/// sec.gov once EDGAR has listed the ticker, otherwise Equibles.
 struct ResearchFilingsView: View {
     let filings: [Filing]
+    let link: (Filing) -> URL
 
     var body: some View {
         let dates = PriceDateFormatter()
@@ -358,7 +360,7 @@ struct ResearchFilingsView: View {
             // By position: two filings can match in every field.
             ForEach(Array(filings.enumerated()), id: \.offset) { _, filing in
                 GridRow {
-                    Link(filing.form, destination: filing.url)
+                    Link(filing.form, destination: link(filing))
                     Text(dates.day(ofSession: filing.filedDate))
                     Text(filing.reportingForDate.map(dates.day(ofSession:)) ?? ResearchFigureFormatter.missing)
                 }

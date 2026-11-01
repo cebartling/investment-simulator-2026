@@ -66,6 +66,9 @@ public final class ResearchTabModel: Identifiable {
     public private(set) var profileState = ResearchSectionState<CompanyProfile>.loading
     /// Empty when EDGAR doesn't list the ticker, or lists no exchange for it.
     public private(set) var exchangeState = ResearchSectionState<String>.loading
+    /// SEC's company ID for the ticker, once the directory has listed it. It
+    /// stays nil when EDGAR is off, fails or lacks the ticker.
+    private var cik: Int?
     public private(set) var multiplesState = ResearchSectionState<ValuationMultiples>.loading
     public private(set) var dividendsState = ResearchSectionState<DividendHistory>.loading
     public private(set) var pressReleasesState = ResearchSectionState<[PressRelease]>.loading
@@ -278,8 +281,11 @@ public final class ResearchTabModel: Identifiable {
                 try await .loaded(ports.profiles.companyProfile(for: ticker))
             }
         case .exchange:
+            cik = nil
             await load(\.exchangeState) { () async throws(MarketDataError) in
-                guard let exchange = try await ports.directory.security(for: ticker)?.exchange else {
+                let security = try await ports.directory.security(for: ticker)
+                cik = security?.cik
+                guard let exchange = security?.exchange else {
                     return .empty(.noData)
                 }
                 return .loaded(exchange)
@@ -335,6 +341,12 @@ public final class ResearchTabModel: Identifiable {
 }
 
 public extension ResearchTabModel {
+    /// Where a filing row opens: its folder on sec.gov when EDGAR has listed
+    /// the ticker, otherwise the Equibles page.
+    func link(for filing: Filing) -> URL {
+        cik.flatMap(filing.secURL(cik:)) ?? filing.url
+    }
+
     /// Why the profile shows no exchange, when that's worth saying.
     var exchangeMessage: String? {
         switch exchangeState {

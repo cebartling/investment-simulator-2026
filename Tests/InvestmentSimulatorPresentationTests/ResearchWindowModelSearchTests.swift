@@ -10,7 +10,9 @@ struct ResearchWindowModelSearchTests {
 
     init() throws {
         apple = try ListedSecurity(ticker: Ticker("AAPL"), name: "Apple Inc.", cik: 320_193, exchange: "Nasdaq")
-        hospitality = try ListedSecurity(ticker: Ticker("APLE"), name: "Apple Hospitality REIT", cik: 1_418_121, exchange: "NYSE")
+        hospitality = try ListedSecurity(
+            ticker: Ticker("APLE"), name: "Apple Hospitality REIT", cik: 1_418_121, exchange: "NYSE",
+        )
     }
 
     private func research(_ directory: FakeDirectory, quotes: FakeTickerQuotes? = nil) -> ResearchWindowModel {
