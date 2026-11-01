@@ -41,6 +41,27 @@ struct EquiblesFinancialStatementsTests {
      "data": [{"lineItem": "Total Assets", "value": 5024265535488.0, "unit": "USD"}]}
     """#
 
+    /// A balance sheet's fourth quarter, as Equibles sent it on 2026-11-01
+    /// (`docs/spikes/PIN-413`, PIN-452), trimmed to one line. It's the
+    /// reported balance sheet (`basis: "reported"`; some lines cite a later
+    /// 10-Q as `form`, the rest the 10-K), equal to the FY response line for line.
+    static let balanceQ4 = #"""
+    {"fiscalYear": 2025, "fiscalPeriod": "Q4",
+     "data": [{"lineItem": "Total Assets", "value": 359241000000.0, "unit": "USD", "basis": "reported",
+               "periodStart": null, "periodEnd": "2025-09-27"}]}
+    """#
+
+    /// A cash-flow fourth quarter is derived (FY minus nine months), as
+    /// Equibles sent it on 2026-11-01, trimmed to two lines. It lacks the
+    /// FY statement's "Debt Issued" line.
+    static let cashFlowQ4 = #"""
+    {"fiscalYear": 2025, "fiscalPeriod": "Q4",
+     "data": [{"lineItem": "Operating Cash Flow", "value": 29728000000.0, "unit": "USD", "basis": "derived",
+               "periodStart": "2025-06-29", "periodEnd": "2025-09-27"},
+              {"lineItem": "Investing Cash Flow", "value": -2587000000.0, "unit": "USD", "basis": "derived",
+               "periodStart": "2025-06-29", "periodEnd": "2025-09-27"}]}
+    """#
+
     static let missing = #"""
     {"error": {"code": "not_found", "message": "No income statement line items were found.", "status": 404}}
     """#
@@ -89,6 +110,29 @@ struct EquiblesFinancialStatementsTests {
 
         #expect(statement.period == period)
         #expect(statement.lines == [StatementLine(name: "Total Assets", figure: .money(Money(5_024_265_535_488)))])
+    }
+
+    @Test func `a balance sheet has a reported fourth quarter`() async throws {
+        let transport = FakeTransport(["\(Self.balance)?year=2025&period=Q4": (200, Self.balanceQ4)])
+        let period = FiscalPeriod(year: 2025, part: .quarter4)
+
+        let statement = try await provider(transport).financialStatement(.balance, for: aapl, period: period)
+
+        #expect(statement.period == period)
+        #expect(statement.lines == [StatementLine(name: "Total Assets", figure: .money(Money(359_241_000_000)))])
+    }
+
+    @Test func `a cash flow statement has a derived fourth quarter`() async throws {
+        let transport = FakeTransport(["\(Self.cashFlow)?year=2025&period=Q4": (200, Self.cashFlowQ4)])
+        let period = FiscalPeriod(year: 2025, part: .quarter4)
+
+        let statement = try await provider(transport).financialStatement(.cashFlow, for: aapl, period: period)
+
+        #expect(statement.period == period)
+        #expect(statement.lines == [
+            StatementLine(name: "Operating Cash Flow", figure: .money(Money(29_728_000_000))),
+            StatementLine(name: "Investing Cash Flow", figure: .money(Money(-2_587_000_000))),
+        ])
     }
 
     @Test func `the cash flow statement has its own path`() async throws {
