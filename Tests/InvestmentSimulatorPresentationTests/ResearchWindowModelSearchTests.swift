@@ -9,8 +9,8 @@ struct ResearchWindowModelSearchTests {
     private let hospitality: ListedSecurity
 
     init() throws {
-        apple = try ListedSecurity(ticker: Ticker("AAPL"), name: "Apple Inc.", exchange: "Nasdaq")
-        hospitality = try ListedSecurity(ticker: Ticker("APLE"), name: "Apple Hospitality REIT", exchange: "NYSE")
+        apple = try ListedSecurity(ticker: Ticker("AAPL"), name: "Apple Inc.", cik: 320_193, exchange: "Nasdaq")
+        hospitality = try ListedSecurity(ticker: Ticker("APLE"), name: "Apple Hospitality REIT", cik: 1_418_121, exchange: "NYSE")
     }
 
     private func research(_ directory: FakeDirectory, quotes: FakeTickerQuotes? = nil) -> ResearchWindowModel {
@@ -288,7 +288,7 @@ struct ResearchWindowModelSearchTests {
     /// A ticker EDGAR lacks could otherwise open a security it merely starts.
     @Test func `entering text that matches a symbol opens what was typed`() async throws {
         let quote = try makeQuote(ticker: "VTI", price: 12)
-        let longerSymbol = try ListedSecurity(ticker: Ticker("VTIP"), name: "Other Co", exchange: "Nasdaq")
+        let longerSymbol = try ListedSecurity(ticker: Ticker("VTIP"), name: "Other Co", cik: 2, exchange: "Nasdaq")
         let model = research(
             FakeDirectory(.success([longerSymbol])),
             quotes: FakeTickerQuotes(["VTI": .success(quote)]),

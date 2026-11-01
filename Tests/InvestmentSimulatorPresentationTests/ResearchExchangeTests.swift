@@ -22,7 +22,7 @@ struct ResearchExchangeTests {
     }
 
     private func listing(exchange: String?) throws -> [ListedSecurity] {
-        try [ListedSecurity(ticker: Ticker("BRK-B"), name: "Berkshire", exchange: exchange)]
+        try [ListedSecurity(ticker: Ticker("BRK-B"), name: "Berkshire", cik: 1_067_983, exchange: exchange)]
     }
 
     @Test func `a tab loads its exchange, however the share class is spelled`() async throws {
@@ -92,7 +92,7 @@ struct ResearchExchangeTests {
     }
 
     @Test func `retrying the exchange after saving the email loads it`() async throws {
-        let berkshire = try ListedSecurity(ticker: Ticker("BRK-B"), name: "Berkshire", exchange: "NYSE")
+        let berkshire = try ListedSecurity(ticker: Ticker("BRK-B"), name: "Berkshire", cik: 1_067_983, exchange: "NYSE")
         let quote = try makeQuote(ticker: "BRK-B", price: 12)
         let directory = FakeDirectory(.failure(.missingContactEmail))
         let model = ResearchWindowModel(

@@ -28,7 +28,7 @@ struct EdgarSecurityDirectoryTests {
 
         let results = try await directory(transport).search("apple")
 
-        #expect(try results == [ListedSecurity(ticker: Ticker("AAPL"), name: "Apple Inc.", exchange: "Nasdaq")])
+        #expect(try results == [ListedSecurity(ticker: Ticker("AAPL"), name: "Apple Inc.", cik: 320_193, exchange: "Nasdaq")])
     }
 
     @Test func `a lookup finds a share class by either spelling`() async throws {
