@@ -1,11 +1,12 @@
 import InvestmentSimulatorCore
 import Synchronization
 
-/// Answers searches and lookups from `listing`, and records the searches.
+/// Answers searches and lookups from `listing`, and records both.
 /// `whileAnswering` runs on the main actor during each search.
 final class FakeDirectory: SecurityDirectory {
     private let listing: Mutex<Result<[ListedSecurity], MarketDataError>>
     private let searched = Mutex<[String]>([])
+    private let lookedUp = Mutex<[Ticker]>([])
     private let hook = Mutex<(@MainActor @Sendable () -> Void)?>(nil)
 
     init(_ listing: Result<[ListedSecurity], MarketDataError> = .success([])) {
@@ -14,6 +15,10 @@ final class FakeDirectory: SecurityDirectory {
 
     var searches: [String] {
         searched.withLock { $0 }
+    }
+
+    var lookups: [Ticker] {
+        lookedUp.withLock { $0 }
     }
 
     func answer(with result: Result<[ListedSecurity], MarketDataError>) {
@@ -33,7 +38,8 @@ final class FakeDirectory: SecurityDirectory {
     }
 
     func security(for ticker: Ticker) async throws(MarketDataError) -> ListedSecurity? {
-        try listing.withLock { $0 }.get().security(for: ticker)
+        lookedUp.withLock { $0.append(ticker) }
+        return try listing.withLock { $0 }.get().security(for: ticker)
     }
 }
 
@@ -42,11 +48,13 @@ final class FakeContactEmail: ContactEmailStoring {
 
     private let email: Mutex<String?>
     private let failsToSave: Bool
+    private let failsToCheck: Bool
     private let reads = Mutex(0)
 
-    init(_ email: String? = nil, failsToSave: Bool = false) {
+    init(_ email: String? = nil, failsToSave: Bool = false, failsToCheck: Bool = false) {
         self.email = Mutex(email)
         self.failsToSave = failsToSave
+        self.failsToCheck = failsToCheck
     }
 
     /// How many times the email itself was read.
@@ -60,7 +68,10 @@ final class FakeContactEmail: ContactEmailStoring {
     }
 
     func hasContactEmail() throws -> Bool {
-        email.withLock { $0 != nil }
+        if failsToCheck {
+            throw StoreError()
+        }
+        return email.withLock { $0 != nil }
     }
 
     func setContactEmail(_ newEmail: String?) throws {

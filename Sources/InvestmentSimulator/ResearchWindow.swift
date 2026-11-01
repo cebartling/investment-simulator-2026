@@ -60,6 +60,7 @@ struct ResearchTickerView: View {
                             profile: $0,
                             exchangeState: tab.exchangeState,
                             exchangeMessage: tab.exchangeMessage,
+                            onRetryExchange: { onRetry(.exchange) },
                         )
                     },
                 )
@@ -187,6 +188,7 @@ struct ResearchProfileView: View {
     let profile: CompanyProfile
     let exchangeState: ResearchSectionState<String>
     let exchangeMessage: String?
+    let onRetryExchange: @MainActor () -> Void
 
     var body: some View {
         let formatter = ResearchFigureFormatter()
@@ -205,6 +207,8 @@ struct ResearchProfileView: View {
                 Text(exchangeMessage)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                // Saving the email in Settings doesn't reach an open ticker.
+                Button("Retry", action: onRetryExchange)
             }
         }
     }

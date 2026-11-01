@@ -67,6 +67,13 @@ struct SettingsModelTests {
         #expect(!model().hasStoredEmail)
     }
 
+    @Test func `a Keychain that can't be checked for an email says so`() {
+        let model = model(FakeContactEmail("me@example.com", failsToCheck: true))
+
+        #expect(!model.hasStoredEmail)
+        #expect(model.emailErrorMessage == "Couldn't check the Keychain for a saved email.")
+    }
+
     @Test func `saving stores the trimmed email and clears the field`() throws {
         let emails = FakeContactEmail()
         let model = model(emails)
@@ -80,7 +87,9 @@ struct SettingsModelTests {
         #expect(model.emailErrorMessage == nil)
     }
 
-    @Test(arguments: ["", "   ", "me", "me@", "@example.com", "me@example", "me example@test.com", "me@a@b.com"])
+    @Test(arguments: [
+        "", "   ", "me", "me@", "@example.com", "me@example", "me example@test.com", "me@a@b.com", "josé@example.com",
+    ])
     func `text that doesn't look like an email can't be saved`(text: String) throws {
         let emails = FakeContactEmail()
         let model = model(emails)

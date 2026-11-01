@@ -14,6 +14,17 @@ public struct Ticker: Sendable, Hashable {
         }
         self.symbol = symbol
     }
+
+    /// Whether both name one security: a share class is spelled `BRK.B` or
+    /// `BRK-B`, depending on the source.
+    public func isSameSecurity(as other: Ticker) -> Bool {
+        Self.comparable(symbol) == Self.comparable(other.symbol)
+    }
+
+    /// `symbol` with its share class spelled one way, to compare with others.
+    static func comparable(_ symbol: String) -> String {
+        symbol.replacing(".", with: "-")
+    }
 }
 
 public enum TickerError: Error, Equatable {

@@ -109,15 +109,6 @@ public final class ResearchTabModel: Identifiable {
         quoteState == .failed(.missingAPIKey) || quoteState == .failed(.invalidAPIKey)
     }
 
-    /// Why the profile shows no exchange, when that's worth saying.
-    public var exchangeMessage: String? {
-        switch exchangeState {
-        case .failed(.missingContactEmail): "Add your SEC contact email in Settings to see the exchange."
-        case let .failed(error): error.localizedDescription
-        case .loading, .loaded, .empty: nil
-        }
-    }
-
     /// The trailing dividend yield at the current quote, or nil until both
     /// are in. Worked out here so a refreshed quote updates it.
     public var dividendYield: Decimal? {
@@ -130,8 +121,10 @@ public final class ResearchTabModel: Identifiable {
     /// Quotes the ticker, charts the current range and loads the sections at
     /// the same time, forgetting the ranges and statements loaded before.
     /// Statements reload only if they're showing. If the quote finds
-    /// no such ticker, the rest is cancelled rather than waited for. A load
-    /// cancelled before it starts changes nothing.
+    /// no such ticker, the rest is cancelled rather than waited for. The
+    /// exchange waits for the quote: a directory download can't be cancelled,
+    /// so it would hold up dropping an unknown ticker. A load cancelled
+    /// before it starts changes nothing.
     public func load() async {
         guard !Task.isCancelled else {
             return
@@ -146,12 +139,14 @@ public final class ResearchTabModel: Identifiable {
             if let selection {
                 group.addTask { await self.showStatements(selection) }
             }
-            for section in Section.allCases {
+            for section in Section.allCases where section != .exchange {
                 group.addTask { await self.load(section) }
             }
             await refresh()
             if case .failed(.unknownTicker) = quoteState {
                 group.cancelAll()
+            } else {
+                group.addTask { await self.load(.exchange) }
             }
         }
     }
@@ -335,6 +330,17 @@ public final class ResearchTabModel: Identifiable {
         }
         if !Task.isCancelled {
             self[keyPath: state] = outcome
+        }
+    }
+}
+
+public extension ResearchTabModel {
+    /// Why the profile shows no exchange, when that's worth saying.
+    var exchangeMessage: String? {
+        switch exchangeState {
+        case .failed(.missingContactEmail): "Add your SEC contact email in Settings to see the exchange."
+        case let .failed(error): error.localizedDescription
+        case .loading, .loaded, .empty: nil
         }
     }
 }

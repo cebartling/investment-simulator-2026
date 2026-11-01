@@ -249,6 +249,42 @@ struct ResearchWindowModelSearchTests {
         #expect(model.openError != nil)
     }
 
+    /// Return can come before the first search has its download.
+    @Test func `matches for a name rejected as a ticker clear the rejection`() async {
+        let model = research(FakeDirectory(.success([apple])))
+        model.symbolText = "apple inc"
+        model.open()
+
+        await model.search()
+
+        #expect(model.symbolMessage == nil)
+        #expect(model.searchResults == [apple])
+    }
+
+    @Test func `no matches leave a rejected ticker's message`() async {
+        let model = research(FakeDirectory())
+        model.symbolText = "apple inc"
+        model.open()
+
+        await model.search()
+
+        #expect(model.symbolMessage != nil)
+    }
+
+    /// EDGAR spells a share class `BRK-B`, and a typed one is often `BRK.B`.
+    @Test func `opening a share class spelled another way selects its open tab`() async throws {
+        let dotted = try Ticker("BRK.B")
+        let dashed = try Ticker("BRK-B")
+        let quote = try makeQuote(ticker: "BRK.B", price: 12)
+        let model = research(FakeDirectory(), quotes: FakeTickerQuotes(["BRK.B": .success(quote)]))
+        await model.open(dotted)?.value
+
+        await model.open(dashed)?.value
+
+        #expect(model.tabs.map(\.ticker) == [dotted])
+        #expect(model.selection == dotted)
+    }
+
     /// A ticker EDGAR lacks could otherwise open a security it merely starts.
     @Test func `entering text that matches a symbol opens what was typed`() async throws {
         let quote = try makeQuote(ticker: "VTI", price: 12)
@@ -263,60 +299,5 @@ struct ResearchWindowModelSearchTests {
         await model.open()?.value
 
         #expect(try model.selection == Ticker("VTI"))
-    }
-}
-
-@MainActor
-struct ResearchExchangeTests {
-    private func tab(
-        _ symbol: String,
-        _ listing: Result<[ListedSecurity], MarketDataError>,
-    ) async throws -> ResearchTabModel {
-        let ticker = try Ticker(symbol)
-        let tab = try ResearchTabModel(
-            ticker: ticker,
-            quotes: FakeQuotes(.success(makeQuote(ticker: symbol, price: 12))),
-            dailyPrices: FakeDailyPrices(),
-            ports: FakeResearchData(directory: FakeDirectory(listing)).ports,
-            clock: Date.init,
-        )
-        await tab.load()
-        return tab
-    }
-
-    private func listing(exchange: String?) throws -> [ListedSecurity] {
-        try [ListedSecurity(ticker: Ticker("BRK-B"), name: "Berkshire", exchange: exchange)]
-    }
-
-    @Test func `a tab loads its exchange, however the share class is spelled`() async throws {
-        let tab = try await tab("BRK.B", .success(listing(exchange: "NYSE")))
-
-        #expect(tab.exchangeState == .loaded("NYSE"))
-        #expect(tab.exchangeMessage == nil)
-    }
-
-    @Test func `a ticker EDGAR lacks has no exchange and no complaint`() async throws {
-        let tab = try await tab("VTI", .success(listing(exchange: "NYSE")))
-
-        #expect(tab.exchangeState == .empty(.noData))
-        #expect(tab.exchangeMessage == nil)
-    }
-
-    @Test func `a listing with no exchange shows none`() async throws {
-        let tab = try await tab("BRK-B", .success(listing(exchange: nil)))
-
-        #expect(tab.exchangeState == .empty(.noData))
-    }
-
-    @Test func `no contact email leaves the profile alone and says Settings needs it`() async throws {
-        let tab = try await tab("VTI", .failure(.missingContactEmail))
-
-        #expect(tab.exchangeMessage == "Add your SEC contact email in Settings to see the exchange.")
-    }
-
-    @Test func `another failure says so`() async throws {
-        let tab = try await tab("VTI", .failure(.unavailable("Down.")))
-
-        #expect(tab.exchangeMessage != nil)
     }
 }

@@ -22,6 +22,9 @@ struct InvestmentSimulatorApp: App {
         let transport = URLSessionTransport()
         let equibles = EquiblesQuoteProvider(transport: transport, credentials: credentials)
         let researchData = EquiblesResearchProvider(transport: transport, credentials: credentials)
+        // Ephemeral, so URLCache keeps neither the list nor the request naming
+        // the email on disk (ADR-0019).
+        let edgarTransport = URLSessionTransport(session: URLSession(configuration: .ephemeral))
         quotes = equibles
         dailyPrices = equibles
         _settings = State(initialValue: SettingsModel(credentials: credentials, contactEmails: contactEmails))
@@ -35,7 +38,7 @@ struct InvestmentSimulatorApp: App {
                 pressReleases: researchData,
                 filings: researchData,
                 statements: researchData,
-                directory: EdgarSecurityDirectory(transport: transport, contactEmails: contactEmails),
+                directory: EdgarSecurityDirectory(transport: edgarTransport, contactEmails: contactEmails),
             ),
         ))
     }

@@ -21,7 +21,12 @@ public final class SettingsModel {
         self.credentials = credentials
         self.contactEmails = contactEmails
         hasStoredKey = (try? credentials.hasAPIKey()) == true
-        hasStoredEmail = (try? contactEmails.hasContactEmail()) == true
+        do {
+            hasStoredEmail = try contactEmails.hasContactEmail()
+        } catch {
+            hasStoredEmail = false
+            emailErrorMessage = "Couldn't check the Keychain for a saved email."
+        }
     }
 
     private var trimmedKey: String {
@@ -61,9 +66,10 @@ public final class SettingsModel {
     }
 
     /// Checks only the address's shape; nothing is sent to verify it
-    /// (ADR-0019). It goes in a request header, so it can't hold whitespace.
+    /// (ADR-0019). It goes in a request header, so it can't hold whitespace
+    /// or anything beyond ASCII.
     public var canSaveEmail: Bool {
-        trimmedEmail.wholeMatch(of: /[^@\s]+@[^@\s]+\.[^@\s]+/) != nil
+        trimmedEmail.allSatisfy(\.isASCII) && trimmedEmail.wholeMatch(of: /[^@\s]+@[^@\s]+\.[^@\s]+/) != nil
     }
 
     public var emailMessage: String? {

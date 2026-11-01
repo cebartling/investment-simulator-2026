@@ -100,6 +100,9 @@ public final class ResearchWindowModel {
         searchResults = results
         resultsText = text
         searchMessage = message
+        if !results.isEmpty {
+            symbolRejected = false
+        }
     }
 
     /// Opens the top match when the text matches only company names, and
@@ -117,7 +120,8 @@ public final class ResearchWindowModel {
         return open(ticker, typed: symbolText)
     }
 
-    /// Opens `ticker` and selects it, or selects it if it's already open.
+    /// Opens `ticker` and selects it, or selects its tab if it's already
+    /// open, however its share class is spelled there.
     /// Returns the new ticker's load task. An unknown ticker is dropped again
     /// once its quote says so.
     @discardableResult
@@ -129,8 +133,8 @@ public final class ResearchWindowModel {
         symbolText = ""
         searchResults = []
         searchMessage = nil
-        guard !tabs.contains(where: { $0.ticker == ticker }) else {
-            selection = ticker
+        if let open = tabs.first(where: { $0.ticker.isSameSecurity(as: ticker) }) {
+            selection = open.ticker
             return nil
         }
         let previous = selection

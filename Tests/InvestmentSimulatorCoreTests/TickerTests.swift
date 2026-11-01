@@ -27,4 +27,9 @@ struct TickerTests {
 
         #expect(try Ticker(symbol).symbol == symbol)
     }
+
+    @Test func `a share class names one security however it is spelled`() throws {
+        #expect(try Ticker("BRK.B").isSameSecurity(as: Ticker("BRK-B")))
+        #expect(try !Ticker("BRK.B").isSameSecurity(as: Ticker("BRK-A")))
+    }
 }

@@ -32,10 +32,10 @@ public extension [ListedSecurity] {
         guard !name.isEmpty else {
             return []
         }
-        let symbol = Self.comparableSymbol(name)
+        let symbol = Ticker.comparable(name)
         var ranks: [[ListedSecurity]] = [[], [], [], []]
         for security in self {
-            let listedSymbol = Self.comparableSymbol(security.ticker.symbol)
+            let listedSymbol = Ticker.comparable(security.ticker.symbol)
             let listedName = security.name.uppercased()
             if listedSymbol == symbol {
                 ranks[0].append(security)
@@ -54,22 +54,17 @@ public extension [ListedSecurity] {
     /// symbol. A symbol match means `text` may be a ticker, which could be
     /// one the directory lacks, so it is not a name to look up.
     func topNameMatch(for text: String) -> ListedSecurity? {
-        let symbol = Self.comparableSymbol(text.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
-        return contains { Self.comparableSymbol($0.ticker.symbol).hasPrefix(symbol) } ? nil : first
+        let symbol = Ticker.comparable(text.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
+        return contains { Ticker.comparable($0.ticker.symbol).hasPrefix(symbol) } ? nil : first
     }
 
     /// The row for `ticker`, however its share class is spelled: `BRK.B` is
     /// listed as `BRK-B`.
     func security(for ticker: Ticker) -> ListedSecurity? {
-        let symbol = Self.comparableSymbol(ticker.symbol)
-        return first { Self.comparableSymbol($0.ticker.symbol) == symbol }
+        first { $0.ticker.isSameSecurity(as: ticker) }
     }
 
     private static var matchLimit: Int {
         20
-    }
-
-    private static func comparableSymbol(_ symbol: String) -> String {
-        symbol.replacing(".", with: "-")
     }
 }
