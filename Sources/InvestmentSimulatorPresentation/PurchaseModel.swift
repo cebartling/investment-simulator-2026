@@ -31,10 +31,17 @@ public final class PurchaseModel {
     private let quotes: any QuoteProviding
     private let purchaseID: UUID
 
+    /// `ticker` fills in the field, as when buying from Research.
     /// `purchaseID` identifies the purchase this sheet makes.
-    public init(availableCash: Money, quotes: any QuoteProviding, purchaseID: UUID = UUID()) {
+    public init(
+        availableCash: Money,
+        quotes: any QuoteProviding,
+        ticker: Ticker? = nil,
+        purchaseID: UUID = UUID(),
+    ) {
         self.availableCash = availableCash
         self.quotes = quotes
+        tickerText = ticker?.symbol ?? ""
         self.purchaseID = purchaseID
     }
 

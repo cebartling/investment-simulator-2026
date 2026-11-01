@@ -16,6 +16,18 @@ struct BuyLimitOrderModelTests {
         #expect(!model.canPlace)
     }
 
+    @Test func `a ticker from Research fills the field, unquoted`() throws {
+        let model = try BuyLimitOrderModel(
+            availableCash: Money(1000),
+            quotes: FakeQuotes(.failure(.missingAPIKey)),
+            ticker: Ticker("VTI"),
+        )
+
+        #expect(model.tickerText == "VTI")
+        #expect(model.quoteState == .none)
+        #expect(model.canGetQuote)
+    }
+
     @Test func `an invalid ticker explains itself and can't be quoted`() {
         let model = makeModel(cash: 1000)
 

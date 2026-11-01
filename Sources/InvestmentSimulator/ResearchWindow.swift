@@ -7,6 +7,7 @@ import SwiftUI
 /// in the order opened, and the selected ticker's research beside them.
 struct ResearchWindow: View {
     @Bindable var model: ResearchWindowModel
+    let openExperiments: OpenExperiments
 
     var body: some View {
         NavigationSplitView {
@@ -15,6 +16,7 @@ struct ResearchWindow: View {
             if let tab = model.selectedTab {
                 ResearchTickerView(
                     tab: tab,
+                    openExperiments: openExperiments,
                     onRefresh: { model.refresh(tab.ticker) },
                     onShowRange: { model.showRange($0, for: tab.ticker) },
                     onRetry: { model.retry($0, for: tab.ticker) },
@@ -37,6 +39,7 @@ struct ResearchWindow: View {
 /// One ticker's research. Its sections stack below the quote.
 struct ResearchTickerView: View {
     let tab: ResearchTabModel
+    let openExperiments: OpenExperiments
     let onRefresh: () -> Void
     let onShowRange: @MainActor (PriceRange) -> Void
     let onRetry: @MainActor (ResearchTabModel.Section) -> Void
@@ -46,8 +49,12 @@ struct ResearchTickerView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text(tab.ticker.symbol)
-                    .font(.largeTitle.bold())
+                HStack {
+                    Text(tab.ticker.symbol)
+                        .font(.largeTitle.bold())
+                    Spacer()
+                    buyMenu
+                }
                 quote
                 ResearchChartSection(tab: tab, onShowRange: onShowRange)
                 ResearchSection(
@@ -100,6 +107,23 @@ struct ResearchTickerView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
         }
+    }
+
+    /// One entry per open experiment window (ADR-0020).
+    private var buyMenu: some View {
+        Menu("Buy in Experiment…") {
+            ForEach(openExperiments.entries) { experiment in
+                Menu(experiment.title) {
+                    Button("Market Buy…") { experiment.model.beginPurchase(of: tab.ticker) }
+                    Button("Buy Limit…") { experiment.model.beginBuyLimitOrder(of: tab.ticker) }
+                }
+                // A hand-off would replace what's being typed there.
+                .disabled(experiment.model.isShowingSheet)
+            }
+        }
+        .fixedSize()
+        .disabled(openExperiments.entries.isEmpty)
+        .help("Open Market Buy or Buy Limit for this ticker in an open experiment")
     }
 
     @ViewBuilder private var quote: some View {

@@ -35,16 +35,19 @@ public final class BuyLimitOrderModel {
     private let clock: () -> Date
     private let orderID: UUID
 
-    /// `clock` tells the time; the order is placed when `place()` is
-    /// called. `orderID` identifies it.
+    /// `ticker` fills in the field, as when buying from Research. `clock`
+    /// tells the time; the order is placed when `place()` is called.
+    /// `orderID` identifies it.
     public init(
         availableCash: Money,
         quotes: any QuoteProviding,
+        ticker: Ticker? = nil,
         clock: @escaping () -> Date = Date.init,
         orderID: UUID = UUID(),
     ) {
         self.availableCash = availableCash
         self.quotes = quotes
+        tickerText = ticker?.symbol ?? ""
         self.clock = clock
         self.orderID = orderID
     }

@@ -110,6 +110,8 @@ struct ContentView: View {
         .overlay(ConfettiView(trigger: model.celebrationCount))
         // Cancelling the new experiment closes the new, untitled document.
         .background(WindowCloser(isClosing: model.shouldCloseWindow))
+        // Research starts a sheet here while another window is in front.
+        .background(WindowRaiser(raiseCount: model.raiseCount))
         .sheet(isPresented: $model.isShowingNewExperiment) {
             NewExperimentSheet(
                 model: model.newExperiment,

@@ -15,6 +15,18 @@ struct PurchaseModelTests {
         #expect(model.cost == nil)
     }
 
+    @Test func `a ticker from Research fills the field, unpriced`() throws {
+        let model = try PurchaseModel(
+            availableCash: Money(1000),
+            quotes: FakeQuotes(.failure(.missingAPIKey)),
+            ticker: Ticker("VTI"),
+        )
+
+        #expect(model.tickerText == "VTI")
+        #expect(model.priceState == .none)
+        #expect(model.canGetPrice)
+    }
+
     @Test func `a valid ticker can be priced`() {
         let model = makeModel(cash: 1000, quotes: FakeQuotes(.failure(.missingAPIKey)))
 

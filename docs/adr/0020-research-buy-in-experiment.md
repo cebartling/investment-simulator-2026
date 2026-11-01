@@ -24,7 +24,7 @@ Testing against the bundled app on 2026-10-31 found the following.
 - **Each `MainWindow` adds and removes itself:** on appear, on disappear, and whenever its title changes, so the list follows Save As and renames.
 - **The list only routes.** Research reads the titles and whether a window can take a hand-off, and calls one of two methods on the chosen model: `beginPurchase(of:)` or `beginBuyLimitOrder(of:)`. The window's model keeps owning its experiment and sheets, and writes to its own document as before.
 - **Research shows a menu.** "Buy in Experiment…" lists each open experiment, each with Market Buy… and Buy Limit…. It's disabled when none is open.
-- **A window showing any sheet can't be targeted,** so a hand-off never replaces what the user is typing. Its menu entry is disabled, and the two methods do nothing if called anyway.
+- **A window showing any sheet can't be targeted,** so a hand-off never replaces what the user is typing. Its Market Buy… and Buy Limit… items are disabled, and the two methods do nothing if called anyway.
 - **A second exception to "no `NSWindow` access": `WindowRaiser`.** A sheet on a background window would go unseen, and `openDocument(at:)` can't reach an untitled document. This `NSViewRepresentable` in the app target calls `makeKeyAndOrderFront(nil)` when the model's `raiseCount` changes, and `MainWindowModel` decides when, which is unit tested.
 
 ## Options Considered
