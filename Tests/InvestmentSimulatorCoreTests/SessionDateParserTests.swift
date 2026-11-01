@@ -15,7 +15,10 @@ struct SessionDateParserTests {
             == DateComponents(year: 2026, month: 10, day: 28, hour: 12))
     }
 
-    @Test(arguments: ["", "2026-10-2", "10/23/2026", "2026-10-23T16:00", "2026-13-01", "2026-02-30", "2026-00-10"])
+    @Test(arguments: [
+        "", "2026-10-2", "10/23/2026", "2026-10-23T16:00", "2026-13-01", "2026-02-30", "2026-00-10",
+        "٢٠٢٦-١٠-٢٨", // Arabic-Indic digits, which `Int` can't read
+    ])
     func `text that is not a real yyyy-MM-dd date gives nil`(text: String) {
         #expect(SessionDateParser(timeZone: .gmt).date(of: text, hour: 12) == nil)
     }

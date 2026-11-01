@@ -18,7 +18,8 @@ public nonisolated struct SessionDateParser: Sendable {
     /// `hour` o'clock on the session `sessionDate` (`yyyy-MM-dd`) in the
     /// parser's zone, or nil if the text isn't a real calendar date.
     public func date(of sessionDate: String, hour: Int) -> Date? {
-        guard sessionDate.wholeMatch(of: /\d{4}-\d{2}-\d{2}/) != nil else {
+        // `[0-9]`, not `\d`, which also matches digits `Int` can't read.
+        guard sessionDate.wholeMatch(of: /[0-9]{4}-[0-9]{2}-[0-9]{2}/) != nil else {
             return nil
         }
         let parts = sessionDate.split(separator: "-").compactMap { Int($0) }

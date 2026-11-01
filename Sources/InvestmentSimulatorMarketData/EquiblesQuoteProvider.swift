@@ -192,11 +192,7 @@ public struct EquiblesQuoteProvider: QuoteProviding, DailyPriceProviding {
 
     /// US markets close at 4 PM New York time.
     private func closeTime(onSession sessionDate: String) throws(QuoteError) -> Date {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "America/New_York")!
-        let parts = sessionDate.split(separator: "-").compactMap { Int($0) }
-        guard parts.count == 3,
-              let date = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2], hour: 16))
+        guard let date = SessionDateParser.market.date(of: sessionDate, hour: 16)
         else {
             throw .unreadableResponse
         }
