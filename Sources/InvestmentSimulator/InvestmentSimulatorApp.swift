@@ -15,6 +15,8 @@ struct InvestmentSimulatorApp: App {
     @State private var settings: SettingsModel
     /// App-wide, so open tickers survive closing the Research window (ADR-0019).
     @State private var research: ResearchWindowModel
+    /// App-wide, so Research can reach each experiment window (ADR-0020).
+    @State private var openExperiments = OpenExperiments()
 
     init() {
         let credentials = KeychainCredentialStore()
@@ -46,11 +48,17 @@ struct InvestmentSimulatorApp: App {
     var body: some Scene {
         DocumentGroup(newDocument: ExperimentDocument()) { file in
             // Read here, so the title follows Save As.
-            MainWindow(document: file.$document, fileURL: file.fileURL, quotes: quotes, dailyPrices: dailyPrices)
+            MainWindow(
+                document: file.$document,
+                fileURL: file.fileURL,
+                quotes: quotes,
+                dailyPrices: dailyPrices,
+                openExperiments: openExperiments,
+            )
         }
         // The scene puts itself in the Window menu with its shortcut.
         Window("Research", id: "research") {
-            ResearchWindow(model: research)
+            ResearchWindow(model: research, openExperiments: openExperiments)
         }
         .keyboardShortcut("r", modifiers: [.command, .shift])
         Settings {
@@ -66,6 +74,7 @@ struct MainWindow: View {
     @Binding var document: ExperimentDocument
     /// The document's file, or nil until it is saved.
     let fileURL: URL?
+    let openExperiments: OpenExperiments
     @State private var model: MainWindowModel
 
     init(
@@ -73,9 +82,11 @@ struct MainWindow: View {
         fileURL: URL?,
         quotes: any QuoteProviding,
         dailyPrices: any DailyPriceProviding,
+        openExperiments: OpenExperiments,
     ) {
         _document = document
         self.fileURL = fileURL
+        self.openExperiments = openExperiments
         _model = State(initialValue: MainWindowModel(
             experiment: document.wrappedValue.experiment,
             needsSetup: document.wrappedValue.needsSetup,
@@ -135,6 +146,13 @@ struct MainWindow: View {
         .onChange(of: document.experiment) { _, experiment in
             model.replaceExperiment(with: experiment)
         }
+        // On disappear only when the window closes, not when it's minimized
+        // or a background tab (ADR-0020).
+        .onAppear { openExperiments.register(model, title: model.title(fileURL: fileURL)) }
+        .onChange(of: model.title(fileURL: fileURL)) { _, title in
+            openExperiments.register(model, title: title)
+        }
+        .onDisappear { openExperiments.remove(model) }
     }
 }
 

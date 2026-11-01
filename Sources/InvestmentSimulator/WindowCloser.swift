@@ -3,7 +3,8 @@ import SwiftUI
 
 /// Closes its hosting window when `isClosing` becomes true. SwiftUI's
 /// `dismiss` and `dismissWindow` don't close a `DocumentGroup` window, so
-/// this is the one place the app touches `NSWindow` (ADR-0011).
+/// this touches `NSWindow`, as only it and `WindowRaiser` may (ADR-0011,
+/// ADR-0020).
 struct WindowCloser: NSViewRepresentable {
     let isClosing: Bool
 

@@ -4,7 +4,7 @@
 **Date:** 2026-10-24
 **Deciders:** Christopher Bartling
 
-Supersedes ADR-0010.
+Supersedes ADR-0010. Amended by ADR-0020.
 
 ## Context
 
