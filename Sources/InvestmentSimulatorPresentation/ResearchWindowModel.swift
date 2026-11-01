@@ -17,8 +17,18 @@ public final class ResearchWindowModel {
         }
     }
 
-    public var selection: Ticker?
-    public private(set) var tabs: [ResearchTabModel] = []
+    public var selection: Ticker? {
+        didSet {
+            save()
+        }
+    }
+
+    public private(set) var tabs: [ResearchTabModel] = [] {
+        didSet {
+            save()
+        }
+    }
+
     /// Why the last ticker opened was dropped: its quote found no such ticker.
     public private(set) var openError: QuoteError?
     /// The best matches for the field's text, once searched.
@@ -33,7 +43,10 @@ public final class ResearchWindowModel {
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
     private let ports: ResearchSectionPorts
+    private let tickerStore: any ResearchTickerStoring
     private let clock: () -> Date
+    /// Set while restoring, so a half-restored list never overwrites the saved one.
+    private var isRestoring = false
     private var tasks: [Ticker: Task<Void, Never>] = [:]
     /// Each ticker's chart range still loading, apart from its first load.
     private var chartTasks: [Ticker: Task<Void, Never>] = [:]
@@ -42,18 +55,43 @@ public final class ResearchWindowModel {
     /// Each ticker's section retries still loading.
     private var retryTasks: [Ticker: [ResearchTabModel.Section: Task<Void, Never>]] = [:]
 
-    /// `clock` tells the time chart ranges and trailing dividends reach back
+    /// `tickerStore` keeps the open tickers between launches; `restore()` reads
+    /// it. `clock` tells the time chart ranges and trailing dividends reach back
     /// from.
     public init(
         quotes: any QuoteProviding,
         dailyPrices: any DailyPriceProviding,
         ports: ResearchSectionPorts,
+        tickerStore: any ResearchTickerStoring = NoResearchTickerStore(),
         clock: @escaping () -> Date = Date.init,
     ) {
         self.quotes = quotes
         self.dailyPrices = dailyPrices
         self.ports = ports
+        self.tickerStore = tickerStore
         self.clock = clock
+    }
+
+    /// Reopens the saved tickers in order and selects the saved one, or the
+    /// last. A symbol that is no longer valid is skipped, and one whose quote
+    /// finds no such ticker is dropped, as when opening. Returns each load.
+    @discardableResult
+    public func restore() -> [Task<Void, Never>] {
+        let saved = tickerStore.load()
+        isRestoring = true
+        let loads = saved.symbols.compactMap { symbol in
+            (try? Ticker(symbol)).flatMap { open($0) }
+        }
+        isRestoring = false
+        selection = tabs.first { $0.ticker.symbol == saved.selected }?.ticker ?? tabs.last?.ticker
+        return loads
+    }
+
+    private func save() {
+        guard !isRestoring else {
+            return
+        }
+        tickerStore.save(SavedResearchTickers(symbols: tabs.map(\.ticker.symbol), selected: selection?.symbol))
     }
 
     private var ticker: Ticker? {

@@ -30,7 +30,7 @@ struct InvestmentSimulatorApp: App {
         quotes = equibles
         dailyPrices = equibles
         _settings = State(initialValue: SettingsModel(credentials: credentials, contactEmails: contactEmails))
-        _research = State(initialValue: ResearchWindowModel(
+        let research = ResearchWindowModel(
             quotes: quotes,
             dailyPrices: dailyPrices,
             ports: ResearchSectionPorts(
@@ -42,7 +42,10 @@ struct InvestmentSimulatorApp: App {
                 statements: researchData,
                 directory: EdgarSecurityDirectory(transport: edgarTransport, contactEmails: contactEmails),
             ),
-        ))
+            tickerStore: UserDefaultsResearchTickerStore(),
+        )
+        research.restore()
+        _research = State(initialValue: research)
     }
 
     var body: some Scene {
