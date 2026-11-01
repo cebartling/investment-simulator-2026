@@ -67,7 +67,8 @@ public final class ResearchTabModel: Identifiable {
     /// Empty when EDGAR doesn't list the ticker, or lists no exchange for it.
     public private(set) var exchangeState = ResearchSectionState<String>.loading
     /// SEC's company ID for the ticker, once the directory has listed it. It
-    /// stays nil when EDGAR is off, fails or lacks the ticker.
+    /// stays nil when EDGAR is off, fails or lacks the ticker; a later failed
+    /// lookup keeps the last good one.
     private var cik: Int?
     public private(set) var multiplesState = ResearchSectionState<ValuationMultiples>.loading
     public private(set) var dividendsState = ResearchSectionState<DividendHistory>.loading
@@ -281,10 +282,11 @@ public final class ResearchTabModel: Identifiable {
                 try await .loaded(ports.profiles.companyProfile(for: ticker))
             }
         case .exchange:
-            cik = nil
             await load(\.exchangeState) { () async throws(MarketDataError) in
                 let security = try await ports.directory.security(for: ticker)
-                cik = security?.cik
+                if !Task.isCancelled {
+                    cik = security?.cik
+                }
                 guard let exchange = security?.exchange else {
                     return .empty(.noData)
                 }

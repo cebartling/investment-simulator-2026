@@ -66,6 +66,24 @@ struct ResearchExchangeTests {
         #expect(try tab.link(for: filing(accession: nil)) == Self.equibles)
     }
 
+    @Test func `a failed reload keeps the sec.gov link from the last good lookup`() async throws {
+        let directory = try FakeDirectory(.success(listing(exchange: "NYSE")))
+        let tab = try ResearchTabModel(
+            ticker: Ticker("BRK-B"),
+            quotes: FakeQuotes(.success(makeQuote(ticker: "BRK-B", price: 12))),
+            dailyPrices: FakeDailyPrices(),
+            ports: FakeResearchData(directory: directory).ports,
+            clock: Date.init,
+        )
+        await tab.load()
+        directory.answer(with: .failure(.unavailable("Down.")))
+
+        await tab.load(.exchange)
+
+        #expect(try tab.link(for: filing(accession: "0001193125-26-000001"))
+            == URL(string: "https://www.sec.gov/Archives/edgar/data/1067983/000119312526000001/"))
+    }
+
     @Test func `a ticker EDGAR lacks keeps the Equibles link`() async throws {
         let tab = try await tab("VTI", .success(listing(exchange: "NYSE")))
 
