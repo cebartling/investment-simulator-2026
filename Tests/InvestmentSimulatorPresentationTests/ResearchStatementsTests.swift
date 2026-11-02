@@ -157,14 +157,27 @@ struct ResearchStatementsTests {
         #expect(tab.statementState == .empty(.noData))
     }
 
-    @Test func `a company reporting in another currency is not covered`() async throws {
+    @Test func `a company reporting in another currency has statements the app can't show`() async throws {
         let statements = FakeStatements([Request(.income, nil): .failure(.unsupportedCurrency)])
         let tab = try tab(statements)
 
         await tab.showStatements(Self.quarterly)
 
-        #expect(tab.statementState == .empty(.notCovered))
+        #expect(tab.statementState == .empty(.unsupportedCurrency))
         #expect(statements.requests.count == 1)
+    }
+
+    @Test func `a period in another currency drops its column`() async throws {
+        let statements = FakeStatements([
+            Request(.income, nil): .success(Self.statement(Self.quarter3)),
+            Request(.income, Self.quarter2): .failure(.unsupportedCurrency),
+            Request(.income, Self.quarter1): .success(Self.statement(Self.quarter1)),
+        ])
+        let tab = try tab(statements)
+
+        await tab.showStatements(Self.quarterly)
+
+        #expect(tab.statementState == .loaded(Self.table(Self.quarter3, Self.quarter1)))
     }
 
     @Test func `a failed latest period fails the section`() async throws {

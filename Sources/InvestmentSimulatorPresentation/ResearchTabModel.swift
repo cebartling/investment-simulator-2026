@@ -10,6 +10,8 @@ public nonisolated enum ResearchEmptyReason: Equatable, Sendable {
     case nonePublished
     /// Equibles' coverage of the company is missing or incomplete.
     case notCovered
+    /// Equibles has the data in a currency the app can't show.
+    case unsupportedCurrency
 
     /// What the section says, where `subject` names what it shows, such as
     /// "press releases".
@@ -18,6 +20,7 @@ public nonisolated enum ResearchEmptyReason: Equatable, Sendable {
         case .noData: "No \(subject) for \(ticker.symbol)."
         case .nonePublished: "No \(subject) published for \(ticker.symbol)."
         case .notCovered: "Equibles doesn't cover \(ticker.symbol)'s \(subject)."
+        case .unsupportedCurrency: "\(ticker.symbol)'s \(subject) are in a currency the app can't show."
         }
     }
 }

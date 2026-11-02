@@ -6,7 +6,7 @@ extension MarketDataError {
     nonisolated var statementEmptyReason: ResearchEmptyReason? {
         switch self {
         case .noData: .noData
-        case .unsupportedCurrency: .notCovered
+        case .unsupportedCurrency: .unsupportedCurrency
         default: nil
         }
     }

@@ -215,6 +215,7 @@ struct ResearchSectionTests {
         (ResearchEmptyReason.noData, "No press releases for PLUG."),
         (.nonePublished, "No press releases published for PLUG."),
         (.notCovered, "Equibles doesn't cover PLUG's press releases."),
+        (.unsupportedCurrency, "PLUG's press releases are in a currency the app can't show."),
     ])
     func `each empty reason reads differently`(reason: ResearchEmptyReason, expected: String) throws {
         #expect(try reason.message(subject: "press releases", ticker: Ticker("PLUG")) == expected)

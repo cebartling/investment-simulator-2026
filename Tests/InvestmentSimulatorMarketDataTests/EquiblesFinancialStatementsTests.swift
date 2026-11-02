@@ -192,6 +192,32 @@ struct EquiblesFinancialStatementsTests {
         }
     }
 
+    @Test(arguments: ["%", "ratio", "USD/share", ""])
+    func `lines in a unit that isn't a currency are unreadable`(unit: String) async throws {
+        let body = """
+        {"fiscalYear": 2026, "fiscalPeriod": "Q3",
+         "data": [{"lineItem": "Revenue", "value": 5.0, "unit": "\(unit)"}]}
+        """
+        let transport = FakeTransport([Self.income: (200, body)])
+
+        await #expect(throws: Self.unreadable) {
+            try await provider(transport).financialStatement(.income, for: aapl, period: nil)
+        }
+    }
+
+    @Test func `another currency beside a line with no unit is unreadable`() async throws {
+        let body = #"""
+        {"fiscalYear": 2026, "fiscalPeriod": "Q3",
+         "data": [{"lineItem": "Revenue", "value": 5.0, "unit": "TWD"},
+                  {"lineItem": "Net Income", "value": 1.0}]}
+        """#
+        let transport = FakeTransport([Self.income: (200, body)])
+
+        await #expect(throws: Self.unreadable) {
+            try await provider(transport).financialStatement(.income, for: aapl, period: nil)
+        }
+    }
+
     @Test func `no readable line at all is unavailable`() async throws {
         let body = #"""
         {"fiscalYear": 2026, "fiscalPeriod": "Q3",
