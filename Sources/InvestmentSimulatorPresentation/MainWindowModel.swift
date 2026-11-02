@@ -139,7 +139,13 @@ public final class MainWindowModel {
         await storage?.settle()
     }
 
+    /// Saves nothing until `load()` has read the stored experiment: until
+    /// then, and after a failed load, `experiment` is a placeholder that
+    /// would replace the stored one. `loadError` tells the user why.
     func persist(_ updated: Experiment) {
+        guard !isLoading, loadError == nil else {
+            return
+        }
         storage?.save(updated)
     }
 
@@ -351,13 +357,13 @@ public final class MainWindowModel {
 public extension MainWindowModel {
     /// The stored name, else "Untitled" (ADR-0015, ADR-0021).
     var title: String {
-        experiment.name ?? "Untitled"
+        experiment.name ?? LibraryModel.untitled
     }
 
     /// The experiment's name, else its file's name, else "Untitled" for a
     /// document never saved. Takes the file's URL, which Save As changes.
     func title(fileURL: URL?) -> String {
-        experiment.name ?? fileURL?.deletingPathExtension().lastPathComponent ?? "Untitled"
+        experiment.name ?? fileURL?.deletingPathExtension().lastPathComponent ?? LibraryModel.untitled
     }
 
     /// The document's file name for the window footer (PIN-411), or "Not

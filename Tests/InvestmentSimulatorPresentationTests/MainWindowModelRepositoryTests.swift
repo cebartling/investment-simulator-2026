@@ -79,6 +79,24 @@ extension MainWindowModelTests {
         #expect(model.loadError == "disk full")
     }
 
+    @Test func `a window whose load failed does not overwrite the stored experiment`() async throws {
+        let stored = try makeStoredModel(seededExperiment(orders: [makeOrder(shares: 4)]))
+        let model = stored.model
+        let repository = stored.repository
+        let id = stored.id
+        repository.failNext(with: Boom())
+        await model.load()
+
+        _ = model.cancelOrder(id: fixedOrderID)
+        model.beginEditingDetails()
+        model.details?.name = "Growth"
+        model.completeEditingDetails()
+        await model.settleSaves()
+
+        #expect(repository.savedCount == 0)
+        #expect(repository.stored(id)?.name == "Index funds")
+    }
+
     @Test func `title is the stored name, then Untitled`() async throws {
         let named = try makeStoredModel(seededExperiment()).model
         await named.load()

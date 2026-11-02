@@ -16,9 +16,12 @@ public final class LibraryModel {
     public private(set) var pendingDeletion: ExperimentSummary?
 
     private let repository: any ExperimentRepository
+    private let clock: () -> Date
 
-    public init(repository: any ExperimentRepository) {
+    /// `clock` tells the time a new experiment is created.
+    public init(repository: any ExperimentRepository, clock: @escaping () -> Date = Date.init) {
         self.repository = repository
+        self.clock = clock
     }
 
     public func title(for summary: ExperimentSummary) -> String {
@@ -36,7 +39,7 @@ public final class LibraryModel {
     public func create(name: String?) async {
         await attempt {
             let id = ExperimentID()
-            let experiment = Experiment.empty.editingDetails(name: Self.stored(name), notes: nil)
+            let experiment = try Experiment(cashBalance: .zero, name: Self.stored(name), createdAt: clock())
             try await repository.save(experiment, as: id)
             summaries = try await repository.list()
             selection = id
@@ -83,7 +86,8 @@ public final class LibraryModel {
         }
     }
 
-    private static let untitled = "Untitled"
+    /// The title of an experiment without a name (ADR-0015).
+    static let untitled = "Untitled"
 
     private static func stored(_ name: String?) -> String? {
         guard let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {

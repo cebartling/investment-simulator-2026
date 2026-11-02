@@ -18,9 +18,10 @@ struct LibraryModelTests {
 
     private func makeModel(
         _ experiments: [ExperimentID: Experiment] = [:],
+        clock: @escaping () -> Date = Date.init,
     ) -> (LibraryModel, FakeExperimentRepository) {
         let repository = FakeExperimentRepository(experiments)
-        return (LibraryModel(repository: repository), repository)
+        return (LibraryModel(repository: repository, clock: clock), repository)
     }
 
     @Test func `load lists the stored experiments`() async {
@@ -71,6 +72,15 @@ struct LibraryModelTests {
         #expect(created?.name == "Tech")
         #expect(model.selection == created?.id)
         #expect(created.flatMap { repository.stored($0.id) }?.name == "Tech")
+    }
+
+    @Test func `create stamps the experiment with the time it was made`() async {
+        let made = Date(timeIntervalSince1970: 1_000_000)
+        let (model, _) = makeModel(clock: { made })
+
+        await model.create(name: "Tech")
+
+        #expect(model.summaries.first?.createdAt == made)
     }
 
     @Test func `create with a blank name stores no name`() async {
