@@ -170,13 +170,13 @@ struct LibraryModelTests {
         #expect(model.pendingDeletion == nil)
     }
 
-    @Test func `deleting another experiment keeps the selection`() async {
+    @Test func `deleting another experiment keeps the selection`() async throws {
         let kept = ExperimentID()
         let removed = ExperimentID()
         let (model, _) = makeModel([kept: experiment(named: "A"), removed: experiment(named: "B")])
         await model.load()
         model.selection = kept
-        model.requestDelete(model.summaries.first { $0.id == removed }!)
+        try model.requestDelete(#require(model.summaries.first { $0.id == removed }))
 
         await model.confirmDelete()
 
