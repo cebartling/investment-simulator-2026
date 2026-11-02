@@ -9,6 +9,9 @@ public enum MarketDataError: Error, Equatable {
     /// Nothing to show for a ticker the quote has already validated. An
     /// empty state, not an error.
     case noData
+    /// A statement reported entirely in a unit `Money` can't hold, such as
+    /// another currency. Retrying can't help, so it's an empty state.
+    case unsupportedCurrency
     /// An EDGAR request with no contact email saved.
     case missingContactEmail
 }

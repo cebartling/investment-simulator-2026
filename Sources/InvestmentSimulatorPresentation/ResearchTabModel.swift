@@ -243,10 +243,8 @@ public final class ResearchTabModel: Identifiable {
             }
             tables[selection] = table
             outcome = .loaded(table)
-        } catch .noData {
-            outcome = .empty(.noData)
         } catch {
-            outcome = .failed(error)
+            outcome = error.statementEmptyReason.map { .empty($0) } ?? .failed(error)
         }
         if !Task.isCancelled, statementSelection == selection {
             statementState = outcome

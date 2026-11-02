@@ -5,8 +5,9 @@ import InvestmentSimulatorCore
 /// Equibles sends the latest (ADR-0019).
 extension EquiblesResearchProvider: FinancialStatementProviding {
     /// As with press releases, a line that can't be read is left out, unless
-    /// that leaves none. That includes a line in another currency, which
-    /// `Money` can't hold.
+    /// that leaves none. A line in another currency, which `Money` can't
+    /// hold, is left out the same way; if every line is, the statement is
+    /// `unsupportedCurrency`, not unreadable, because a retry can't fix it.
     public func financialStatement(
         _ kind: StatementKind,
         for ticker: Ticker,
@@ -23,9 +24,13 @@ extension EquiblesResearchProvider: FinancialStatementProviding {
         guard !response.data.isEmpty else {
             throw .noData
         }
-        let lines = response.data.compactMap(line(from:))
-        guard !lines.isEmpty, let year = response.fiscalYear, let part = part(named: response.fiscalPeriod) else {
+        guard let year = response.fiscalYear, let part = part(named: response.fiscalPeriod) else {
             throw .unreadableResponse
+        }
+        let lines = response.data.compactMap(line(from:))
+        guard !lines.isEmpty else {
+            // Retrying can't make another currency readable.
+            throw response.data.allSatisfy(hasUnsupportedUnit) ? .unsupportedCurrency : .unreadableResponse
         }
         return FinancialStatement(period: FiscalPeriod(year: year, part: part), lines: lines)
     }
@@ -57,6 +62,13 @@ extension EquiblesResearchProvider: FinancialStatementProviding {
         case "FY": .fullYear
         default: nil
         }
+    }
+
+    private func hasUnsupportedUnit(_ row: StatementResponse.Row) -> Bool {
+        guard let unit = row.unit else {
+            return false
+        }
+        return !["USD", "USD/shares", "shares"].contains(unit)
     }
 
     private func line(from row: StatementResponse.Row) -> StatementLine? {

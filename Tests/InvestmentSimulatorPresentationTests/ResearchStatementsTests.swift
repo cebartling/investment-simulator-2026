@@ -157,6 +157,16 @@ struct ResearchStatementsTests {
         #expect(tab.statementState == .empty(.noData))
     }
 
+    @Test func `a company reporting in another currency is not covered`() async throws {
+        let statements = FakeStatements([Request(.income, nil): .failure(.unsupportedCurrency)])
+        let tab = try tab(statements)
+
+        await tab.showStatements(Self.quarterly)
+
+        #expect(tab.statementState == .empty(.notCovered))
+        #expect(statements.requests.count == 1)
+    }
+
     @Test func `a failed latest period fails the section`() async throws {
         let statements = FakeStatements([Request(.income, nil): .failure(.dailyLimitReached)])
         let tab = try tab(statements)
