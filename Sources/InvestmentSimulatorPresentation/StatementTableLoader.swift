@@ -21,7 +21,7 @@ nonisolated struct StatementTableLoader {
     }
 
     /// Asks for the periods walked back from `latest`, all at once. A period
-    /// Equibles doesn't have loses its column, as a new company's would. Any
+    /// Equibles doesn't have, or has in another currency, loses its column. Any
     /// other failure fails the table, which mustn't look complete without it.
     func table(
         _ selection: StatementSelection,
@@ -56,7 +56,7 @@ nonisolated struct StatementTableLoader {
     ) async -> Result<FinancialStatement?, MarketDataError> {
         do throws(MarketDataError) {
             return try await .success(statements.financialStatement(kind, for: ticker, period: period))
-        } catch .noData {
+        } catch .noData, .unsupportedCurrency {
             return .success(nil)
         } catch {
             return .failure(error)

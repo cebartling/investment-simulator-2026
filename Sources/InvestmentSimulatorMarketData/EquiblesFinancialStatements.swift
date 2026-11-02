@@ -5,8 +5,9 @@ import InvestmentSimulatorCore
 /// Equibles sends the latest (ADR-0019).
 extension EquiblesResearchProvider: FinancialStatementProviding {
     /// As with press releases, a line that can't be read is left out, unless
-    /// that leaves none. That includes a line in another currency, which
-    /// `Money` can't hold.
+    /// that leaves none. A line in another currency, which `Money` can't
+    /// hold, is left out the same way; if every line is, the statement is
+    /// `unsupportedCurrency`, not unreadable, because a retry can't fix it.
     public func financialStatement(
         _ kind: StatementKind,
         for ticker: Ticker,
@@ -23,9 +24,14 @@ extension EquiblesResearchProvider: FinancialStatementProviding {
         guard !response.data.isEmpty else {
             throw .noData
         }
-        let lines = response.data.compactMap(line(from:))
-        guard !lines.isEmpty, let year = response.fiscalYear, let part = part(named: response.fiscalPeriod) else {
+        guard let year = response.fiscalYear, let part = part(named: response.fiscalPeriod) else {
             throw .unreadableResponse
+        }
+        let lines = response.data.compactMap(line(from:))
+        guard !lines.isEmpty else {
+            // Retrying can't make another currency readable.
+            let allOtherCurrency = response.data.allSatisfy { unit(of: $0) == .otherCurrency }
+            throw allOtherCurrency ? .unsupportedCurrency : .unreadableResponse
         }
         return FinancialStatement(period: FiscalPeriod(year: year, part: part), lines: lines)
     }
@@ -59,15 +65,36 @@ extension EquiblesResearchProvider: FinancialStatementProviding {
         }
     }
 
+    private enum Unit {
+        case money, perShare, shares
+        /// A currency code, alone or per share, that `Money` can't hold.
+        case otherCurrency
+    }
+
+    /// Nil for a unit that isn't a currency or a count of shares, which is
+    /// unreadable rather than unsupported.
+    private func unit(of row: StatementResponse.Row) -> Unit? {
+        switch row.unit {
+        case "USD": return .money
+        case "USD/shares": return .perShare
+        case "shares": return .shares
+        case let unit?:
+            let code = unit.hasSuffix("/shares") ? String(unit.dropLast("/shares".count)) : unit
+            let isCode = code.count == 3 && code.allSatisfy { $0.isASCII && $0.isUppercase }
+            return isCode ? .otherCurrency : nil
+        case nil: return nil
+        }
+    }
+
     private func line(from row: StatementResponse.Row) -> StatementLine? {
         guard let name = row.lineItem, let number = row.value, let value = try? requiredDecimal(from: number) else {
             return nil
         }
-        switch row.unit {
-        case "USD": return StatementLine(name: name, figure: .money(Money(value)))
-        case "USD/shares": return StatementLine(name: name, figure: .perShare(value))
-        case "shares": return StatementLine(name: name, figure: .shares(value))
-        default: return nil
+        switch unit(of: row) {
+        case .money: return StatementLine(name: name, figure: .money(Money(value)))
+        case .perShare: return StatementLine(name: name, figure: .perShare(value))
+        case .shares: return StatementLine(name: name, figure: .shares(value))
+        case .otherCurrency, nil: return nil
         }
     }
 }

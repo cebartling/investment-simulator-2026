@@ -16,6 +16,8 @@ extension MarketDataError: LocalizedError {
             "Couldn't load this. \(detail)"
         case .noData:
             "Equibles has no data for this ticker."
+        case .unsupportedCurrency:
+            "Equibles reports this in a currency the app can't show."
         case .missingContactEmail:
             "Add your SEC contact email in Settings to see this."
         }
