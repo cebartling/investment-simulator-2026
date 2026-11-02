@@ -125,11 +125,19 @@ public final class ResearchTabModel: Identifiable {
         return history.trailingYield(atPrice: quote.price)
     }
 
+    /// Forgets the statements loaded before. A full load starts from here, so
+    /// the statement shown can reload apart from `load()`, where the window
+    /// model can cancel it.
+    public func forgetStatements() {
+        tables = [:]
+        latestStatements = [:]
+    }
+
     /// Quotes the ticker, charts the current range and loads the sections at
-    /// the same time, forgetting the ranges and statements loaded before.
-    /// Statements reload only if they're showing. If the quote finds
-    /// no such ticker, the rest is cancelled rather than waited for. The
-    /// exchange waits for the quote: a directory download can't be cancelled,
+    /// the same time, forgetting the ranges loaded before. Callers
+    /// `forgetStatements()` first and reload the statement shown themselves.
+    /// If the quote finds no such ticker, the rest is cancelled rather than
+    /// waited for. The exchange waits for the quote: a directory download can't be cancelled,
     /// so it would hold up dropping an unknown ticker. A load cancelled
     /// before it starts changes nothing.
     public func load() async {
@@ -137,15 +145,9 @@ public final class ResearchTabModel: Identifiable {
             return
         }
         charts = [:]
-        tables = [:]
-        latestStatements = [:]
         let range = chartRange
-        let selection = statementsShown ? statementSelection : nil
         await withTaskGroup { group in
             group.addTask { await self.showRange(range) }
-            if let selection {
-                group.addTask { await self.showStatements(selection) }
-            }
             for section in Section.allCases where section != .exchange {
                 group.addTask { await self.load(section) }
             }

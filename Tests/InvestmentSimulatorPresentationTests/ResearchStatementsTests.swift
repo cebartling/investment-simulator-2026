@@ -272,14 +272,15 @@ struct ResearchStatementsTests {
         #expect(statements.requests.count == sent)
     }
 
-    @Test func `loading again forgets statements and reloads the one shown`() async throws {
+    @Test func `forgetting statements reloads the one shown`() async throws {
         let statements = Self.statements()
         let tab = try tab(statements)
         await tab.showStatements(Self.quarterly)
         let sent = statements.requests.count
         statements.answer(Request(.income, nil), with: .success(Self.statement(Self.quarter3, 5)))
 
-        await tab.load()
+        tab.forgetStatements()
+        await tab.showStatements(Self.quarterly)
 
         #expect(statements.requests.count == sent * 2)
         #expect(tab.statementState == .loaded(StatementTable(statements: [
@@ -290,13 +291,14 @@ struct ResearchStatementsTests {
         ])))
     }
 
-    @Test func `loading again leaves hidden statements unloaded`() async throws {
+    @Test func `loading leaves hidden statements unloaded`() async throws {
         let statements = Self.statements()
         let tab = try tab(statements)
         await tab.showStatements(Self.quarterly)
         tab.hideStatements()
         let sent = statements.requests.count
 
+        tab.forgetStatements()
         await tab.load()
         #expect(statements.requests.count == sent)
 
