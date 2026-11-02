@@ -1,10 +1,10 @@
 # ADR-0020: Buying from Research Through a Registry of Open Experiments
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0021
 **Date:** 2026-10-31
 **Deciders:** Christopher Bartling
 
-Amends ADR-0011.
+Amends ADR-0011. Superseded by ADR-0021.
 
 ## Context
 

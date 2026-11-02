@@ -1,10 +1,10 @@
 # ADR-0011: Document Window Management, with One AppKit Close
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0021
 **Date:** 2026-10-24
 **Deciders:** Christopher Bartling
 
-Supersedes ADR-0010. Amended by ADR-0020.
+Supersedes ADR-0010. Amended by ADR-0020. Superseded by ADR-0021.
 
 ## Context
 

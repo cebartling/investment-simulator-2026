@@ -4,6 +4,8 @@
 **Date:** 2026-10-29
 **Deciders:** Christopher Bartling
 
+Amended by ADR-0021.
+
 ## Context
 
 The Research epic (PIN-412) adds a window for looking up a stock before trading it in an experiment. It shows a quote, a price history chart, a profile, valuation multiples, financial statements, dividends, press releases and SEC filings. The window is app-wide, not tied to an `.invsim` document, and holds several tickers at once.

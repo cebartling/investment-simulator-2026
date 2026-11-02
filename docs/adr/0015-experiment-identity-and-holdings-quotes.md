@@ -4,6 +4,8 @@
 **Date:** 2026-10-28
 **Deciders:** Christopher Bartling
 
+Amended by ADR-0021.
+
 ## Context
 
 PIN-408 replaces the Experiment section's cash-only header with a header that names the experiment and shows five tiles: Total Value, Gain/Loss, Cash, Available and Invested. Two parts of that need decisions.
