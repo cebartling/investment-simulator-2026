@@ -134,12 +134,12 @@ public final class ResearchTabModel: Identifiable {
     }
 
     /// Quotes the ticker, charts the current range and loads the sections at
-    /// the same time, forgetting the ranges loaded before. Callers
-    /// `forgetStatements()` first and reload the statement shown themselves.
-    /// If the quote finds no such ticker, the rest is cancelled rather than
-    /// waited for. The exchange waits for the quote: a directory download can't be cancelled,
-    /// so it would hold up dropping an unknown ticker. A load cancelled
-    /// before it starts changes nothing.
+    /// the same time, forgetting the ranges loaded before. Statements are left
+    /// alone: callers `forgetStatements()` first and reload the one shown
+    /// themselves. If the quote finds no such ticker, the rest is cancelled
+    /// rather than waited for. The exchange waits for the quote: a directory
+    /// download can't be cancelled, so it would hold up dropping an unknown
+    /// ticker. A load cancelled before it starts changes nothing.
     public func load() async {
         guard !Task.isCancelled else {
             return

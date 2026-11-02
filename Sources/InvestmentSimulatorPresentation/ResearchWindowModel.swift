@@ -273,8 +273,7 @@ public final class ResearchWindowModel {
         cancelTasks(of: ticker)
         tab.forgetStatements()
         if tab.statementsShown {
-            let selection = tab.statementSelection
-            statementTasks[ticker] = Task { await tab.showStatements(selection) }
+            showStatements(tab.statementSelection, for: ticker)
         }
         let task = Task {
             await tab.load()
