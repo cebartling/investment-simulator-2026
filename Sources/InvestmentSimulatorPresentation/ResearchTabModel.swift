@@ -249,7 +249,7 @@ public final class ResearchTabModel: Identifiable {
             tables[selection] = table
             outcome = .loaded(table)
         } catch {
-            outcome = error.statementEmptyReason.map { .empty($0) } ?? .failed(error)
+            outcome = error.sectionState()
         }
         if !Task.isCancelled, statementSelection == selection {
             statementState = outcome
@@ -334,10 +334,8 @@ public final class ResearchTabModel: Identifiable {
         let outcome: ResearchSectionState<Value>
         do throws(MarketDataError) {
             outcome = try await request()
-        } catch .noData {
-            outcome = .empty(.noData)
         } catch {
-            outcome = .failed(error)
+            outcome = error.sectionState()
         }
         if !Task.isCancelled {
             self[keyPath: state] = outcome

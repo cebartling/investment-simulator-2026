@@ -139,6 +139,15 @@ struct ResearchSectionTests {
         #expect(tab.profileState == .loaded(Self.profile))
     }
 
+    @Test func `a currency the app can't show is an empty section in any section`() async throws {
+        let tab = try tab(FakeResearchData(profile: .success(Self.profile), dividends: .failure(.unsupportedCurrency)))
+
+        await tab.load()
+
+        #expect(tab.dividendsState == .empty(.unsupportedCurrency))
+        #expect(tab.profileState == .loaded(Self.profile))
+    }
+
     @Test func `the yield divides the trailing dividends by the quote`() async throws {
         let quote = try makeQuote(ticker: "VTI", price: 12)
         let tab = try tab(FakeResearchData(dividends: .success(Self.dividends())), quotes: FakeQuotes(.success(quote)))
