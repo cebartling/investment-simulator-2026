@@ -70,6 +70,43 @@ extension GRDBExperimentRepositoryTests {
         #expect(try await repository.load(id) == experiment)
     }
 
+    @Test func `an unreadable created date doesn't hide the library, and the experiment can be deleted`() async throws {
+        let good = ExperimentID()
+        let damaged = ExperimentID()
+        try await repository.save(Experiment(cashBalance: Money(0), name: "Good"), as: good)
+        try await repository.save(Experiment(cashBalance: Money(0), name: "Damaged"), as: damaged)
+        try await queue.write { database in
+            try database.execute(
+                sql: "UPDATE experiment SET created_at = 'yesterday' WHERE id = ?",
+                arguments: [damaged.rawValue.uuidString],
+            )
+        }
+
+        let listed = try await repository.list()
+
+        #expect(Set(listed.map(\.id)) == [good, damaged])
+        #expect(listed.first { $0.id == damaged }?.createdAt == nil)
+        await #expect(throws: ExperimentRepositoryError.corrupt(damaged, detail: "created date isn't a valid date")) {
+            try await repository.load(damaged)
+        }
+        try await repository.delete(damaged)
+        #expect(try await repository.list().map(\.id) == [good])
+    }
+
+    @Test func `a row whose id isn't an id is left out of the list`() async throws {
+        let good = ExperimentID()
+        try await repository.save(Experiment(cashBalance: Money(0)), as: good)
+        try await repository.save(Experiment(cashBalance: Money(0)), as: ExperimentID())
+        try await queue.write { database in
+            try database.execute(
+                sql: "UPDATE experiment SET id = 'not an id' WHERE id <> ?",
+                arguments: [good.rawValue.uuidString],
+            )
+        }
+
+        #expect(try await repository.list().map(\.id) == [good])
+    }
+
     @Test func `a stored amount that isn't a number fails to load`() async throws {
         let id = ExperimentID()
         try await repository.save(Experiment(cashBalance: Money(1)), as: id)

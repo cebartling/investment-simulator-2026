@@ -19,11 +19,18 @@ public struct GRDBExperimentRepository: ExperimentRepository {
             try Row.fetchAll(database, sql: """
             SELECT id, name, created_at FROM experiment
             ORDER BY created_at IS NULL, created_at DESC, name IS NULL, name, id
-            """).map { row in
-                try ExperimentSummary(
-                    id: ExperimentID(StoredValues.uuid(row, "id", what: "experiment id")),
-                    name: StoredValues.optionalText(row, "name", what: "name"),
-                    createdAt: StoredValues.optionalDate(row, "created_at", what: "created date"),
+            """).compactMap { row in
+                // One damaged row mustn't make the whole library unlistable.
+                // An unreadable name or date shows as missing, and the
+                // experiment can still be deleted. A row whose id isn't an
+                // id can't be named by any call, so it is left out.
+                guard let uuid = try? StoredValues.uuid(row, "id", what: "experiment id") else {
+                    return nil
+                }
+                return ExperimentSummary(
+                    id: ExperimentID(uuid),
+                    name: try? StoredValues.optionalText(row, "name", what: "name"),
+                    createdAt: try? StoredValues.optionalDate(row, "created_at", what: "created date"),
                 )
             }
         }

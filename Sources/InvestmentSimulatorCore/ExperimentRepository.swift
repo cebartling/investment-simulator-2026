@@ -28,7 +28,9 @@ public struct ExperimentSummary: Sendable, Hashable, Identifiable {
 /// Driven port for the app-wide library of experiments (ADR-0021).
 public protocol ExperimentRepository: Sendable {
     /// Newest `createdAt` first, experiments without one last, ties by name
-    /// and then id so the order is stable.
+    /// and then id so the order is stable. A damaged row doesn't fail the
+    /// list: an unreadable name or date comes back nil, so the experiment
+    /// can still be deleted, and a row with an unreadable id is left out.
     func list() async throws -> [ExperimentSummary]
 
     /// Throws `ExperimentRepositoryError.notFound` for an unknown id.
