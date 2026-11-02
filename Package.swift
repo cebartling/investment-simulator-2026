@@ -4,6 +4,10 @@ import PackageDescription
 let package = Package(
     name: "InvestmentSimulator",
     platforms: [.macOS(.v26)],
+    dependencies: [
+        // ADR-0021: used only by InvestmentSimulatorPersistence.
+        .package(url: "https://github.com/groue/GRDB.swift", exact: "7.12.0"),
+    ],
     targets: [
         .target(name: "InvestmentSimulatorCore"),
         .target(
@@ -14,7 +18,10 @@ let package = Package(
         ),
         .target(
             name: "InvestmentSimulatorPersistence",
-            dependencies: ["InvestmentSimulatorCore"],
+            dependencies: [
+                "InvestmentSimulatorCore",
+                .product(name: "GRDB", package: "GRDB.swift"),
+            ],
         ),
         .target(
             name: "InvestmentSimulatorMarketData",
@@ -41,7 +48,11 @@ let package = Package(
         ),
         .testTarget(
             name: "InvestmentSimulatorPersistenceTests",
-            dependencies: ["InvestmentSimulatorCore", "InvestmentSimulatorPersistence"],
+            dependencies: [
+                "InvestmentSimulatorCore",
+                "InvestmentSimulatorPersistence",
+                .product(name: "GRDB", package: "GRDB.swift"),
+            ],
         ),
         .testTarget(
             name: "InvestmentSimulatorPresentationTests",
