@@ -10,4 +10,10 @@ extension MarketDataError {
         default: nil
         }
     }
+
+    /// How a section shows this failure: an empty state when a retry
+    /// couldn't help, otherwise the error.
+    nonisolated func sectionState<Value>() -> ResearchSectionState<Value> {
+        statementEmptyReason.map { .empty($0) } ?? .failed(self)
+    }
 }
