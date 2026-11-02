@@ -93,21 +93,6 @@ struct MainWindowModelTests {
         #expect(model.cashBalance == 250)
     }
 
-    @Test func `window stays open by default`() throws {
-        let model = try makeModel(needsSetup: true)
-
-        #expect(!model.shouldCloseWindow)
-    }
-
-    @Test func `cancelling the new experiment hides the sheet and closes the window`() throws {
-        let model = try makeModel(needsSetup: true)
-
-        model.cancelNewExperiment()
-
-        #expect(!model.isShowingNewExperiment)
-        #expect(model.shouldCloseWindow)
-    }
-
     @Test func `purchases come from the experiment`() throws {
         let purchase = try Purchase(
             id: fixedPurchaseID,

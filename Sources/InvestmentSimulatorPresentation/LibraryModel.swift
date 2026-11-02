@@ -34,12 +34,13 @@ public final class LibraryModel {
         }
     }
 
-    /// Stores a new, empty experiment, lists it and selects it. A blank name
-    /// stores none.
-    public func create(name: String?) async {
+    /// Stores a new experiment with no holdings, lists it and selects it. A
+    /// blank name stores none. A negative `cashBalance` becomes the error
+    /// message.
+    public func create(name: String?, cashBalance: Money = .zero) async {
         await attempt {
             let id = ExperimentID()
-            let experiment = try Experiment(cashBalance: .zero, name: Self.stored(name), createdAt: clock())
+            let experiment = try Experiment(cashBalance: cashBalance, name: Self.stored(name), createdAt: clock())
             try await repository.save(experiment, as: id)
             summaries = try await repository.list()
             selection = id

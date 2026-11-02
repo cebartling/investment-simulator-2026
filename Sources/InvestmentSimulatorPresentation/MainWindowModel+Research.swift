@@ -32,6 +32,5 @@ public extension MainWindowModel {
         }
         selection = .experiment
         showSheet()
-        raiseCount += 1
     }
 }

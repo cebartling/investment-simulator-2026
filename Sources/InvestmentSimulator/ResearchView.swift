@@ -3,45 +3,52 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// The app-wide Research window (ADR-0019): open tickers in the sidebar,
-/// in the order opened, and the selected ticker's research beside them.
-struct ResearchWindow: View {
+/// Research in the library window's detail (ADR-0019, ADR-0021): open
+/// tickers in a list, in the order opened, and the selected ticker's
+/// research beside it.
+struct ResearchView: View {
     @Bindable var model: ResearchWindowModel
-    let openExperiments: OpenExperiments
+    let library: LibraryWindowModel
 
     var body: some View {
-        NavigationSplitView {
-            ResearchSidebar(model: model)
-        } detail: {
-            if let tab = model.selectedTab {
-                ResearchTickerView(
-                    tab: tab,
-                    openExperiments: openExperiments,
-                    onRefresh: { model.refresh(tab.ticker) },
-                    onShowRange: { model.showRange($0, for: tab.ticker) },
-                    onRetry: { model.retry($0, for: tab.ticker) },
-                    onShowStatements: { model.showStatements($0, for: tab.ticker) },
-                    onHideStatements: { model.hideStatements(for: tab.ticker) },
-                )
-            } else {
-                // A sidebar list can be deselected with tickers still open.
-                ContentUnavailableView(
-                    model.tabs.isEmpty ? "No Ticker Open" : "No Ticker Selected",
-                    systemImage: "magnifyingglass",
-                    description: Text("Type a ticker symbol or company name to research it."),
-                )
+        // Not a second NavigationSplitView: the library window has the one.
+        HSplitView {
+            VStack(spacing: 0) {
+                ResearchSidebar(model: model)
             }
+            .frame(minWidth: 180, idealWidth: 220, maxWidth: 300)
+            detail
         }
-        .frame(minWidth: 900, minHeight: 480)
         // The saved tickers load when Research is first shown, not at launch.
         .task { model.restore() }
+    }
+
+    @ViewBuilder private var detail: some View {
+        if let tab = model.selectedTab {
+            ResearchTickerView(
+                tab: tab,
+                library: library,
+                onRefresh: { model.refresh(tab.ticker) },
+                onShowRange: { model.showRange($0, for: tab.ticker) },
+                onRetry: { model.retry($0, for: tab.ticker) },
+                onShowStatements: { model.showStatements($0, for: tab.ticker) },
+                onHideStatements: { model.hideStatements(for: tab.ticker) },
+            )
+        } else {
+            // A sidebar list can be deselected with tickers still open.
+            ContentUnavailableView(
+                model.tabs.isEmpty ? "No Ticker Open" : "No Ticker Selected",
+                systemImage: "magnifyingglass",
+                description: Text("Type a ticker symbol or company name to research it."),
+            )
+        }
     }
 }
 
 /// One ticker's research. Its sections stack below the quote.
 struct ResearchTickerView: View {
     let tab: ResearchTabModel
-    let openExperiments: OpenExperiments
+    let library: LibraryWindowModel
     let onRefresh: () -> Void
     let onShowRange: @MainActor (PriceRange) -> Void
     let onRetry: @MainActor (ResearchTabModel.Section) -> Void
@@ -111,21 +118,23 @@ struct ResearchTickerView: View {
         }
     }
 
-    /// One entry per open experiment window (ADR-0020).
+    /// One entry per experiment in the library (ADR-0020, ADR-0021).
     private var buyMenu: some View {
         Menu("Buy in Experiment…") {
-            ForEach(openExperiments.entries) { experiment in
-                Menu(experiment.title) {
-                    Button("Market Buy…") { experiment.model.beginPurchase(of: tab.ticker) }
-                    Button("Buy Limit…") { experiment.model.beginBuyLimitOrder(of: tab.ticker) }
+            ForEach(library.library.summaries) { summary in
+                Menu(library.library.title(for: summary)) {
+                    Button("Market Buy…") {
+                        Task { await library.beginPurchase(of: tab.ticker, in: summary.id) }
+                    }
+                    Button("Buy Limit…") {
+                        Task { await library.beginBuyLimitOrder(of: tab.ticker, in: summary.id) }
+                    }
                 }
-                // A hand-off would replace what's being typed there.
-                .disabled(experiment.model.isShowingSheet)
             }
         }
         .fixedSize()
-        .disabled(openExperiments.entries.isEmpty)
-        .help("Open Market Buy or Buy Limit for this ticker in an open experiment")
+        .disabled(library.library.summaries.isEmpty)
+        .help("Open Market Buy or Buy Limit for this ticker in an experiment")
     }
 
     @ViewBuilder private var quote: some View {

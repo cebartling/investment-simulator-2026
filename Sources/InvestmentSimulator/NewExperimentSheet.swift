@@ -1,7 +1,7 @@
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// Collects the starting cash balance for a new experiment.
+/// Collects the name and starting cash balance for a new experiment.
 struct NewExperimentSheet: View {
     @Bindable var model: NewExperimentModel
     let onCreate: () -> Void
@@ -15,6 +15,7 @@ struct NewExperimentSheet: View {
                 .font(.title2.bold())
                 .padding([.horizontal, .top], 20)
             Form {
+                TextField("Name", text: $model.name, prompt: Text("Optional"))
                 TextField("Cash balance", value: $model.cashBalance, format: .currency(code: "USD"))
                 if let message = model.validationMessage {
                     Text(message)

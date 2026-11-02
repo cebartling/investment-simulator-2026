@@ -1,11 +1,12 @@
 import AppKit
 import InvestmentSimulatorCore
 import InvestmentSimulatorMarketData
+import InvestmentSimulatorPersistence
 import InvestmentSimulatorPresentation
 import SwiftUI
 
 /// The app-wide composition root: services built once here are passed to
-/// each window through its initializer (ADR-0011, ADR-0012).
+/// the window through its initializer (ADR-0012, ADR-0021).
 @main
 struct InvestmentSimulatorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
@@ -15,8 +16,9 @@ struct InvestmentSimulatorApp: App {
     @State private var settings: SettingsModel
     /// App-wide, so open tickers survive closing the Research window (ADR-0019).
     @State private var research: ResearchWindowModel
-    /// App-wide, so Research can reach each experiment window (ADR-0020).
-    @State private var openExperiments = OpenExperiments()
+    /// Nil when the database couldn't be opened; `databaseError` says why.
+    @State private var library: LibraryWindowModel?
+    private let databaseError: String?
 
     init() {
         let credentials = KeychainCredentialStore()
@@ -29,6 +31,20 @@ struct InvestmentSimulatorApp: App {
         let edgarTransport = URLSessionTransport(session: URLSession(configuration: .ephemeral))
         quotes = equibles
         dailyPrices = equibles
+        do {
+            let repository = try ExperimentDatabase.open(at: ExperimentDatabase.defaultURL())
+            let library = LibraryModel(repository: repository)
+            _library = State(initialValue: LibraryWindowModel(
+                library: library,
+                makeExperimentModel: { id in
+                    MainWindowModel(id: id, repository: repository, quotes: equibles, dailyPrices: equibles)
+                },
+            ))
+            databaseError = nil
+        } catch {
+            _library = State(initialValue: nil)
+            databaseError = error.localizedDescription
+        }
         _settings = State(initialValue: SettingsModel(credentials: credentials, contactEmails: contactEmails))
         _research = State(initialValue: ResearchWindowModel(
             quotes: quotes,
@@ -47,113 +63,26 @@ struct InvestmentSimulatorApp: App {
     }
 
     var body: some Scene {
-        DocumentGroup(newDocument: ExperimentDocument()) { file in
-            // Read here, so the title follows Save As.
-            MainWindow(
-                document: file.$document,
-                fileURL: file.fileURL,
-                quotes: quotes,
-                dailyPrices: dailyPrices,
-                openExperiments: openExperiments,
-            )
+        Window("Investment Simulator", id: "library") {
+            if let library {
+                LibraryWindow(model: library, research: research)
+            } else {
+                DatabaseErrorView(message: databaseError ?? "Unknown error.")
+            }
         }
-        // The scene puts itself in the Window menu with its shortcut.
-        Window("Research", id: "research") {
-            ResearchWindow(model: research, openExperiments: openExperiments)
+        .commands {
+            if let library {
+                CommandGroup(replacing: .newItem) {
+                    Button("New Experiment…", action: library.beginNewExperiment)
+                        .keyboardShortcut("n")
+                    Button("Research") { library.destination = .research }
+                        .keyboardShortcut("r", modifiers: [.command, .shift])
+                }
+            }
         }
-        .keyboardShortcut("r", modifiers: [.command, .shift])
         Settings {
             SettingsView(model: settings)
         }
-    }
-}
-
-/// Composition root for one document window (ADR-0011). `@State` on the
-/// `App` would be shared by every window; here each window gets its own
-/// model, seeded from its document. Changes flow both ways.
-struct MainWindow: View {
-    @Binding var document: ExperimentDocument
-    /// The document's file, or nil until it is saved.
-    let fileURL: URL?
-    let openExperiments: OpenExperiments
-    @State private var model: MainWindowModel
-
-    init(
-        document: Binding<ExperimentDocument>,
-        fileURL: URL?,
-        quotes: any QuoteProviding,
-        dailyPrices: any DailyPriceProviding,
-        openExperiments: OpenExperiments,
-    ) {
-        _document = document
-        self.fileURL = fileURL
-        self.openExperiments = openExperiments
-        _model = State(initialValue: MainWindowModel(
-            experiment: document.wrappedValue.experiment,
-            needsSetup: document.wrappedValue.needsSetup,
-            quotes: quotes,
-            dailyPrices: dailyPrices,
-        ))
-    }
-
-    var body: some View {
-        // Writing on create, not on a change in value, marks even a $0
-        // experiment (equal to the new document's) as edited.
-        ContentView(
-            model: model,
-            fileURL: fileURL,
-            onCreate: {
-                if let created = model.createExperiment() {
-                    document.experiment = created
-                }
-            },
-            onPurchase: {
-                if let updated = model.completePurchase() {
-                    document.experiment = updated
-                }
-            },
-            onSell: {
-                if let updated = model.completeSale() {
-                    document.experiment = updated
-                }
-            },
-            onPlaceLimitOrder: {
-                if let updated = model.completeLimitOrder() {
-                    document.experiment = updated
-                }
-            },
-            onPlaceBuyLimitOrder: {
-                if let updated = model.completeBuyLimitOrder() {
-                    document.experiment = updated
-                }
-            },
-            onCancelOrder: { id in
-                if let updated = model.cancelOrder(id: id) {
-                    document.experiment = updated
-                }
-            },
-            onCheckOrders: {
-                if let updated = await model.checkLimitOrders() {
-                    document.experiment = updated
-                }
-            },
-            onSaveDetails: {
-                if let updated = model.completeEditingDetails() {
-                    document.experiment = updated
-                }
-            },
-        )
-        // Changes the document makes itself, like File › Revert To.
-        .onChange(of: document.experiment) { _, experiment in
-            model.replaceExperiment(with: experiment)
-        }
-        // On disappear only when the window closes, not when it's minimized
-        // or a background tab (ADR-0020).
-        .onAppear { openExperiments.register(model, title: model.title(fileURL: fileURL)) }
-        .onChange(of: model.title(fileURL: fileURL)) { _, title in
-            openExperiments.register(model, title: title)
-        }
-        .onDisappear { openExperiments.remove(model) }
     }
 }
 

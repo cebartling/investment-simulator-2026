@@ -34,6 +34,15 @@ struct LibraryModelTests {
         #expect(model.errorMessage == nil)
     }
 
+    @Test func `create stores the starting cash`() async {
+        let (model, repository) = makeModel()
+
+        await model.create(name: nil, cashBalance: Money(250))
+
+        let id = model.selection
+        #expect(id.flatMap { repository.stored($0) }?.cashBalance == Money(250))
+    }
+
     @Test func `a list failure becomes an error message and keeps the old list`() async {
         let id = ExperimentID()
         let (model, repository) = makeModel([id: experiment(named: "Index funds")])

@@ -1,22 +1,22 @@
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// The window's status bar, under the sidebar and the detail (PIN-411):
-/// the document's file, and the state of the holdings' prices with Refresh
-/// Prices.
+/// The experiment's status bar (PIN-411): a failed save, and the state of
+/// the holdings' prices with Refresh Prices.
 struct ExperimentFooter: View {
     let model: MainWindowModel
-    let fileURL: URL?
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(model.fileLabel(fileURL: fileURL))
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .help(fileURL?.path(percentEncoded: false) ?? "")
-                .foregroundStyle(.secondary)
+            if let saveError = model.saveError {
+                Text("Couldn't save: \(saveError)")
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(saveError)
+                    .foregroundStyle(.red)
+            }
             Spacer()
-            // Secondary like the file name; the button keeps its own color,
+            // Secondary; the button keeps its own color,
             // so it reads as disabled when it is.
             pricesStatus
                 .lineLimit(1)

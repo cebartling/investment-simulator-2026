@@ -67,15 +67,6 @@ public final class MainWindowModel {
         storage?.saveError
     }
 
-    /// Set when the user cancels a new document. The app's `WindowCloser`
-    /// then ends the sheet, since a window can't close with one attached,
-    /// and closes the window.
-    public private(set) var shouldCloseWindow = false
-
-    /// Counts the times Research started a sheet here, so the app's
-    /// `WindowRaiser` can bring this window forward (ADR-0020).
-    public internal(set) var raiseCount = 0
-
     /// `needsSetup` is true for a new, untitled document, which opens the
     /// New Experiment sheet. `clock` tells the time experiments are created
     /// and orders are placed and checked.
@@ -346,11 +337,6 @@ public final class MainWindowModel {
         isShowingLimitOrder = false
         limitOrder = nil
     }
-
-    public func cancelNewExperiment() {
-        isShowingNewExperiment = false
-        shouldCloseWindow = true
-    }
 }
 
 /// The Experiment header (PIN-408).
@@ -358,19 +344,6 @@ public extension MainWindowModel {
     /// The stored name, else "Untitled" (ADR-0015, ADR-0021).
     var title: String {
         experiment.name ?? LibraryModel.untitled
-    }
-
-    /// The experiment's name, else its file's name, else "Untitled" for a
-    /// document never saved. Takes the file's URL, which Save As changes.
-    func title(fileURL: URL?) -> String {
-        experiment.name ?? fileURL?.deletingPathExtension().lastPathComponent ?? LibraryModel.untitled
-    }
-
-    /// The document's file name for the window footer (PIN-411), or "Not
-    /// saved" before its first save. Takes the file's URL, which Save As
-    /// changes.
-    func fileLabel(fileURL: URL?) -> String {
-        fileURL?.lastPathComponent ?? "Not saved"
     }
 
     /// The cash a purchase or new buy order can spend at `date`. Takes the
