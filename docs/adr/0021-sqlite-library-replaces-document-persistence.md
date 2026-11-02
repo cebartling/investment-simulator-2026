@@ -69,7 +69,7 @@ The experiment data is small, relational (purchases, sales, orders, fills, cance
 **Pros:**
 - Mature SQLite toolkit with `DatabasePool` (concurrent readers with one writer), versioned migrations and Swift concurrency support.
 - Plain SQL stays visible, and records are explicit, so the decimal-string money rule is easy to apply.
-- Adapter tests can use an in-memory database, so no test touches disk (ADR-0007).
+- The adapter takes GRDB's `DatabaseWriter`, so tests pass an in-memory `DatabaseQueue` while the app passes the `DatabasePool` (a pool needs a file; only a queue can be in memory), and no test touches disk (ADR-0007).
 
 **Cons:**
 - A third-party dependency to pin, update and audit.
