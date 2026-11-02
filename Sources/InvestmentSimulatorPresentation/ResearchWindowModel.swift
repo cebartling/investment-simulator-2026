@@ -271,6 +271,10 @@ public final class ResearchWindowModel {
     ) -> Task<Void, Never> {
         let ticker = tab.ticker
         cancelTasks(of: ticker)
+        tab.forgetStatements()
+        if tab.statementsShown {
+            showStatements(tab.statementSelection, for: ticker)
+        }
         let task = Task {
             await tab.load()
             guard !Task.isCancelled, case .failed(.unknownTicker) = tab.quoteState else {

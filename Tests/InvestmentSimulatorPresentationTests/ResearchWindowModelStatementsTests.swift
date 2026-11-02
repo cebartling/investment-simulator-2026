@@ -81,6 +81,43 @@ struct ResearchWindowModelStatementsTests {
         #expect(tab.statementsShown == false)
     }
 
+    @Test func `hiding statements cancels the reload a refresh started`() async throws {
+        let statements = Self.statements()
+        let model = research(statements)
+        await model.open()?.value
+        let vti = try Ticker("VTI")
+        let tab = try #require(model.selectedTab)
+        await model.showStatements(Self.quarterly, for: vti)?.value
+        statements.whileAnswering { model.hideStatements(for: vti) }
+
+        await model.refresh(vti)?.value
+
+        #expect(tab.statementState == .loading)
+        #expect(tab.statementsShown == false)
+    }
+
+    @Test func `a newer selection cancels the reload a refresh started`() async throws {
+        let statements = Self.statements()
+        let model = research(statements)
+        await model.open()?.value
+        let vti = try Ticker("VTI")
+        let tab = try #require(model.selectedTab)
+        await model.showStatements(Self.quarterly, for: vti)?.value
+        let run = Run()
+        statements.whileAnswering {
+            guard run.task == nil else {
+                return
+            }
+            run.task = model.showStatements(Self.balance, for: vti)
+        }
+
+        await model.refresh(vti)?.value
+        await run.task?.value
+
+        #expect(tab.statementSelection == Self.balance)
+        #expect(tab.statementState == .loaded(Self.table()))
+    }
+
     @Test func `closing a ticker cancels its statements`() async throws {
         let statements = Self.statements()
         let model = research(statements)
