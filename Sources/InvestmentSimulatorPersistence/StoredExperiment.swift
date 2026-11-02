@@ -19,7 +19,7 @@ enum StoredExperiment {
                 experiment.cashBalance.amount.description,
                 experiment.name,
                 experiment.notes,
-                experiment.createdAt.map(StoredValues.text),
+                experiment.createdAt.map(StoredValues.stored),
             ],
         )
         try insertPurchases(experiment.purchases, key, database)
@@ -37,7 +37,7 @@ enum StoredExperiment {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, arguments: [
                 key, purchase.id.uuidString, position, purchase.ticker.symbol, purchase.shares,
-                purchase.pricePerShare.description, StoredValues.text(purchase.pricedAt),
+                purchase.pricePerShare.description, StoredValues.stored(purchase.pricedAt),
                 source.source, source.delayed, source.sessionDate,
             ])
         }
@@ -52,7 +52,7 @@ enum StoredExperiment {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, arguments: [
                 key, sale.id.uuidString, position, sale.purchaseID.uuidString, sale.shares,
-                sale.pricePerShare.description, StoredValues.text(sale.soldAt),
+                sale.pricePerShare.description, StoredValues.stored(sale.soldAt),
                 source.source, source.delayed, source.sessionDate,
             ])
         }
@@ -66,8 +66,8 @@ enum StoredExperiment {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, arguments: [
                 key, order.id.uuidString, position, order.purchaseID.uuidString, order.shares,
-                order.limitPrice.amount.description, StoredValues.text(order.placedAt),
-                StoredValues.text(order.expiresAt), order.filledOn, order.cancelledAt.map(StoredValues.text),
+                order.limitPrice.amount.description, StoredValues.stored(order.placedAt),
+                StoredValues.stored(order.expiresAt), order.filledOn, order.cancelledAt.map(StoredValues.stored),
             ])
         }
     }
@@ -80,8 +80,8 @@ enum StoredExperiment {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, arguments: [
                 key, order.id.uuidString, position, order.ticker.symbol, order.shares,
-                order.limitPrice.amount.description, StoredValues.text(order.placedAt),
-                StoredValues.text(order.expiresAt), order.filledOn, order.cancelledAt.map(StoredValues.text),
+                order.limitPrice.amount.description, StoredValues.stored(order.placedAt),
+                StoredValues.stored(order.expiresAt), order.filledOn, order.cancelledAt.map(StoredValues.stored),
             ])
         }
     }
@@ -134,14 +134,14 @@ enum StoredExperiment {
     static func read(header: Row, id: ExperimentID, from database: Database) throws -> Experiment {
         let key = id.rawValue.uuidString
         return try Experiment(
-            cashBalance: Money(StoredValues.decimal(header["cash_balance"], what: "cash balance")),
+            cashBalance: Money(StoredValues.decimal(header, "cash_balance", what: "cash balance")),
             purchases: rows("purchase", key, database).map(purchase),
             limitOrders: rows("sell_order", key, database).map(sellOrder),
             buyLimitOrders: rows("buy_order", key, database).map(buyOrder),
             sales: rows("sale", key, database).map(sale),
-            name: header["name"],
-            notes: header["notes"],
-            createdAt: (header["created_at"] as String?).map { try StoredValues.date($0, what: "created date") },
+            name: StoredValues.optionalText(header, "name", what: "name"),
+            notes: StoredValues.optionalText(header, "notes", what: "notes"),
+            createdAt: StoredValues.optionalDate(header, "created_at", what: "created date"),
         )
     }
 
@@ -155,11 +155,11 @@ enum StoredExperiment {
 
     private static func purchase(_ row: Row) throws -> Purchase {
         try Purchase(
-            id: StoredValues.uuid(row["id"], what: "purchase id"),
-            ticker: ticker(row["ticker"]),
-            shares: row["shares"],
-            pricePerShare: StoredValues.decimal(row["price_per_share"], what: "purchase price"),
-            pricedAt: StoredValues.date(row["priced_at"], what: "purchase date"),
+            id: StoredValues.uuid(row, "id", what: "purchase id"),
+            ticker: ticker(row, what: "purchase ticker"),
+            shares: StoredValues.integer(row, "shares", what: "purchase shares"),
+            pricePerShare: StoredValues.decimal(row, "price_per_share", what: "purchase price"),
+            pricedAt: StoredValues.date(row, "priced_at", what: "purchase date"),
             priceSource: priceSource(row, of: "purchase"),
         )
     }
@@ -173,52 +173,53 @@ enum StoredExperiment {
             throw StoredValueError(detail: "sale price source \"limitOrderFill\" isn't recognized")
         }
         return try Sale(
-            id: StoredValues.uuid(row["id"], what: "sale id"),
-            purchaseID: StoredValues.uuid(row["purchase_id"], what: "sale purchase id"),
-            shares: row["shares"],
-            pricePerShare: StoredValues.decimal(row["price_per_share"], what: "sale price"),
-            soldAt: StoredValues.date(row["sold_at"], what: "sale date"),
+            id: StoredValues.uuid(row, "id", what: "sale id"),
+            purchaseID: StoredValues.uuid(row, "purchase_id", what: "sale purchase id"),
+            shares: StoredValues.integer(row, "shares", what: "sale shares"),
+            pricePerShare: StoredValues.decimal(row, "price_per_share", what: "sale price"),
+            soldAt: StoredValues.date(row, "sold_at", what: "sale date"),
             priceSource: source,
         )
     }
 
     private static func sellOrder(_ row: Row) throws -> LimitOrder {
         try LimitOrder(
-            id: StoredValues.uuid(row["id"], what: "sell order id"),
-            purchaseID: StoredValues.uuid(row["purchase_id"], what: "sell order purchase id"),
-            shares: row["shares"],
-            limitPrice: Money(StoredValues.decimal(row["limit_price"], what: "limit price")),
-            placedAt: StoredValues.date(row["placed_at"], what: "order date"),
-            expiresAt: StoredValues.date(row["expires_at"], what: "order date"),
-            filledOn: row["filled_on"],
-            cancelledAt: (row["cancelled_at"] as String?).map { try StoredValues.date($0, what: "order date") },
+            id: StoredValues.uuid(row, "id", what: "sell order id"),
+            purchaseID: StoredValues.uuid(row, "purchase_id", what: "sell order purchase id"),
+            shares: StoredValues.integer(row, "shares", what: "sell order shares"),
+            limitPrice: Money(StoredValues.decimal(row, "limit_price", what: "sell order limit price")),
+            placedAt: StoredValues.date(row, "placed_at", what: "sell order placed date"),
+            expiresAt: StoredValues.date(row, "expires_at", what: "sell order expiry date"),
+            filledOn: StoredValues.optionalText(row, "filled_on", what: "sell order fill session"),
+            cancelledAt: StoredValues.optionalDate(row, "cancelled_at", what: "sell order cancelled date"),
         )
     }
 
     private static func buyOrder(_ row: Row) throws -> BuyLimitOrder {
         try BuyLimitOrder(
-            id: StoredValues.uuid(row["id"], what: "buy order id"),
-            ticker: ticker(row["ticker"]),
-            shares: row["shares"],
-            limitPrice: Money(StoredValues.decimal(row["limit_price"], what: "limit price")),
-            placedAt: StoredValues.date(row["placed_at"], what: "order date"),
-            expiresAt: StoredValues.date(row["expires_at"], what: "order date"),
-            filledOn: row["filled_on"],
-            cancelledAt: (row["cancelled_at"] as String?).map { try StoredValues.date($0, what: "order date") },
+            id: StoredValues.uuid(row, "id", what: "buy order id"),
+            ticker: ticker(row, what: "buy order ticker"),
+            shares: StoredValues.integer(row, "shares", what: "buy order shares"),
+            limitPrice: Money(StoredValues.decimal(row, "limit_price", what: "buy order limit price")),
+            placedAt: StoredValues.date(row, "placed_at", what: "buy order placed date"),
+            expiresAt: StoredValues.date(row, "expires_at", what: "buy order expiry date"),
+            filledOn: StoredValues.optionalText(row, "filled_on", what: "buy order fill session"),
+            cancelledAt: StoredValues.optionalDate(row, "cancelled_at", what: "buy order cancelled date"),
         )
     }
 
-    private static func ticker(_ symbol: String) throws -> Ticker {
+    private static func ticker(_ row: Row, what: String) throws -> Ticker {
+        let symbol = try StoredValues.text(row, "ticker", what: what)
         guard let ticker = try? Ticker(symbol) else {
-            throw StoredValueError(detail: "ticker \"\(symbol)\" isn't valid")
+            throw StoredValueError(detail: "\(what) \"\(symbol)\" isn't valid")
         }
         return ticker
     }
 
     private static func priceSource(_ row: Row, of kind: String) throws -> PriceSource {
-        let source: String = row["price_source"]
-        let delayed: Bool? = row["delayed"]
-        let sessionDate: String? = row["session_date"]
+        let source = try StoredValues.text(row, "price_source", what: "\(kind) price source")
+        let delayed = try StoredValues.optionalBool(row, "delayed", what: "\(kind) delayed flag")
+        let sessionDate = try StoredValues.optionalText(row, "session_date", what: "\(kind) session date")
         switch (source, delayed, sessionDate) {
         case let ("liveQuote", delayed?, _): return .liveQuote(delayed: delayed)
         case let ("close", _, sessionDate?): return .close(sessionDate: sessionDate)

@@ -21,9 +21,9 @@ public struct GRDBExperimentRepository: ExperimentRepository {
             ORDER BY created_at IS NULL, created_at DESC, name IS NULL, name, id
             """).map { row in
                 try ExperimentSummary(
-                    id: ExperimentID(StoredValues.uuid(row["id"], what: "experiment id")),
-                    name: row["name"],
-                    createdAt: (row["created_at"] as String?).map { try StoredValues.date($0, what: "created date") },
+                    id: ExperimentID(StoredValues.uuid(row, "id", what: "experiment id")),
+                    name: StoredValues.optionalText(row, "name", what: "name"),
+                    createdAt: StoredValues.optionalDate(row, "created_at", what: "created date"),
                 )
             }
         }
@@ -42,6 +42,14 @@ public struct GRDBExperimentRepository: ExperimentRepository {
                 return try StoredExperiment.read(header: header, id: id, from: database)
             } catch let error as StoredValueError {
                 throw ExperimentRepositoryError.corrupt(id, detail: error.detail)
+            } catch let error as PurchaseError {
+                throw ExperimentRepositoryError.corrupt(id, detail: String(describing: error))
+            } catch let error as SaleError {
+                throw ExperimentRepositoryError.corrupt(id, detail: String(describing: error))
+            } catch let error as LimitOrderError {
+                throw ExperimentRepositoryError.corrupt(id, detail: String(describing: error))
+            } catch let error as ExperimentError {
+                throw ExperimentRepositoryError.corrupt(id, detail: String(describing: error))
             }
         }
     }

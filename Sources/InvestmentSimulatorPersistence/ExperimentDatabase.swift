@@ -23,6 +23,9 @@ public enum ExperimentDatabase {
                 withIntermediateDirectories: true,
             )
             pool = try DatabasePool(path: path)
+            // Opening a pool doesn't read the file, so a file that isn't a
+            // database would otherwise fail later, as a failed migration.
+            try pool.read { try $0.execute(sql: "SELECT 1 FROM sqlite_master LIMIT 1") }
         } catch {
             throw ExperimentDatabaseError.cannotOpen(path: path, underlying: String(describing: error))
         }

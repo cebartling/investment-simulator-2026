@@ -1,7 +1,8 @@
 import GRDB
 
 /// The database's versioned schema (ADR-0021). Money is TEXT, a decimal
-/// string, never REAL or INTEGER (ADR-0002). Dates are ISO 8601 TEXT.
+/// string, never REAL or INTEGER (ADR-0002). Dates are REAL seconds since
+/// the reference date, which round-trip exactly.
 /// `position` keeps each list in the order it was made. A filled buy order
 /// and its purchase share an id, so every id is only unique per experiment.
 enum ExperimentSchema {
@@ -11,7 +12,7 @@ enum ExperimentSchema {
                     cash_balance TEXT NOT NULL,
                     name TEXT,
                     notes TEXT,
-                    created_at TEXT
+                    created_at REAL
                 );
     """
 
@@ -23,7 +24,7 @@ enum ExperimentSchema {
                     ticker TEXT NOT NULL,
                     shares INTEGER NOT NULL,
                     price_per_share TEXT NOT NULL,
-                    priced_at TEXT NOT NULL,
+                    priced_at REAL NOT NULL,
                     price_source TEXT NOT NULL,
                     delayed INTEGER,
                     session_date TEXT,
@@ -39,7 +40,7 @@ enum ExperimentSchema {
                     purchase_id TEXT NOT NULL,
                     shares INTEGER NOT NULL,
                     price_per_share TEXT NOT NULL,
-                    sold_at TEXT NOT NULL,
+                    sold_at REAL NOT NULL,
                     price_source TEXT NOT NULL,
                     delayed INTEGER,
                     session_date TEXT,
@@ -55,10 +56,10 @@ enum ExperimentSchema {
                     purchase_id TEXT NOT NULL,
                     shares INTEGER NOT NULL,
                     limit_price TEXT NOT NULL,
-                    placed_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
+                    placed_at REAL NOT NULL,
+                    expires_at REAL NOT NULL,
                     filled_on TEXT,
-                    cancelled_at TEXT,
+                    cancelled_at REAL,
                     PRIMARY KEY (experiment_id, id)
                 );
     """
@@ -71,10 +72,10 @@ enum ExperimentSchema {
                     ticker TEXT NOT NULL,
                     shares INTEGER NOT NULL,
                     limit_price TEXT NOT NULL,
-                    placed_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
+                    placed_at REAL NOT NULL,
+                    expires_at REAL NOT NULL,
                     filled_on TEXT,
-                    cancelled_at TEXT,
+                    cancelled_at REAL,
                     PRIMARY KEY (experiment_id, id)
                 );
     """
