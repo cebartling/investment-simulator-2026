@@ -134,6 +134,7 @@ struct ResearchWindowModelRetryTests {
             quotes: quotes,
             dailyPrices: prices,
             ports: data.ports,
+            tickerStore: NoResearchTickerStore(),
             clock: { Date(timeIntervalSince1970: 1_793_000_000) },
         )
     }

@@ -33,6 +33,8 @@ struct ResearchWindow: View {
             }
         }
         .frame(minWidth: 900, minHeight: 480)
+        // The saved tickers load when Research is first shown, not at launch.
+        .task { model.restore() }
     }
 }
 

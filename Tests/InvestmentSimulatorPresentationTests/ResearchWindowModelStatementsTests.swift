@@ -108,6 +108,7 @@ struct ResearchWindowModelStatementsTests {
                 statements: statements,
                 directory: FakeDirectory(),
             ),
+            tickerStore: NoResearchTickerStore(),
             clock: { Date(timeIntervalSince1970: 1_793_000_000) },
         )
         model.symbolText = "VTI"

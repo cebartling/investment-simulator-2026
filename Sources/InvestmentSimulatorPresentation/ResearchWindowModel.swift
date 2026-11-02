@@ -17,8 +17,18 @@ public final class ResearchWindowModel {
         }
     }
 
-    public var selection: Ticker?
-    public private(set) var tabs: [ResearchTabModel] = []
+    public var selection: Ticker? {
+        didSet {
+            save()
+        }
+    }
+
+    public private(set) var tabs: [ResearchTabModel] = [] {
+        didSet {
+            save()
+        }
+    }
+
     /// Why the last ticker opened was dropped: its quote found no such ticker.
     public private(set) var openError: QuoteError?
     /// The best matches for the field's text, once searched.
@@ -33,7 +43,11 @@ public final class ResearchWindowModel {
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
     private let ports: ResearchSectionPorts
+    private let tickerStore: any ResearchTickerStoring
     private let clock: () -> Date
+    /// Nothing is saved until the saved tickers have been restored, so a model
+    /// that opens a ticker first can't overwrite the last session's list.
+    private var isRestored = false
     private var tasks: [Ticker: Task<Void, Never>] = [:]
     /// Each ticker's chart range still loading, apart from its first load.
     private var chartTasks: [Ticker: Task<Void, Never>] = [:]
@@ -42,18 +56,46 @@ public final class ResearchWindowModel {
     /// Each ticker's section retries still loading.
     private var retryTasks: [Ticker: [ResearchTabModel.Section: Task<Void, Never>]] = [:]
 
-    /// `clock` tells the time chart ranges and trailing dividends reach back
+    /// `tickerStore` keeps the open tickers between launches; `restore()` reads
+    /// it. `clock` tells the time chart ranges and trailing dividends reach back
     /// from.
     public init(
         quotes: any QuoteProviding,
         dailyPrices: any DailyPriceProviding,
         ports: ResearchSectionPorts,
+        tickerStore: any ResearchTickerStoring,
         clock: @escaping () -> Date = Date.init,
     ) {
         self.quotes = quotes
         self.dailyPrices = dailyPrices
         self.ports = ports
+        self.tickerStore = tickerStore
         self.clock = clock
+    }
+
+    /// Reopens the saved tickers in order and selects the saved one, or the
+    /// last. A symbol that is no longer valid is skipped, and one whose quote
+    /// finds no such ticker is dropped quietly, as the user typed nothing.
+    /// Does nothing after the first call. Returns each load.
+    @discardableResult
+    public func restore() -> [Task<Void, Never>] {
+        guard !isRestored else {
+            return []
+        }
+        let saved = tickerStore.load()
+        let loads = saved.symbols.compactMap { symbol in
+            (try? Ticker(symbol)).flatMap { open($0, typed: nil, restoring: true) }
+        }
+        isRestored = true
+        selection = tabs.first { $0.ticker.symbol == saved.selected }?.ticker ?? tabs.last?.ticker
+        return loads
+    }
+
+    private func save() {
+        guard isRestored else {
+            return
+        }
+        tickerStore.save(SavedResearchTickers(symbols: tabs.map(\.ticker.symbol), selected: selection?.symbol))
     }
 
     private var ticker: Ticker? {
@@ -129,7 +171,7 @@ public final class ResearchWindowModel {
         open(ticker, typed: nil)
     }
 
-    private func open(_ ticker: Ticker, typed: String?) -> Task<Void, Never>? {
+    private func open(_ ticker: Ticker, typed: String?, restoring: Bool = false) -> Task<Void, Never>? {
         symbolText = ""
         searchResults = []
         searchMessage = nil
@@ -147,7 +189,7 @@ public final class ResearchWindowModel {
         )
         tabs.append(tab)
         selection = ticker
-        return load(tab, reselecting: previous, restoring: typed)
+        return load(tab, reselecting: previous, restoring: typed, reportsUnknown: !restoring)
     }
 
     /// Loads an open ticker's quote, chart and sections again, replacing
@@ -225,6 +267,7 @@ public final class ResearchWindowModel {
         _ tab: ResearchTabModel,
         reselecting previous: Ticker?,
         restoring typed: String? = nil,
+        reportsUnknown: Bool = true,
     ) -> Task<Void, Never> {
         let ticker = tab.ticker
         cancelTasks(of: ticker)
@@ -237,7 +280,9 @@ public final class ResearchWindowModel {
             if let typed, symbolText.isEmpty {
                 symbolText = typed
             }
-            openError = .unknownTicker(ticker)
+            if reportsUnknown {
+                openError = .unknownTicker(ticker)
+            }
         }
         tasks[ticker] = task
         return task

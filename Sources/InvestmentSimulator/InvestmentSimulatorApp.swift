@@ -42,6 +42,7 @@ struct InvestmentSimulatorApp: App {
                 statements: researchData,
                 directory: EdgarSecurityDirectory(transport: edgarTransport, contactEmails: contactEmails),
             ),
+            tickerStore: UserDefaultsResearchTickerStore(),
         ))
     }
 

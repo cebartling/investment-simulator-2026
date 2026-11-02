@@ -169,6 +169,7 @@ struct ResearchExchangeTests {
             quotes: FakeTickerQuotes(["BRK-B": .success(quote)]),
             dailyPrices: FakeDailyPrices(),
             ports: FakeResearchData(directory: directory).ports,
+            tickerStore: NoResearchTickerStore(),
         )
         await model.open(berkshire.ticker)?.value
         directory.answer(with: .success([berkshire]))
