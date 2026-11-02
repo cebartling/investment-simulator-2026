@@ -32,7 +32,7 @@ ADR-0004 gives each screen one `@Observable` model, built by a composition root.
   - Selecting a ticker shows its sections in the detail pane.
   - A ticker closes from its row's close button, its context menu, or the Delete key.
   - Reordering is out of the first cut.
-  - **Open tickers are restored at launch (PIN-442).** Only the symbols, in order, and the selected one are kept, in `UserDefaults` behind `ResearchTickerStoring`. `ResearchWindowModel.restore()` reopens them through `open(_:)`, so each loads every section and an unknown ticker is dropped as usual. Nothing else is saved.
+  - **Open tickers are restored at launch (PIN-442).** Only the symbols, in order, and the selected one are kept, in `UserDefaults` behind `ResearchTickerStoring`. `ResearchWindowModel.restore()` runs when the Research window first appears, not at launch, and reopens them through `open(_:)`, so each loads every section. An unknown ticker is dropped without an error, since the user typed nothing. Nothing is saved before `restore()` runs. Nothing else is saved.
 - **Presentation** (`InvestmentSimulatorPresentation`):
   - **`ResearchWindowModel`** owns the open tickers, the selection, and opening a ticker. A typed symbol opens straight away and its `QuoteProviding` quote validates it: an unknown ticker is removed again, with its message under the field. A search result is opened the same way. Opening a ticker already open selects it.
   - **It is `@State` on `InvestmentSimulatorApp`**, as `SettingsModel` is, so open tickers survive closing and reopening the window during a launch. This is app-wide state, which ADR-0011's no-shared-state rule doesn't cover, because that rule is about document windows.

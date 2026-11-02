@@ -122,6 +122,7 @@ struct ResearchWindowModelTests {
                 statements: UntilCancelled(),
                 directory: FakeDirectory(),
             ),
+            tickerStore: NoResearchTickerStore(),
             clock: { Self.now },
         )
 
@@ -137,6 +138,7 @@ struct ResearchWindowModelTests {
             quotes: FakeTickerQuotes(["VTI": .success(makeQuote(ticker: "VTI", price: 12))]),
             dailyPrices: FakeDailyPrices(),
             ports: FakeResearchData(profile: .success(profile), multiples: .failure(.dailyLimitReached)).ports,
+            tickerStore: NoResearchTickerStore(),
             clock: { Self.now },
         )
 
@@ -302,6 +304,7 @@ struct ResearchWindowModelTests {
             quotes: quotes,
             dailyPrices: prices,
             ports: FakeResearchData().ports,
+            tickerStore: NoResearchTickerStore(),
             clock: { Self.now },
         )
     }

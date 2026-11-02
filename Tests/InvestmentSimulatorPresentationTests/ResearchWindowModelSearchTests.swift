@@ -20,6 +20,7 @@ struct ResearchWindowModelSearchTests {
             quotes: quotes ?? FakeTickerQuotes([:]),
             dailyPrices: FakeDailyPrices(),
             ports: FakeResearchData(directory: directory).ports,
+            tickerStore: NoResearchTickerStore(),
         )
     }
 

@@ -64,6 +64,29 @@ struct ResearchTickerRestoreTests {
         #expect(try model.selection == Ticker("VTI"))
         #expect(store.symbols == ["VTI"])
         #expect(store.selected == "VTI")
+        #expect(model.openError == nil)
+    }
+
+    @Test func `restoring twice reopens nothing the second time`() async throws {
+        let store = FakeTickerStore(symbols: ["VTI"], selected: "VTI")
+        let model = try research(store)
+        for task in model.restore() {
+            await task.value
+        }
+        try model.close(Ticker("VTI"))
+
+        #expect(model.restore().isEmpty)
+        #expect(model.tabs.isEmpty)
+    }
+
+    @Test func `opening before restoring doesn't overwrite the saved tickers`() async throws {
+        let store = FakeTickerStore(symbols: ["VTI"], selected: "VTI")
+        let model = try research(store)
+
+        await open("AAPL", in: model)
+
+        #expect(store.symbols == ["VTI"])
+        #expect(store.selected == "VTI")
     }
 
     @Test func `restoring leaves an empty store empty`() throws {
@@ -77,6 +100,7 @@ struct ResearchTickerRestoreTests {
     @Test func `opening saves the tickers and the selection`() async throws {
         let store = FakeTickerStore(symbols: [], selected: nil)
         let model = try research(store)
+        model.restore()
 
         await open("VTI", in: model)
         await open("AAPL", in: model)
@@ -88,6 +112,7 @@ struct ResearchTickerRestoreTests {
     @Test func `selecting saves the selection`() async throws {
         let store = FakeTickerStore(symbols: [], selected: nil)
         let model = try research(store)
+        model.restore()
         await open("VTI", in: model)
         await open("AAPL", in: model)
 
@@ -99,6 +124,7 @@ struct ResearchTickerRestoreTests {
     @Test func `closing saves the remaining tickers and the new selection`() async throws {
         let store = FakeTickerStore(symbols: [], selected: nil)
         let model = try research(store)
+        model.restore()
         await open("VTI", in: model)
         await open("AAPL", in: model)
 
@@ -111,6 +137,7 @@ struct ResearchTickerRestoreTests {
     @Test func `closing the last ticker saves an empty list`() async throws {
         let store = FakeTickerStore(symbols: [], selected: nil)
         let model = try research(store)
+        model.restore()
         await open("VTI", in: model)
 
         try model.close(Ticker("VTI"))
@@ -122,6 +149,7 @@ struct ResearchTickerRestoreTests {
     @Test func `a ticker dropped as unknown is not saved`() async throws {
         let store = FakeTickerStore(symbols: [], selected: nil)
         let model = try research(store)
+        model.restore()
         await open("AAPL", in: model)
 
         await open("ZZZZQ", in: model)
