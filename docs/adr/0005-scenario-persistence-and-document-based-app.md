@@ -1,6 +1,6 @@
 # ADR-0005: Persist Scenarios as Versioned JSON Documents in a Document-Based App
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0021
 **Date:** 2026-10-23
 **Deciders:** Christopher Bartling
 
