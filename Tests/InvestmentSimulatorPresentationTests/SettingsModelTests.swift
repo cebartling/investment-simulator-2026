@@ -130,6 +130,62 @@ struct SettingsModelTests {
         #expect(model.emailText == "you@example.com")
     }
 
+    @Test func `loading finds an email that the launch-time check missed`() {
+        let emails = FakeContactEmail("me@example.com", failsToCheck: true)
+        let model = model(emails)
+        emails.allowChecks()
+
+        model.loadStoredEmail()
+
+        #expect(model.emailText == "me@example.com")
+        #expect(model.hasStoredEmail)
+        #expect(model.emailErrorMessage == nil)
+    }
+
+    @Test func `loading notices an email that was deleted outside the app`() throws {
+        let emails = FakeContactEmail("me@example.com")
+        let model = model(emails)
+        try emails.setContactEmail(nil)
+
+        model.loadStoredEmail()
+
+        #expect(!model.hasStoredEmail)
+        #expect(model.emailText.isEmpty)
+    }
+
+    @Test func `loading twice reads once and doesn't refill a cleared field`() {
+        let emails = FakeContactEmail("me@example.com")
+        let model = model(emails)
+        model.loadStoredEmail()
+        model.emailText = ""
+
+        model.loadStoredEmail()
+
+        #expect(model.emailText.isEmpty)
+        #expect(emails.readCount == 1)
+    }
+
+    @Test func `a failed load is tried again next time`() {
+        let model = model(FakeContactEmail("me@example.com", failsToRead: true))
+
+        model.loadStoredEmail()
+        model.loadStoredEmail()
+
+        #expect(model.emailErrorMessage != nil)
+    }
+
+    @Test func `removing the email keeps an unrelated edit in the field`() {
+        let model = model(FakeContactEmail("me@example.com"))
+        model.loadStoredEmail()
+        model.emailText = "you@example.com"
+
+        model.removeEmail()
+
+        #expect(model.emailText == "you@example.com")
+        #expect(!model.hasStoredEmail)
+        #expect(model.canSaveEmail)
+    }
+
     @Test func `a stored email that can't be read says so`() {
         let model = model(FakeContactEmail("me@example.com", failsToRead: true))
 

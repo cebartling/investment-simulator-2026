@@ -17,6 +17,7 @@ public final class SettingsModel {
 
     /// The address last read from or written to the Keychain this session.
     private var savedEmail: String?
+    private var hasLoadedEmail = false
 
     private let credentials: any CredentialStoring
     private let contactEmails: any ContactEmailStoring
@@ -87,18 +88,23 @@ public final class SettingsModel {
 
     /// Fills the email field with the stored address. The email is the one
     /// secret shown back to the user, so this reads the Keychain item; the
-    /// Settings window calls it when it appears, not at launch. Typed text
-    /// is never overwritten.
+    /// Settings window calls it when it appears, not at launch. It checks
+    /// again whether an email is stored, in case the launch-time check failed
+    /// or the item has since gone. It succeeds once per session, so a field
+    /// the user cleared stays cleared, and it never overwrites typed text.
     public func loadStoredEmail() {
-        guard hasStoredEmail, emailText.isEmpty else {
+        guard !hasLoadedEmail, emailText.isEmpty else {
             return
         }
         do {
-            guard let email = try contactEmails.contactEmail() else {
-                return
+            hasStoredEmail = try contactEmails.hasContactEmail()
+            if hasStoredEmail, let email = try contactEmails.contactEmail() {
+                emailText = email
+                savedEmail = email
+            } else {
+                hasStoredEmail = false
             }
-            emailText = email
-            savedEmail = email
+            hasLoadedEmail = true
             emailErrorMessage = nil
         } catch {
             emailErrorMessage = "Couldn't read the saved email from the Keychain."
@@ -113,6 +119,7 @@ public final class SettingsModel {
             try contactEmails.setContactEmail(trimmedEmail)
             emailText = trimmedEmail
             savedEmail = trimmedEmail
+            hasLoadedEmail = true
             hasStoredEmail = true
             emailErrorMessage = nil
         } catch {
@@ -123,8 +130,11 @@ public final class SettingsModel {
     public func removeEmail() {
         do {
             try contactEmails.setContactEmail(nil)
-            emailText = ""
+            if emailText == savedEmail {
+                emailText = ""
+            }
             savedEmail = nil
+            hasLoadedEmail = true
             hasStoredEmail = false
             emailErrorMessage = nil
         } catch {
