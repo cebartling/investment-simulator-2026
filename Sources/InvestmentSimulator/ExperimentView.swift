@@ -43,6 +43,8 @@ struct ExperimentView: View {
                 saleRows: model.saleRows,
                 limitOrderRows: model.limitOrderRows(at:),
                 showsExpiredAndCancelledOrders: $model.showsExpiredAndCancelledOrders,
+                onBuy: model.beginPurchase,
+                onBuyLimit: model.beginBuyLimitOrder,
                 onSell: model.beginSale,
                 onSellLimit: model.beginLimitOrder,
                 onCancelOrder: { model.cancelOrder(id: $0) },
@@ -51,12 +53,6 @@ struct ExperimentView: View {
                 orderCheckMessage: model.orderCheckMessage,
                 onCheckOrders: { await model.checkLimitOrders() },
             )
-        }
-        .toolbar {
-            Button("Market Buy…", systemImage: "cart.badge.plus", action: model.beginPurchase)
-                .help("Buy shares of a ticker now at the market price")
-            Button("Buy Limit…", systemImage: "arrow.down.to.line", action: model.beginBuyLimitOrder)
-                .help("Place an order to buy shares once the price drops to a limit")
         }
         // On the detail, not beside the New Experiment sheet, so
         // each sheet has its own view.
