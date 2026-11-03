@@ -1,5 +1,6 @@
 import Foundation
 import InvestmentSimulatorCore
+import InvestmentSimulatorPresentation
 import Synchronization
 
 /// Keeps experiments in memory, in the order `list()` promises: newest
@@ -120,4 +121,25 @@ final class FakeExperimentRepository: ExperimentRepository {
         }
         return lhs.id.rawValue.uuidString < rhs.id.rawValue.uuidString
     }
+}
+
+/// A model of `experiment`, stored in a fake repository and loaded, as the
+/// library window shows it.
+@MainActor
+func loadedModel(
+    experiment: Experiment,
+    quotes: any QuoteProviding,
+    dailyPrices: any DailyPriceProviding,
+    clock: @escaping () -> Date = Date.init,
+) async -> MainWindowModel {
+    let id = ExperimentID()
+    let model = MainWindowModel(
+        id: id,
+        repository: FakeExperimentRepository([id: experiment]),
+        quotes: quotes,
+        dailyPrices: dailyPrices,
+        clock: clock,
+    )
+    await model.load()
+    return model
 }

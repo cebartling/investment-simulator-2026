@@ -47,14 +47,13 @@ extension MainWindowModelTests {
         return StoredModel(model: model, repository: repository, id: id)
     }
 
-    @Test func `loading shows the stored experiment without the new experiment sheet`() async throws {
+    @Test func `loading shows the stored experiment`() async throws {
         let stored = try seededExperiment()
         let model = makeStoredModel(stored).model
 
         await model.load()
 
         #expect(model.experiment == stored)
-        #expect(!model.isShowingNewExperiment)
         #expect(model.loadError == nil)
         #expect(!model.isLoading)
     }
@@ -221,7 +220,7 @@ extension MainWindowModelTests {
     }
 
     @Test func `a window without a repository has nothing to settle`() async throws {
-        let model = try makeModel()
+        let model = try await makeModel()
 
         await model.settleSaves()
 

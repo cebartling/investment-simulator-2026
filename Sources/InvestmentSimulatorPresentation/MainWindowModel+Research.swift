@@ -6,7 +6,7 @@ public extension MainWindowModel {
     /// True while any of this window's sheets shows. Research can't start a
     /// purchase then, as that would replace what the user is typing.
     var isShowingSheet: Bool {
-        isShowingNewExperiment || isShowingPurchase || isShowingSale
+        isShowingPurchase || isShowingSale
             || isShowingLimitOrder || isShowingBuyLimitOrder || isShowingDetails
     }
 
@@ -31,7 +31,6 @@ public extension MainWindowModel {
         guard !isShowingSheet, !isLoading, loadError == nil else {
             return
         }
-        selection = .experiment
         showSheet()
     }
 }

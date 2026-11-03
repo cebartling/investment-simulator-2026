@@ -2,16 +2,11 @@ import Foundation
 import InvestmentSimulatorCore
 import Observation
 
-/// Drives one experiment's window: the sidebar's sections, which one is
-/// shown, and the experiment itself.
+/// Drives one stored experiment in the library window (ADR-0021): the
+/// experiment itself, the sheets that change it, and saving each change.
 @Observable
 public final class MainWindowModel {
-    public let sections = NavigationSection.allCases
-    public var selection: NavigationSection? = .experiment
-
     public internal(set) var experiment: Experiment
-    public var isShowingNewExperiment: Bool
-    public let newExperiment: NewExperimentModel
     /// Prices the held shares for the header (PIN-408).
     public let holdingsPrices: HoldingsPricesModel
 
@@ -52,44 +47,21 @@ public final class MainWindowModel {
     private let dailyPrices: any DailyPriceProviding
     let clock: () -> Date
 
-    /// Where a window opened from the library saves (ADR-0021). Nil for a
-    /// document window, which hands each change back to its document.
-    private let storage: ExperimentStorage?
+    /// Where each change is saved (ADR-0021).
+    private let storage: ExperimentStorage
 
-    /// True from the start of a repository-backed window until `load()`
-    /// finishes.
+    /// True from the start until `load()` finishes.
     public private(set) var isLoading = false
     /// Why `load()` failed, or nil.
     public private(set) var loadError: String?
     /// Why the last save failed, or nil after one that worked. The change
     /// stays in the window, so the next change saves it again.
     public var saveError: String? {
-        storage?.saveError
+        storage.saveError
     }
 
-    /// `needsSetup` is true for a new, untitled document, which opens the
-    /// New Experiment sheet. `clock` tells the time experiments are created
-    /// and orders are placed and checked.
-    public init(
-        experiment: Experiment,
-        needsSetup: Bool,
-        quotes: any QuoteProviding,
-        dailyPrices: any DailyPriceProviding,
-        clock: @escaping () -> Date = Date.init,
-    ) {
-        self.experiment = experiment
-        isShowingNewExperiment = needsSetup
-        self.quotes = quotes
-        self.dailyPrices = dailyPrices
-        self.clock = clock
-        newExperiment = NewExperimentModel(clock: clock)
-        holdingsPrices = HoldingsPricesModel(quotes: quotes)
-        storage = nil
-    }
-
-    /// A window on the stored experiment `id`. Call `load()` to read it; each
-    /// later change is saved through `repository`. The library makes the
-    /// experiment, so there's no New Experiment sheet.
+    /// A model of the stored experiment `id`. Call `load()` to read it; each
+    /// later change is saved through `repository`.
     public init(
         id: ExperimentID,
         repository: any ExperimentRepository,
@@ -98,20 +70,15 @@ public final class MainWindowModel {
         clock: @escaping () -> Date = Date.init,
     ) {
         experiment = .empty
-        isShowingNewExperiment = false
         self.quotes = quotes
         self.dailyPrices = dailyPrices
         self.clock = clock
-        newExperiment = NewExperimentModel(clock: clock)
         holdingsPrices = HoldingsPricesModel(quotes: quotes)
         storage = ExperimentStorage(id: id, repository: repository)
         isLoading = true
     }
 
     public func load() async {
-        guard let storage else {
-            return
-        }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -127,7 +94,7 @@ public final class MainWindowModel {
     /// Waits for every save started so far. For tests, and for a window that
     /// is closing.
     public func settleSaves() async {
-        await storage?.settle()
+        await storage.settle()
     }
 
     /// Saves nothing until `load()` has read the stored experiment: until
@@ -137,7 +104,7 @@ public final class MainWindowModel {
         guard !isLoading, loadError == nil else {
             return
         }
-        storage?.save(updated)
+        storage.save(updated)
     }
 
     public var cashBalance: Decimal {
@@ -160,31 +127,12 @@ public final class MainWindowModel {
         max(date, clock())
     }
 
-    /// Returns the created experiment, for the document to save. Returns nil
-    /// while the input is invalid, leaving the sheet open with its
-    /// validation message.
-    @discardableResult
-    public func createExperiment() -> Experiment? {
-        guard let created = newExperiment.create() else {
-            return nil
-        }
-        experiment = created
-        isShowingNewExperiment = false
-        persist(created)
-        return created
-    }
-
-    /// Shows a change the document made itself, such as File › Revert To.
-    public func replaceExperiment(with experiment: Experiment) {
-        self.experiment = experiment
-    }
-
     public func beginPurchase() {
         purchase = PurchaseModel(availableCash: experiment.availableCash(at: clock()), quotes: quotes)
         isShowingPurchase = true
     }
 
-    /// Returns the experiment after the purchase, for the document to save.
+    /// Returns the experiment after the purchase.
     /// Returns nil while the purchase can't be bought, leaving the sheet open.
     @discardableResult
     public func completePurchase() -> Experiment? {
@@ -211,8 +159,7 @@ public final class MainWindowModel {
     }
 
     /// Fetches each ticker's daily bars and fills the orders they reach
-    /// (ADR-0013). Returns the experiment after the fills, for the document
-    /// to save, or nil when nothing filled or the check failed;
+    /// (ADR-0013). Returns the experiment after the fills, or nil when nothing filled or the check failed;
     /// `orderCheckMessage` says which.
     @discardableResult
     public func checkLimitOrders() async -> Experiment? {
@@ -240,8 +187,8 @@ public final class MainWindowModel {
         }
 
         // The bars cover the orders of the experiment checked. If it changed
-        // while they loaded, as after File › Revert To, they may not cover
-        // the orders shown now.
+        // while they loaded, as when an order was cancelled, they may not
+        // cover the orders shown now.
         guard experiment == checked else {
             orderCheckMessage = "The experiment changed during the check. Check again."
             return nil
@@ -270,7 +217,7 @@ public final class MainWindowModel {
     }
 
     /// Returns the experiment with the order `id`, buy or sell, cancelled
-    /// now, for the document to save. Returns nil when no such order is
+    /// now. Returns nil when no such order is
     /// open.
     @discardableResult
     public func cancelOrder(id: UUID) -> Experiment? {
@@ -291,9 +238,8 @@ public final class MainWindowModel {
         isShowingBuyLimitOrder = true
     }
 
-    /// Returns the experiment with the buy order placed, for the document to
-    /// save. Returns nil while the order can't be placed, leaving the sheet
-    /// open.
+    /// Returns the experiment with the buy order placed. Returns nil while the
+    /// order can't be placed, leaving the sheet open.
     @discardableResult
     public func completeBuyLimitOrder() -> Experiment? {
         guard let order = buyLimitOrder?.place(), let updated = try? experiment.placing(order) else {
@@ -319,9 +265,8 @@ public final class MainWindowModel {
         isShowingLimitOrder = true
     }
 
-    /// Returns the experiment with the order placed, for the document to
-    /// save. Returns nil while the order can't be placed, leaving the sheet
-    /// open.
+    /// Returns the experiment with the order placed. Returns nil while the
+    /// order can't be placed, leaving the sheet open.
     @discardableResult
     public func completeLimitOrder() -> Experiment? {
         guard let order = limitOrder?.place(), let updated = try? experiment.placing(order) else {

@@ -5,9 +5,9 @@ import Testing
 
 /// Hiding expired and cancelled orders from the order rows (PIN-406).
 extension MainWindowModelTests {
-    @Test func `order rows hide expired and cancelled orders by default`() throws {
+    @Test func `order rows hide expired and cancelled orders by default`() async throws {
         var now = fixedNow
-        let model = try makeModelWithEveryOrderStatus(clock: { now })
+        let model = try await makeModelWithEveryOrderStatus(clock: { now })
         now = fixedNow.addingTimeInterval(60)
         _ = try #require(model.cancelOrder(id: cancelledOrderID))
 
@@ -18,9 +18,9 @@ extension MainWindowModelTests {
         #expect(rows.map(\.status) == [.filled(sessionDate: "2026-10-28"), .open])
     }
 
-    @Test func `order rows show expired and cancelled orders when asked`() throws {
+    @Test func `order rows show expired and cancelled orders when asked`() async throws {
         var now = fixedNow
-        let model = try makeModelWithEveryOrderStatus(clock: { now })
+        let model = try await makeModelWithEveryOrderStatus(clock: { now })
         now = fixedNow.addingTimeInterval(60)
         _ = try #require(model.cancelOrder(id: cancelledOrderID))
 
@@ -31,18 +31,18 @@ extension MainWindowModelTests {
         #expect(rows.map(\.status) == [.expired, .filled(sessionDate: "2026-10-28"), .open, .cancelled])
     }
 
-    @Test func `an open order leaves the default rows once it expires`() throws {
+    @Test func `an open order leaves the default rows once it expires`() async throws {
         let open = try makeOrder(shares: 2)
-        let model = try makeModelWithPurchase(orders: [open])
+        let model = try await makeModelWithPurchase(orders: [open])
 
         #expect(model.limitOrderRows(at: fixedNow).map(\.id) == [open.id])
         #expect(model.limitOrderRows(at: open.expiresAt).isEmpty)
     }
 
-    @Test func `a cancelled buy order leaves the default rows`() throws {
+    @Test func `a cancelled buy order leaves the default rows`() async throws {
         var now = fixedNow
         let buy = try makeBuyOrder(shares: 4)
-        let model = try makeModelWithBuyOrders([buy], clock: { now })
+        let model = try await makeModelWithBuyOrders([buy], clock: { now })
         now = fixedNow.addingTimeInterval(60)
 
         _ = try #require(model.cancelOrder(id: buy.id))
@@ -53,7 +53,7 @@ extension MainWindowModelTests {
 
     /// A model whose sell orders, once the last is cancelled, are expired,
     /// filled, open (`fixedOrderID`) and cancelled, placed in that order.
-    private func makeModelWithEveryOrderStatus(clock: @escaping () -> Date) throws -> MainWindowModel {
+    private func makeModelWithEveryOrderStatus(clock: @escaping () -> Date) async throws -> MainWindowModel {
         let expired = try makeOrder(
             id: expiredOrderID,
             shares: 1,
@@ -63,7 +63,7 @@ extension MainWindowModelTests {
             .filled(on: "2026-10-28")
         let open = try makeOrder(shares: 1, placedAt: fixedNow.addingTimeInterval(-1))
         let cancelled = try makeOrder(id: cancelledOrderID, shares: 1)
-        return try makeModelWithPurchase(orders: [expired, filled, open, cancelled], clock: clock)
+        return try await makeModelWithPurchase(orders: [expired, filled, open, cancelled], clock: clock)
     }
 }
 
