@@ -1,7 +1,7 @@
 import Foundation
 
 /// A USD amount. Wraps `Decimal` so money never passes through `Double`
-/// (ADR-0002). Not `Codable`: file formats belong to the persistence adapter.
+/// (ADR-0002). Not `Codable`: storage formats belong to the persistence adapter.
 public struct Money: Sendable, Hashable {
     public static let zero = Money(0)
 

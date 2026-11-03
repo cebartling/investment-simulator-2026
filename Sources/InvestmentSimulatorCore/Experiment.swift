@@ -1,9 +1,9 @@
 import Foundation
 
-/// One investment experiment, stored in the library database (ADR-0021). It starts with a cash balance, buys
-/// investments from it, sells them at a quote, and places limit orders to
-/// sell them, whose fills add to the cash, and to buy more, whose fills
-/// become purchases.
+/// One investment experiment, stored in the library database (ADR-0021).
+/// It starts with a cash balance, buys investments from it, sells them at a
+/// quote, and places limit orders to sell them, whose fills add to the cash,
+/// and to buy more, whose fills become purchases.
 public struct Experiment: Sendable, Hashable {
     /// A new experiment with no cash yet.
     public static let empty = Experiment(

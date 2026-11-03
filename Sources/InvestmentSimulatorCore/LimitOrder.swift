@@ -20,7 +20,7 @@ public struct LimitOrder: Sendable, Hashable, Identifiable {
     public let cancelledAt: Date?
 
     /// An order with a known expiry, fill and cancellation, such as one read
-    /// from a file.
+    /// from storage.
     /// New orders come from `placed(id:purchaseID:shares:limitPrice:at:)`.
     public init(
         id: UUID,
