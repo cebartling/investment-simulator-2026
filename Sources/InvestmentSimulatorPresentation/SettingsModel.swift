@@ -6,16 +6,23 @@ import Observation
 /// email. The API key is never read back, only whether there is one, because
 /// reading a secret can make macOS ask for Keychain access. The email is read
 /// once, off the main actor, by `loadStoredEmail()`, so the field can show it.
+/// Every Keychain write runs off the main actor as well, because macOS can
+/// hold one behind an access prompt; the matching `isSaving…` flag is true
+/// meanwhile.
 @Observable
 public final class SettingsModel {
     public var keyText = ""
     public private(set) var hasStoredKey: Bool
     public private(set) var errorMessage: String?
+    /// True while `save()` or `removeKey()` waits on the Keychain.
+    public private(set) var isSavingKey = false
     public var emailText = ""
     public private(set) var hasStoredEmail: Bool
     public private(set) var emailErrorMessage: String?
     /// True while `loadStoredEmail()` waits on the Keychain.
     public private(set) var isLoadingEmail = false
+    /// True while `saveEmail()` or `removeEmail()` waits on the Keychain.
+    public private(set) var isSavingEmail = false
 
     /// The address last read from or written to the Keychain this session.
     private var savedEmail: String?
@@ -40,16 +47,20 @@ public final class SettingsModel {
         keyText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// False while a write is running, so a second tap can't start another.
     public var canSave: Bool {
-        !trimmedKey.isEmpty
+        !trimmedKey.isEmpty && !isSavingKey
     }
 
-    public func save() {
+    public func save() async {
         guard canSave else {
             return
         }
+        isSavingKey = true
+        defer { isSavingKey = false }
+        let key = trimmedKey
         do {
-            try credentials.setAPIKey(trimmedKey)
+            try await Self.writeKey(key, to: credentials)
             keyText = ""
             hasStoredKey = true
             errorMessage = nil
@@ -58,14 +69,26 @@ public final class SettingsModel {
         }
     }
 
-    public func removeKey() {
+    public func removeKey() async {
+        guard !isSavingKey else {
+            return
+        }
+        isSavingKey = true
+        defer { isSavingKey = false }
         do {
-            try credentials.setAPIKey(nil)
+            try await Self.writeKey(nil, to: credentials)
             hasStoredKey = false
             errorMessage = nil
         } catch {
             errorMessage = "Couldn't remove the API key from the Keychain."
         }
+    }
+
+    /// Writes off the main actor, because macOS can hold a write behind a
+    /// Keychain access prompt.
+    @concurrent
+    private nonisolated static func writeKey(_ key: String?, to store: any CredentialStoring) async throws {
+        try store.setAPIKey(key)
     }
 
     private var trimmedEmail: String {
@@ -79,9 +102,10 @@ public final class SettingsModel {
         trimmedEmail.allSatisfy(\.isASCII) && trimmedEmail.wholeMatch(of: /[^@\s]+@[^@\s]+\.[^@\s]+/) != nil
     }
 
-    /// False while the field still holds what is already stored.
+    /// False while the field still holds what is already stored, or a write
+    /// is running.
     public var canSaveEmail: Bool {
-        emailLooksValid && trimmedEmail != savedEmail
+        emailLooksValid && trimmedEmail != savedEmail && !isSavingEmail
     }
 
     public var emailMessage: String? {
@@ -128,14 +152,17 @@ public final class SettingsModel {
         try store.hasContactEmail() ? try store.contactEmail() : nil
     }
 
-    public func saveEmail() {
+    public func saveEmail() async {
         guard canSaveEmail else {
             return
         }
+        isSavingEmail = true
+        defer { isSavingEmail = false }
+        let email = trimmedEmail
         do {
-            try contactEmails.setContactEmail(trimmedEmail)
-            emailText = trimmedEmail
-            savedEmail = trimmedEmail
+            try await Self.writeEmail(email, to: contactEmails)
+            emailText = email
+            savedEmail = email
             hasLoadedEmail = true
             hasStoredEmail = true
             emailErrorMessage = nil
@@ -144,9 +171,14 @@ public final class SettingsModel {
         }
     }
 
-    public func removeEmail() {
+    public func removeEmail() async {
+        guard !isSavingEmail else {
+            return
+        }
+        isSavingEmail = true
+        defer { isSavingEmail = false }
         do {
-            try contactEmails.setContactEmail(nil)
+            try await Self.writeEmail(nil, to: contactEmails)
             if emailText == savedEmail {
                 emailText = ""
             }
@@ -157,5 +189,11 @@ public final class SettingsModel {
         } catch {
             emailErrorMessage = "Couldn't remove the email from the Keychain."
         }
+    }
+
+    /// Writes off the main actor, for the same reason as `writeKey`.
+    @concurrent
+    private nonisolated static func writeEmail(_ email: String?, to store: any ContactEmailStoring) async throws {
+        try store.setContactEmail(email)
     }
 }
