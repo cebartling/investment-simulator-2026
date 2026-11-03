@@ -89,7 +89,7 @@ struct BuyLimitOrderReplayTests {
         #expect(experiment.sessionsToReplay(at: Self.now).isEmpty)
     }
 
-    @Test func `a filled buy order reopens from its file`() throws {
+    @Test func `a filled buy order reopens from storage`() throws {
         let experiment = try experimentWithOrder(shares: 4, limitPrice: "9")
 
         let replayed = try experiment.fillingLimitOrders(from: bars(("2026-10-21", "8")), at: Self.now)

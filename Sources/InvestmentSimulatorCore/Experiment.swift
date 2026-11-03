@@ -31,7 +31,7 @@ public struct Experiment: Sendable, Hashable {
     /// Market sales, in the order they were made (ADR-0016). Filled sell
     /// orders are in `limitOrders`, not here.
     public let sales: [Sale]
-    /// What the user calls the experiment, or nil to go by its file's name.
+    /// What the user calls the experiment, or nil to show it as "Untitled".
     public let name: String?
     public let notes: String?
     /// When the experiment was created, or nil when an older record
