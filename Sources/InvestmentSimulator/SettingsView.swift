@@ -9,6 +9,13 @@ struct SettingsView: View {
     private static let maskedKey = String(repeating: "•", count: 16)
     private static let apiKeysPage = URL(string: "https://www.equibles.com/dashboard/apikeys")!
 
+    private var emailStatus: String {
+        if model.isLoadingEmail {
+            return "Reading Keychain…"
+        }
+        return model.hasStoredEmail ? "Email saved" : "No email"
+    }
+
     var body: some View {
         Form {
             Section {
@@ -36,14 +43,15 @@ struct SettingsView: View {
                 }
             }
             Section {
-                LabeledContent("Status", value: model.hasStoredEmail ? "Email saved" : "No email")
+                LabeledContent("Status", value: emailStatus)
                 TextField("Email", text: $model.emailText, prompt: Text("you@example.com"))
                     .onSubmit(model.saveEmail)
+                    .disabled(model.isLoadingEmail)
                 HStack {
                     Button("Save Email", action: model.saveEmail)
-                        .disabled(!model.canSaveEmail)
+                        .disabled(!model.canSaveEmail || model.isLoadingEmail)
                     Button("Remove Email", role: .destructive, action: model.removeEmail)
-                        .disabled(!model.hasStoredEmail)
+                        .disabled(!model.hasStoredEmail || model.isLoadingEmail)
                 }
                 if let message = model.emailMessage ?? model.emailErrorMessage {
                     Text(message)
@@ -60,7 +68,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .task { model.loadStoredEmail() }
+        .task { await model.loadStoredEmail() }
         // A grouped form fills its window; size the window to the content.
         .frame(width: 460, height: 520)
     }

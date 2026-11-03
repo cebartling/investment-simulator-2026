@@ -5,7 +5,7 @@ import Observation
 /// Drives the Settings window: the Equibles API key and the SEC contact
 /// email. The API key is never read back, only whether there is one, because
 /// reading a secret can make macOS ask for Keychain access. The email is read
-/// once, by `loadStoredEmail()`, so the field can show it.
+/// once, off the main actor, by `loadStoredEmail()`, so the field can show it.
 @Observable
 public final class SettingsModel {
     public var keyText = ""
@@ -14,6 +14,8 @@ public final class SettingsModel {
     public var emailText = ""
     public private(set) var hasStoredEmail: Bool
     public private(set) var emailErrorMessage: String?
+    /// True while `loadStoredEmail()` waits on the Keychain.
+    public private(set) var isLoadingEmail = false
 
     /// The address last read from or written to the Keychain this session.
     private var savedEmail: String?
@@ -88,27 +90,41 @@ public final class SettingsModel {
 
     /// Fills the email field with the stored address. The email is the one
     /// secret shown back to the user, so this reads the Keychain item; the
-    /// Settings window calls it when it appears, not at launch. It checks
-    /// again whether an email is stored, in case the launch-time check failed
-    /// or the item has since gone. It succeeds once per session, so a field
-    /// the user cleared stays cleared, and it never overwrites typed text.
-    public func loadStoredEmail() {
-        guard !hasLoadedEmail, emailText.isEmpty else {
+    /// Settings window calls it when it appears, not at launch. The read runs
+    /// off the main actor, because macOS can hold it behind a Keychain access
+    /// prompt, and `isLoadingEmail` is true meanwhile. It checks again whether
+    /// an email is stored, in case the launch-time check failed or the item
+    /// has since gone. It succeeds once per session, so a field the user
+    /// cleared stays cleared, and it never overwrites typed text, including
+    /// text typed while it waits.
+    public func loadStoredEmail() async {
+        guard !hasLoadedEmail, !isLoadingEmail, emailText.isEmpty else {
             return
         }
+        isLoadingEmail = true
+        defer { isLoadingEmail = false }
         do {
-            hasStoredEmail = try contactEmails.hasContactEmail()
-            if hasStoredEmail, let email = try contactEmails.contactEmail() {
-                emailText = email
-                savedEmail = email
-            } else {
-                hasStoredEmail = false
+            let stored = try await Self.readStoredEmail(from: contactEmails)
+            guard emailText.isEmpty else {
+                return
+            }
+            hasStoredEmail = stored != nil
+            if let stored {
+                emailText = stored
+                savedEmail = stored
             }
             hasLoadedEmail = true
             emailErrorMessage = nil
         } catch {
             emailErrorMessage = "Couldn't read the saved email from the Keychain."
         }
+    }
+
+    /// Reads the email only when one is stored, so a missing item costs no
+    /// Keychain access prompt.
+    @concurrent
+    private nonisolated static func readStoredEmail(from store: any ContactEmailStoring) async throws -> String? {
+        try store.hasContactEmail() ? try store.contactEmail() : nil
     }
 
     public func saveEmail() {

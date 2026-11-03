@@ -1,5 +1,6 @@
 /// Driven port for the contact email SEC EDGAR requires (ADR-0019).
-/// Synchronous: the Keychain answers immediately.
+/// Synchronous, and a read can wait on a Keychain access prompt, so a
+/// caller on the main actor must run it elsewhere.
 public protocol ContactEmailStoring: Sendable {
     func contactEmail() throws -> String?
     /// Whether an email is stored, without reading it.

@@ -1,3 +1,4 @@
+import Foundation
 import InvestmentSimulatorCore
 import Synchronization
 
@@ -51,9 +52,13 @@ final class FakeContactEmail: ContactEmailStoring {
     private let failsToCheck: Mutex<Bool>
     private let failsToRead: Bool
     private let reads = Mutex(0)
+    private let readOnMain = Mutex(false)
+    private let gate = DispatchSemaphore(value: 0)
+    private let isGated: Bool
 
     init(
         _ email: String? = nil,
+        gated: Bool = false,
         failsToSave: Bool = false,
         failsToCheck: Bool = false,
         failsToRead: Bool = false,
@@ -62,6 +67,17 @@ final class FakeContactEmail: ContactEmailStoring {
         self.failsToSave = failsToSave
         self.failsToCheck = Mutex(failsToCheck)
         self.failsToRead = failsToRead
+        isGated = gated
+    }
+
+    /// Whether any read of the email itself ran on the main thread.
+    var readOnMainThread: Bool {
+        readOnMain.withLock { $0 }
+    }
+
+    /// Lets a gated read finish, as when the user answers the Keychain prompt.
+    func releaseRead() {
+        gate.signal()
     }
 
     /// How many times the email itself was read.
@@ -76,6 +92,12 @@ final class FakeContactEmail: ContactEmailStoring {
 
     func contactEmail() throws -> String? {
         reads.withLock { $0 += 1 }
+        if Thread.isMainThread {
+            readOnMain.withLock { $0 = true }
+        }
+        if isGated {
+            gate.wait()
+        }
         if failsToRead {
             throw StoreError()
         }
