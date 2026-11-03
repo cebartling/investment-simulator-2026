@@ -270,4 +270,33 @@ struct LibraryWindowModelTests {
 
         #expect(!model.experimentModel(for: id).isShowingPurchase)
     }
+
+    @Test func `a second create while one is running stores nothing more`() async throws {
+        let (model, repository) = makeModel()
+        model.beginNewExperiment()
+        let input = try #require(model.newExperiment)
+        input.cashBalance = 100
+
+        async let first: Void = model.create(input)
+        async let second: Void = model.create(input)
+        _ = await (first, second)
+
+        #expect(repository.savedCount == 1)
+    }
+
+    @Test func `a create whose list reload fails still closes the sheet, so a retry can't duplicate it`() async throws {
+        let (model, repository) = makeModel()
+        model.beginNewExperiment()
+        let input = try #require(model.newExperiment)
+        input.cashBalance = 100
+        // The save goes through; the reload that follows fails.
+        repository.failNext(with: ExperimentRepositoryError.notFound(ExperimentID()), afterCalls: 1)
+
+        await model.create(input)
+
+        #expect(repository.savedCount == 1)
+        #expect(model.newExperiment == nil)
+        #expect(model.library.errorMessage != nil)
+        #expect(model.destination == model.library.selection.map { .experiment($0) })
+    }
 }

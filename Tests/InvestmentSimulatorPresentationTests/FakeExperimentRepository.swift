@@ -4,11 +4,13 @@ import Synchronization
 
 /// Keeps experiments in memory, in the order `list()` promises: newest
 /// `createdAt` first, then name, then id. `failNext(with:)` makes the next
-/// call throw, whichever it is.
+/// call throw, whichever it is; `afterCalls` lets that many calls through
+/// first.
 final class FakeExperimentRepository: ExperimentRepository {
     private struct State {
         var experiments: [ExperimentID: Experiment] = [:]
         var failure: (any Error)?
+        var callsBeforeFailure = 0
         var savedCount = 0
     }
 
@@ -18,8 +20,11 @@ final class FakeExperimentRepository: ExperimentRepository {
         state.withLock { $0.experiments = experiments }
     }
 
-    func failNext(with error: any Error) {
-        state.withLock { $0.failure = error }
+    func failNext(with error: any Error, afterCalls: Int = 0) {
+        state.withLock {
+            $0.failure = error
+            $0.callsBeforeFailure = afterCalls
+        }
     }
 
     var savedCount: Int {
@@ -90,6 +95,10 @@ final class FakeExperimentRepository: ExperimentRepository {
 
     private static func throwScriptedFailure(_ state: inout State) throws {
         if let failure = state.failure {
+            if state.callsBeforeFailure > 0 {
+                state.callsBeforeFailure -= 1
+                return
+            }
             state.failure = nil
             throw failure
         }

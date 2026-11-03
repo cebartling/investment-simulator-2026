@@ -18,6 +18,7 @@ public final class LibraryWindowModel {
     private var experimentModels: [ExperimentID: MainWindowModel] = [:]
     private var loads: [ExperimentID: Task<Void, Never>] = [:]
     private var showsResearch = false
+    private var isCreating = false
 
     /// The New Experiment sheet's input while the sheet shows, else nil.
     public private(set) var newExperiment: NewExperimentModel?
@@ -88,14 +89,16 @@ public final class LibraryWindowModel {
     }
 
     /// Creates the experiment `input` describes and shows it. Does nothing
-    /// while the cash is invalid; a failure keeps the sheet open, with
-    /// `library.errorMessage` saying why.
+    /// while the cash is invalid or another create is running. A failure to
+    /// store it keeps the sheet open, with `library.errorMessage` saying
+    /// why; once it is stored the sheet closes whatever the reload does.
     public func create(_ input: NewExperimentModel) async {
-        guard let started = input.create() else {
+        guard !isCreating, let started = input.create() else {
             return
         }
-        await library.create(name: input.name, cashBalance: started.cashBalance)
-        if library.errorMessage == nil {
+        isCreating = true
+        defer { isCreating = false }
+        if await library.create(name: input.name, cashBalance: started.cashBalance) != nil {
             showsResearch = false
             newExperiment = nil
         }
