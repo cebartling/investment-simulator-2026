@@ -2,23 +2,11 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// The Research window's sidebar: the open tickers, which the matches for the
-/// header's search text replace while there are any.
+/// The Research window's sidebar: the open tickers.
 struct ResearchSidebar: View {
     @Bindable var model: ResearchWindowModel
 
     var body: some View {
-        Group {
-            if model.searchResults.isEmpty {
-                openTickers
-            } else {
-                searchResults
-            }
-        }
-        .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-    }
-
-    private var openTickers: some View {
         List(model.tabs, selection: $model.selection) { tab in
             HStack {
                 Text(tab.ticker.symbol)
@@ -42,10 +30,15 @@ struct ResearchSidebar: View {
             }
         }
     }
+}
 
-    /// Clicking a match opens it. Return in the field opens the top match
-    /// only when the text matches no symbol.
-    private var searchResults: some View {
+/// The matches for the header's search text, in the detail pane where company
+/// names have room. Clicking a match opens it. Return in the field opens the
+/// top match only when the text matches no symbol.
+struct ResearchSearchResults: View {
+    let model: ResearchWindowModel
+
+    var body: some View {
         List(model.searchResults, id: \.ticker) { security in
             Button {
                 model.open(security.ticker)
@@ -57,7 +50,7 @@ struct ResearchSidebar: View {
     }
 }
 
-/// One match for the text in the Research sidebar's field.
+/// One match for the text in the Research search header's field.
 struct ResearchSearchResultRow: View {
     let security: ListedSecurity
 

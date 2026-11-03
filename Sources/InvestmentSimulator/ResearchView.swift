@@ -3,9 +3,9 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// Research in the library window's detail (ADR-0019, ADR-0021): open
-/// tickers in a list, in the order opened, and the selected ticker's
-/// research beside it.
+/// Research in the library window's detail (ADR-0019, ADR-0021): a search
+/// header, then open tickers beside the selected ticker's research, or the
+/// search matches while there are any.
 struct ResearchView: View {
     @Bindable var model: ResearchWindowModel
     let library: LibraryWindowModel
@@ -15,20 +15,23 @@ struct ResearchView: View {
         VStack(spacing: 0) {
             ResearchSearchHeader(model: model)
             Divider()
-            HSplitView {
-                VStack(spacing: 0) {
+            HStack(spacing: 0) { // not an HSplitView: no draggable divider
+                if !model.tabs.isEmpty {
                     ResearchSidebar(model: model)
+                        .frame(width: 220)
                 }
-                .frame(minWidth: 180, idealWidth: 220, maxWidth: 300)
                 detail
             }
+            .frame(maxHeight: .infinity) // else the stack centres in the window
         }
         // The saved tickers load when Research is first shown, not at launch.
         .task { model.restore() }
     }
 
     @ViewBuilder private var detail: some View {
-        if let tab = model.selectedTab {
+        if !model.searchResults.isEmpty {
+            ResearchSearchResults(model: model)
+        } else if let tab = model.selectedTab {
             ResearchTickerView(
                 tab: tab,
                 library: library,
@@ -325,62 +328,6 @@ struct ResearchDividendsView: View {
                     Text(dates.day(ofSession: dividend.exDate))
                     Text(figures.dividendAmount(dividend.amountPerShare, currency: dividend.currency))
                         .monospaced()
-                }
-            }
-        }
-    }
-}
-
-/// The company's own releases, each opening in the browser.
-struct ResearchPressReleasesView: View {
-    let releases: [PressRelease]
-
-    var body: some View {
-        let dates = PriceDateFormatter()
-        VStack(alignment: .leading, spacing: 8) {
-            // By position: two releases can match in every field.
-            ForEach(Array(releases.enumerated()), id: \.offset) { _, release in
-                VStack(alignment: .leading, spacing: 2) {
-                    // Link's title initializer centers a title that wraps,
-                    // whatever the environment's alignment.
-                    Link(destination: release.url) {
-                        Text(release.title)
-                            .multilineTextAlignment(.leading)
-                    }
-                    Text(dates.marketDay(of: release.publishedAt))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if let summary = release.summary {
-                        Text(summary)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Recent filings, each opening in the browser on the page `link` gives:
-/// sec.gov once EDGAR has listed the ticker, otherwise Equibles.
-struct ResearchFilingsView: View {
-    let filings: [Filing]
-    let link: (Filing) -> URL
-
-    var body: some View {
-        let dates = PriceDateFormatter()
-        Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 4) {
-            GridRow {
-                Text("Form")
-                Text("Filed")
-                Text("Reporting For")
-            }
-            .foregroundStyle(.secondary)
-            // By position: two filings can match in every field.
-            ForEach(Array(filings.enumerated()), id: \.offset) { _, filing in
-                GridRow {
-                    Link(filing.form, destination: link(filing))
-                    Text(dates.day(ofSession: filing.filedDate))
-                    Text(filing.reportingForDate.map(dates.day(ofSession:)) ?? ResearchFigureFormatter.missing)
                 }
             }
         }
