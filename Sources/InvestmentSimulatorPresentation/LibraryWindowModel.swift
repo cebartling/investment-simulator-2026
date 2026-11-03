@@ -101,7 +101,28 @@ public final class LibraryWindowModel {
         }
     }
 
+    /// Renames the experiment, and its model when it has one: saving writes
+    /// the whole experiment, so a model left with the old name would undo
+    /// the rename at its next change.
+    public func rename(_ id: ExperimentID, to name: String?) async {
+        await experimentModels[id]?.settleSaves()
+        await library.rename(id, to: name)
+        if library.errorMessage == nil, let summary = library.summaries.first(where: { $0.id == id }) {
+            experimentModels[id]?.applyName(summary.name)
+        }
+    }
+
+    /// Lists the library again once the saves of experiment `id` have
+    /// landed, for a change made in its own window, like Edit Details,
+    /// that the list shows.
+    public func refreshSummaries(after id: ExperimentID) async {
+        await experimentModels[id]?.settleSaves()
+        await library.load()
+    }
+
     public func duplicate(_ id: ExperimentID) async {
+        // The copy is made from what is stored, so wait for the latest changes.
+        await experimentModels[id]?.settleSaves()
         await library.duplicate(id)
         showSelectionIfSucceeded()
     }
@@ -109,6 +130,10 @@ public final class LibraryWindowModel {
     /// Deletes the experiment waiting for confirmation, and drops its model.
     public func confirmDelete() async {
         let deleted = library.pendingDeletion?.id
+        // A save still running would store the experiment again.
+        if let deleted {
+            await experimentModels[deleted]?.settleSaves()
+        }
         await library.confirmDelete()
         if let deleted, library.errorMessage == nil {
             experimentModels[deleted] = nil

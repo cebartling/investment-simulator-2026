@@ -55,6 +55,11 @@ public extension MainWindowModel {
         return experiment
     }
 
+    /// Takes a name changed in the library, without saving it again.
+    internal func applyName(_ name: String?) {
+        experiment = experiment.editingDetails(name: name, notes: experiment.notes)
+    }
+
     func cancelEditingDetails() {
         isShowingDetails = false
         details = nil

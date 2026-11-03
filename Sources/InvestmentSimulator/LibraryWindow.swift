@@ -34,7 +34,7 @@ struct LibraryWindow: View {
             Button("Rename") {
                 if let target = renaming {
                     let name = renameText
-                    Task { await model.library.rename(target.id, to: name) }
+                    Task { await model.rename(target.id, to: name) }
                 }
             }
             Button("Cancel", role: .cancel) {}
@@ -101,6 +101,11 @@ struct LibraryWindow: View {
             ResearchView(model: research, library: model)
         case let .experiment(id):
             ExperimentView(model: model.experimentModel(for: id))
+                // A fresh view per experiment, so its footer prices that experiment's holdings.
+                .id(id)
+                .onChange(of: model.experimentModel(for: id).experiment.name) {
+                    Task { await model.refreshSummaries(after: id) }
+                }
                 // The model is cached, so a task per experiment reads each once.
                 .task(id: id) { await model.ensureLoaded(id) }
         case nil:

@@ -216,4 +216,58 @@ struct LibraryWindowModelTests {
 
         #expect(model.newExperiment == nil)
     }
+
+    @Test func `renaming a loaded experiment updates its model, so the next save keeps the new name`() async {
+        let id = ExperimentID()
+        let (model, repository) = makeModel([id: experiment(named: "Old", cash: 500)])
+        await model.library.load()
+        await model.ensureLoaded(id)
+
+        await model.rename(id, to: "New")
+        let loaded = model.experimentModel(for: id)
+        loaded.beginEditingDetails()
+        loaded.details?.notes = "Some notes"
+        loaded.completeEditingDetails()
+        await loaded.settleSaves()
+
+        #expect(loaded.experiment.name == "New")
+        #expect(repository.stored(id)?.name == "New")
+        #expect(model.library.summaries.first?.name == "New")
+    }
+
+    @Test func `renaming an experiment that was never opened still renames it`() async {
+        let id = ExperimentID()
+        let (model, repository) = makeModel([id: experiment(named: "Old")])
+        await model.library.load()
+
+        await model.rename(id, to: "New")
+
+        #expect(repository.stored(id)?.name == "New")
+        #expect(model.library.summaries.first?.name == "New")
+    }
+
+    @Test func `editing details refreshes the library list`() async {
+        let id = ExperimentID()
+        let (model, _) = makeModel([id: experiment(named: "Old", cash: 500)])
+        await model.library.load()
+        await model.ensureLoaded(id)
+        let loaded = model.experimentModel(for: id)
+        loaded.beginEditingDetails()
+        loaded.details?.name = "Edited"
+        loaded.completeEditingDetails()
+
+        await model.refreshSummaries(after: id)
+
+        #expect(model.library.summaries.first?.name == "Edited")
+    }
+
+    @Test func `a purchase from Research does not queue a sheet on an experiment that failed to load`() async throws {
+        let id = ExperimentID()
+        let (model, repository) = makeModel([id: experiment(named: "Index funds", cash: 500)])
+        repository.failNext(with: ExperimentRepositoryError.notFound(id))
+
+        try await model.beginPurchase(of: Ticker("VTI"), in: id)
+
+        #expect(!model.experimentModel(for: id).isShowingPurchase)
+    }
 }
