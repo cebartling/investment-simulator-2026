@@ -18,12 +18,12 @@ struct SettingsModelTests {
         #expect(credentials.keyReadCount == 0)
     }
 
-    @Test func `saving stores the trimmed key and clears the field`() throws {
+    @Test func `saving stores the trimmed key and clears the field`() async throws {
         let credentials = FakeCredentials()
         let model = settings(credentials)
         model.keyText = "  eq_new \n"
 
-        model.save()
+        await model.save()
 
         #expect(try credentials.apiKey() == "eq_new")
         #expect(model.keyText.isEmpty)
@@ -38,21 +38,21 @@ struct SettingsModelTests {
         #expect(!model.canSave)
     }
 
-    @Test func `removing the key forgets it`() throws {
+    @Test func `removing the key forgets it`() async throws {
         let credentials = FakeCredentials("eq_old")
         let model = settings(credentials)
 
-        model.removeKey()
+        await model.removeKey()
 
         #expect(try credentials.apiKey() == nil)
         #expect(!model.hasStoredKey)
     }
 
-    @Test func `a failed save explains itself and keeps the field`() {
+    @Test func `a failed save explains itself and keeps the field`() async {
         let model = settings(FakeCredentials(failsToSave: true))
         model.keyText = "eq_new"
 
-        model.save()
+        await model.save()
 
         #expect(model.errorMessage == "Couldn't save the API key in the Keychain.")
         #expect(model.keyText == "eq_new")
@@ -74,12 +74,12 @@ struct SettingsModelTests {
         #expect(model.emailErrorMessage == "Couldn't check the Keychain for a saved email.")
     }
 
-    @Test func `saving stores the trimmed email and keeps it in the field`() throws {
+    @Test func `saving stores the trimmed email and keeps it in the field`() async throws {
         let emails = FakeContactEmail()
         let model = model(emails)
         model.emailText = "  me@example.com \n"
 
-        model.saveEmail()
+        await model.saveEmail()
 
         #expect(try emails.contactEmail() == "me@example.com")
         #expect(model.emailText == "me@example.com")
@@ -87,10 +87,10 @@ struct SettingsModelTests {
         #expect(model.emailErrorMessage == nil)
     }
 
-    @Test func `a saved email can't be saved again until it changes`() {
+    @Test func `a saved email can't be saved again until it changes`() async {
         let model = model()
         model.emailText = "me@example.com"
-        model.saveEmail()
+        await model.saveEmail()
 
         #expect(!model.canSaveEmail)
         #expect(model.emailMessage == nil)
@@ -179,7 +179,7 @@ struct SettingsModelTests {
         await model.loadStoredEmail()
         model.emailText = "you@example.com"
 
-        model.removeEmail()
+        await model.removeEmail()
 
         #expect(model.emailText == "you@example.com")
         #expect(!model.hasStoredEmail)
@@ -199,12 +199,12 @@ struct SettingsModelTests {
     @Test(arguments: [
         "", "   ", "me", "me@", "@example.com", "me@example", "me example@test.com", "me@a@b.com", "josé@example.com",
     ])
-    func `text that doesn't look like an email can't be saved`(text: String) throws {
+    func `text that doesn't look like an email can't be saved`(text: String) async throws {
         let emails = FakeContactEmail()
         let model = model(emails)
         model.emailText = text
 
-        model.saveEmail()
+        await model.saveEmail()
 
         #expect(!model.canSaveEmail)
         #expect(try emails.contactEmail() == nil)
@@ -233,7 +233,7 @@ struct SettingsModelTests {
         let model = model(emails)
         await model.loadStoredEmail()
 
-        model.removeEmail()
+        await model.removeEmail()
 
         #expect(try emails.contactEmail() == nil)
         #expect(!model.hasStoredEmail)
@@ -243,27 +243,27 @@ struct SettingsModelTests {
     @Test func `the same email can be saved again after it was removed`() async {
         let model = model(FakeContactEmail("me@example.com"))
         await model.loadStoredEmail()
-        model.removeEmail()
+        await model.removeEmail()
         model.emailText = "me@example.com"
 
         #expect(model.canSaveEmail)
     }
 
-    @Test func `a failed email save explains itself and keeps the field`() {
+    @Test func `a failed email save explains itself and keeps the field`() async {
         let model = model(FakeContactEmail(failsToSave: true))
         model.emailText = "me@example.com"
 
-        model.saveEmail()
+        await model.saveEmail()
 
         #expect(model.emailErrorMessage == "Couldn't save the email in the Keychain.")
         #expect(model.emailText == "me@example.com")
         #expect(!model.hasStoredEmail)
     }
 
-    @Test func `a failed email removal explains itself`() {
+    @Test func `a failed email removal explains itself`() async {
         let model = model(FakeContactEmail("me@example.com", failsToSave: true))
 
-        model.removeEmail()
+        await model.removeEmail()
 
         #expect(model.emailErrorMessage == "Couldn't remove the email from the Keychain.")
         #expect(model.hasStoredEmail)

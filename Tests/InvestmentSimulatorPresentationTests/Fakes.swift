@@ -344,40 +344,6 @@ func makeDailyBar(session: String, high: Decimal) throws -> DailyBar {
     try DailyBar(sessionDate: session, open: 1, high: high, low: 1, close: 1)
 }
 
-final class FakeCredentials: CredentialStoring {
-    struct StoreError: Error {}
-
-    private let key: Mutex<String?>
-    private let failsToSave: Bool
-    private let reads = Mutex(0)
-
-    init(_ key: String? = nil, failsToSave: Bool = false) {
-        self.key = Mutex(key)
-        self.failsToSave = failsToSave
-    }
-
-    /// How many times the secret itself was read.
-    var keyReadCount: Int {
-        reads.withLock { $0 }
-    }
-
-    func apiKey() throws -> String? {
-        reads.withLock { $0 += 1 }
-        return key.withLock { $0 }
-    }
-
-    func hasAPIKey() throws -> Bool {
-        key.withLock { $0 != nil }
-    }
-
-    func setAPIKey(_ newKey: String?) throws {
-        if failsToSave {
-            throw StoreError()
-        }
-        key.withLock { $0 = newKey }
-    }
-}
-
 func makeQuote(price: String, source: PriceSource = .liveQuote(delayed: true)) throws -> Quote {
     try Quote(
         ticker: Ticker("VTI"),

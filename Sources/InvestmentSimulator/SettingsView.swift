@@ -13,7 +13,14 @@ struct SettingsView: View {
         if model.isLoadingEmail {
             return "Reading Keychain…"
         }
+        if model.isSavingEmail {
+            return "Updating Keychain…"
+        }
         return model.hasStoredEmail ? "Email saved" : "No email"
+    }
+
+    private var emailBusy: Bool {
+        model.isLoadingEmail || model.isSavingEmail
     }
 
     var body: some View {
@@ -22,12 +29,13 @@ struct SettingsView: View {
                 LabeledContent("Status", value: model.hasStoredKey ? "API key saved" : "No API key")
                 // The key is never read back; dots stand in for it while one is stored.
                 SecureField("API key", text: $model.keyText, prompt: Text(model.hasStoredKey ? Self.maskedKey : "eq_…"))
-                    .onSubmit(model.save)
+                    .onSubmit { Task { await model.save() } }
+                    .disabled(model.isSavingKey)
                 HStack {
-                    Button("Save Key", action: model.save)
-                        .disabled(!model.canSave)
-                    Button("Remove Key", role: .destructive, action: model.removeKey)
-                        .disabled(!model.hasStoredKey)
+                    Button("Save Key") { Task { await model.save() } }
+                        .disabled(!model.canSave || model.isSavingKey)
+                    Button("Remove Key", role: .destructive) { Task { await model.removeKey() } }
+                        .disabled(!model.hasStoredKey || model.isSavingKey)
                 }
                 if let message = model.errorMessage {
                     Text(message)
@@ -45,13 +53,13 @@ struct SettingsView: View {
             Section {
                 LabeledContent("Status", value: emailStatus)
                 TextField("Email", text: $model.emailText, prompt: Text("you@example.com"))
-                    .onSubmit(model.saveEmail)
-                    .disabled(model.isLoadingEmail)
+                    .onSubmit { Task { await model.saveEmail() } }
+                    .disabled(emailBusy)
                 HStack {
-                    Button("Save Email", action: model.saveEmail)
-                        .disabled(!model.canSaveEmail || model.isLoadingEmail)
-                    Button("Remove Email", role: .destructive, action: model.removeEmail)
-                        .disabled(!model.hasStoredEmail || model.isLoadingEmail)
+                    Button("Save Email") { Task { await model.saveEmail() } }
+                        .disabled(!model.canSaveEmail || emailBusy)
+                    Button("Remove Email", role: .destructive) { Task { await model.removeEmail() } }
+                        .disabled(!model.hasStoredEmail || emailBusy)
                 }
                 if let message = model.emailMessage ?? model.emailErrorMessage {
                     Text(message)

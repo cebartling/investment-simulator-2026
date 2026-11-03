@@ -52,7 +52,7 @@ struct SettingsModelEmailLoadingTests {
         while !model.isLoadingEmail {
             await Task.yield()
         }
-        model.removeEmail()
+        await model.removeEmail()
         emails.releaseRead()
         await load.value
 
