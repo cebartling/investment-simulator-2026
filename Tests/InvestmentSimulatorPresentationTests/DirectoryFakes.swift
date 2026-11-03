@@ -120,7 +120,7 @@ final class FakeContactEmail: ContactEmailStoring {
         // what was stored when the read began.
         let value = email.withLock { $0 }
         if isGated {
-            gate.wait()
+            try waitForRelease(gate)
         }
         if failsToRead {
             throw StoreError()
@@ -141,7 +141,7 @@ final class FakeContactEmail: ContactEmailStoring {
             writeOnMain.withLock { $0 = true }
         }
         if isWriteGated {
-            writeGate.wait()
+            try waitForRelease(writeGate)
         }
         if failsToSave {
             throw StoreError()
@@ -202,11 +202,22 @@ final class FakeCredentials: CredentialStoring {
             writeOnMain.withLock { $0 = true }
         }
         if isWriteGated {
-            writeGate.wait()
+            try waitForRelease(writeGate)
         }
         if failsToSave {
             throw StoreError()
         }
         key.withLock { $0 = newKey }
+    }
+}
+
+struct GateTimedOut: Error {}
+
+/// Holds a fake Keychain call open until the test releases it. It gives up
+/// after a while, so a test that is starved of threads fails instead of
+/// hanging the run.
+private func waitForRelease(_ gate: DispatchSemaphore) throws {
+    if gate.wait(timeout: .now() + 10) == .timedOut {
+        throw GateTimedOut()
     }
 }
