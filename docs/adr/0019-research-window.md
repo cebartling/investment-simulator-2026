@@ -30,7 +30,7 @@ ADR-0004 gives each screen one `@Observable` model, built by a composition root.
 
 - **One app-wide `Window("Research", id: "research")` scene,** with `.keyboardShortcut("r", modifiers: [.command, .shift])`. It appears in the Window menu as **Research ⇧⌘R**.
 - **Open tickers are a sidebar list, not tabs,** in a `NavigationSplitView`.
-  - The sidebar has a field for opening a ticker, above the open tickers in the order they were opened.
+  - A search header across the top of the Research view (PIN-482) has the field for opening a ticker; the sidebar lists the open tickers in the order they were opened, and matches for the search text take the detail pane's place.
   - Selecting a ticker shows its sections in the detail pane.
   - A ticker closes from its row's close button, its context menu, or the Delete key.
   - Reordering is out of the first cut.
