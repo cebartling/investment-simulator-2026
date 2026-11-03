@@ -49,12 +49,19 @@ final class FakeContactEmail: ContactEmailStoring {
     private let email: Mutex<String?>
     private let failsToSave: Bool
     private let failsToCheck: Bool
+    private let failsToRead: Bool
     private let reads = Mutex(0)
 
-    init(_ email: String? = nil, failsToSave: Bool = false, failsToCheck: Bool = false) {
+    init(
+        _ email: String? = nil,
+        failsToSave: Bool = false,
+        failsToCheck: Bool = false,
+        failsToRead: Bool = false,
+    ) {
         self.email = Mutex(email)
         self.failsToSave = failsToSave
         self.failsToCheck = failsToCheck
+        self.failsToRead = failsToRead
     }
 
     /// How many times the email itself was read.
@@ -64,6 +71,9 @@ final class FakeContactEmail: ContactEmailStoring {
 
     func contactEmail() throws -> String? {
         reads.withLock { $0 += 1 }
+        if failsToRead {
+            throw StoreError()
+        }
         return email.withLock { $0 }
     }
 

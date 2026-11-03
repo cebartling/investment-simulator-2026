@@ -3,8 +3,9 @@ import InvestmentSimulatorCore
 import Observation
 
 /// Drives the Settings window: the Equibles API key and the SEC contact
-/// email. Neither is shown once stored, only whether there is one: reading
-/// either can make macOS ask for Keychain access.
+/// email. The API key is never read back, only whether there is one, because
+/// reading a secret can make macOS ask for Keychain access. The email is read
+/// once, by `loadStoredEmail()`, so the field can show it.
 @Observable
 public final class SettingsModel {
     public var keyText = ""
@@ -13,6 +14,9 @@ public final class SettingsModel {
     public var emailText = ""
     public private(set) var hasStoredEmail: Bool
     public private(set) var emailErrorMessage: String?
+
+    /// The address last read from or written to the Keychain this session.
+    private var savedEmail: String?
 
     private let credentials: any CredentialStoring
     private let contactEmails: any ContactEmailStoring
@@ -68,12 +72,37 @@ public final class SettingsModel {
     /// Checks only the address's shape; nothing is sent to verify it
     /// (ADR-0019). It goes in a request header, so it can't hold whitespace
     /// or anything beyond ASCII.
-    public var canSaveEmail: Bool {
+    private var emailLooksValid: Bool {
         trimmedEmail.allSatisfy(\.isASCII) && trimmedEmail.wholeMatch(of: /[^@\s]+@[^@\s]+\.[^@\s]+/) != nil
     }
 
+    /// False while the field still holds what is already stored.
+    public var canSaveEmail: Bool {
+        emailLooksValid && trimmedEmail != savedEmail
+    }
+
     public var emailMessage: String? {
-        trimmedEmail.isEmpty || canSaveEmail ? nil : "Enter an email address, such as you@example.com."
+        trimmedEmail.isEmpty || emailLooksValid ? nil : "Enter an email address, such as you@example.com."
+    }
+
+    /// Fills the email field with the stored address. The email is the one
+    /// secret shown back to the user, so this reads the Keychain item; the
+    /// Settings window calls it when it appears, not at launch. Typed text
+    /// is never overwritten.
+    public func loadStoredEmail() {
+        guard hasStoredEmail, emailText.isEmpty else {
+            return
+        }
+        do {
+            guard let email = try contactEmails.contactEmail() else {
+                return
+            }
+            emailText = email
+            savedEmail = email
+            emailErrorMessage = nil
+        } catch {
+            emailErrorMessage = "Couldn't read the saved email from the Keychain."
+        }
     }
 
     public func saveEmail() {
@@ -82,7 +111,8 @@ public final class SettingsModel {
         }
         do {
             try contactEmails.setContactEmail(trimmedEmail)
-            emailText = ""
+            emailText = trimmedEmail
+            savedEmail = trimmedEmail
             hasStoredEmail = true
             emailErrorMessage = nil
         } catch {
@@ -93,6 +123,8 @@ public final class SettingsModel {
     public func removeEmail() {
         do {
             try contactEmails.setContactEmail(nil)
+            emailText = ""
+            savedEmail = nil
             hasStoredEmail = false
             emailErrorMessage = nil
         } catch {
