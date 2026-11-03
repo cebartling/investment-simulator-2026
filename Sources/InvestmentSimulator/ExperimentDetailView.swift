@@ -33,12 +33,13 @@ struct ExperimentDetailView: View {
     var body: some View {
         VStack(spacing: 24) {
             // The selection can outlive its purchase, as after the experiment reloads.
+            let selected = purchase(withID: selectedPurchase)
             ExperimentActionRow(
-                canSell: purchase(withID: selectedPurchase) != nil,
+                canSell: selected != nil,
                 onBuy: onBuy,
                 onBuyLimit: onBuyLimit,
-                onSell: { purchase(withID: selectedPurchase).map(onSell) },
-                onSellLimit: { purchase(withID: selectedPurchase).map(onSellLimit) },
+                onSell: { selected.map(onSell) },
+                onSellLimit: { selected.map(onSellLimit) },
             )
             if purchases.isEmpty, !hasLimitOrders {
                 ContentUnavailableView(
