@@ -118,7 +118,7 @@ struct ResearchTickerView: View {
         }
     }
 
-    /// One entry per experiment in the library (ADR-0020, ADR-0021).
+    /// One entry per experiment in the library (ADR-0021).
     private var buyMenu: some View {
         Menu("Buy in Experiment…") {
             ForEach(library.library.summaries) { summary in

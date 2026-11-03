@@ -3,7 +3,7 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import Testing
 
-/// Starting a purchase from Research (ADR-0020).
+/// Starting a purchase from Research (ADR-0021).
 extension MainWindowModelTests {
     @Test func `a purchase of a ticker shows the sheet filled in`() async throws {
         let model = try await makeModel(cashBalance: 500)
