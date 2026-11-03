@@ -5,8 +5,8 @@ import Testing
 
 /// Market sales and the Sales table (PIN-409).
 extension MainWindowModelTests {
-    @Test func `beginning a sale shows the sheet with the purchase's free shares and the cash`() throws {
-        let model = try makeModelForSale(orders: [makeOrder(shares: 4)])
+    @Test func `beginning a sale shows the sheet with the purchase's free shares and the cash`() async throws {
+        let model = try await makeModelForSale(orders: [makeOrder(shares: 4)])
 
         try model.beginSale(of: #require(model.purchases.first))
 
@@ -17,7 +17,7 @@ extension MainWindowModelTests {
     }
 
     @Test func `completing a sale credits the proceeds, records it, hides the sheet and celebrates`() async throws {
-        let model = try makeModelForSale(quotes: FakeQuotes(.success(makeQuote(price: "12.5"))))
+        let model = try await makeModelForSale(quotes: FakeQuotes(.success(makeQuote(price: "12.5"))))
         try model.beginSale(of: #require(model.purchases.first))
         model.sale?.shares = 4
         await model.sale?.getPrice()
@@ -33,8 +33,8 @@ extension MainWindowModelTests {
         #expect(model.celebrationCount == 1)
     }
 
-    @Test func `a sale that can't be made leaves the sheet open and doesn't celebrate`() throws {
-        let model = try makeModelForSale()
+    @Test func `a sale that can't be made leaves the sheet open and doesn't celebrate`() async throws {
+        let model = try await makeModelForSale()
         try model.beginSale(of: #require(model.purchases.first))
 
         #expect(model.completeSale() == nil)
@@ -42,8 +42,8 @@ extension MainWindowModelTests {
         #expect(model.celebrationCount == 0)
     }
 
-    @Test func `cancelling a sale hides the sheet and changes nothing`() throws {
-        let model = try makeModelForSale()
+    @Test func `cancelling a sale hides the sheet and changes nothing`() async throws {
+        let model = try await makeModelForSale()
         let before = model.experiment
         try model.beginSale(of: #require(model.purchases.first))
 
@@ -54,7 +54,7 @@ extension MainWindowModelTests {
         #expect(model.experiment == before)
     }
 
-    @Test func `sale rows list market sales and filled sell orders by date, with their gains`() throws {
+    @Test func `sale rows list market sales and filled sell orders by date, with their gains`() async throws {
         let market = try Sale(
             id: #require(UUID(uuidString: "00000000-0000-0000-0000-0000000000C1")),
             purchaseID: fixedPurchaseID,
@@ -65,7 +65,7 @@ extension MainWindowModelTests {
         )
         let open = try makeOrder(id: #require(UUID(uuidString: "00000000-0000-0000-0000-0000000000A2")), shares: 1)
         let filled = try makeOrder(shares: 4).filled(on: "2026-10-28")
-        let model = try makeModelForSale(orders: [filled, open], sales: [market])
+        let model = try await makeModelForSale(orders: [filled, open], sales: [market])
 
         let rows = model.saleRows
 
@@ -84,15 +84,15 @@ extension MainWindowModelTests {
         #expect(rows[1].soldAt == threeDaysLater)
     }
 
-    @Test func `an experiment with no sales or fills has no sale rows`() throws {
-        #expect(try makeModelForSale(orders: [makeOrder(shares: 4)]).saleRows.isEmpty)
+    @Test func `an experiment with no sales or fills has no sale rows`() async throws {
+        #expect(try await makeModelForSale(orders: [makeOrder(shares: 4)]).saleRows.isEmpty)
     }
 
     private func makeModelForSale(
         orders: [LimitOrder] = [],
         sales: [Sale] = [],
         quotes: FakeQuotes = FakeQuotes(.failure(.missingAPIKey)),
-    ) throws -> MainWindowModel {
+    ) async throws -> MainWindowModel {
         let purchase = try Purchase(
             id: fixedPurchaseID,
             ticker: Ticker("VTI"),
@@ -101,9 +101,8 @@ extension MainWindowModelTests {
             pricedAt: Date(timeIntervalSince1970: 0),
             priceSource: .liveQuote(delayed: false),
         )
-        return try MainWindowModel(
+        return try await loadedModel(
             experiment: Experiment(cashBalance: Money(100), purchases: [purchase], limitOrders: orders, sales: sales),
-            needsSetup: false,
             quotes: quotes,
             dailyPrices: FakeDailyPrices(),
             clock: { fixedNow },

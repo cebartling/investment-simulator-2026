@@ -14,7 +14,7 @@ public extension MainWindowModel {
         isShowingSale = true
     }
 
-    /// Returns the experiment after the sale, for the document to save.
+    /// Returns the experiment after the sale.
     /// Returns nil while the sale can't be made, leaving the sheet open.
     @discardableResult
     func completeSale() -> Experiment? {
@@ -41,9 +41,8 @@ public extension MainWindowModel {
         isShowingDetails = true
     }
 
-    /// Returns the experiment with the edited name and notes, for the
-    /// document to save, and hides the sheet. Returns nil when they didn't
-    /// change, so the document isn't marked edited.
+    /// Returns the experiment with the edited name and notes and hides the
+    /// sheet. Returns nil when they didn't change, so nothing is saved.
     @discardableResult
     func completeEditingDetails() -> Experiment? {
         defer { cancelEditingDetails() }
@@ -53,6 +52,11 @@ public extension MainWindowModel {
         experiment = experiment.editingDetails(name: details.savedName, notes: details.savedNotes)
         persist(experiment)
         return experiment
+    }
+
+    /// Takes a name changed in the library, without saving it again.
+    internal func applyName(_ name: String?) {
+        experiment = experiment.editingDetails(name: name, notes: experiment.notes)
     }
 
     func cancelEditingDetails() {

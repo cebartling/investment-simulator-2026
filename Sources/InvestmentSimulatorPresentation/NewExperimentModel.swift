@@ -2,9 +2,12 @@ import Foundation
 import InvestmentSimulatorCore
 import Observation
 
-/// Drives the New Experiment sheet: the starting cash balance being entered.
+/// Drives the New Experiment sheet: the name and starting cash balance being
+/// entered.
 @Observable
 public final class NewExperimentModel {
+    /// Optional; the library stores none when it is blank.
+    public var name = ""
     public var cashBalance: Decimal = 0
 
     private let clock: () -> Date
