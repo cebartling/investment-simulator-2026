@@ -44,6 +44,22 @@ struct SettingsModelEmailLoadingTests {
         #expect(model.emailText == "you@example.com")
     }
 
+    @Test func `removing the email while it loads is not undone by the load`() async {
+        let emails = FakeContactEmail("me@example.com", gated: true)
+        let model = model(emails)
+
+        let load = Task { await model.loadStoredEmail() }
+        while !model.isLoadingEmail {
+            await Task.yield()
+        }
+        model.removeEmail()
+        emails.releaseRead()
+        await load.value
+
+        #expect(model.emailText.isEmpty)
+        #expect(!model.hasStoredEmail)
+    }
+
     @Test func `a second load while one is running doesn't read again`() async {
         let emails = FakeContactEmail("me@example.com", gated: true)
         let model = model(emails)

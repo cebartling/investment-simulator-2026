@@ -95,13 +95,16 @@ final class FakeContactEmail: ContactEmailStoring {
         if Thread.isMainThread {
             readOnMain.withLock { $0 = true }
         }
+        // The value is read before the gate, as a slow Keychain answers with
+        // what was stored when the read began.
+        let value = email.withLock { $0 }
         if isGated {
             gate.wait()
         }
         if failsToRead {
             throw StoreError()
         }
-        return email.withLock { $0 }
+        return value
     }
 
     func hasContactEmail() throws -> Bool {

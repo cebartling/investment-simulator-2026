@@ -105,7 +105,8 @@ public final class SettingsModel {
         defer { isLoadingEmail = false }
         do {
             let stored = try await Self.readStoredEmail(from: contactEmails)
-            guard emailText.isEmpty else {
+            // A save or removal while the read waited is newer than the read.
+            guard emailText.isEmpty, !hasLoadedEmail else {
                 return
             }
             hasStoredEmail = stored != nil
