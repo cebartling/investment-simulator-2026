@@ -33,7 +33,7 @@ struct SettingsView: View {
                     .disabled(model.isSavingKey)
                 HStack {
                     Button("Save Key") { Task { await model.save() } }
-                        .disabled(!model.canSave || model.isSavingKey)
+                        .disabled(!model.canSave)
                     Button("Remove Key", role: .destructive) { Task { await model.removeKey() } }
                         .disabled(!model.hasStoredKey || model.isSavingKey)
                 }
@@ -57,7 +57,7 @@ struct SettingsView: View {
                     .disabled(emailBusy)
                 HStack {
                     Button("Save Email") { Task { await model.saveEmail() } }
-                        .disabled(!model.canSaveEmail || emailBusy)
+                        .disabled(!model.canSaveEmail || model.isLoadingEmail)
                     Button("Remove Email", role: .destructive) { Task { await model.removeEmail() } }
                         .disabled(!model.hasStoredEmail || emailBusy)
                 }

@@ -47,12 +47,13 @@ public final class SettingsModel {
         keyText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// False while a write is running, so a second tap can't start another.
     public var canSave: Bool {
-        !trimmedKey.isEmpty
+        !trimmedKey.isEmpty && !isSavingKey
     }
 
     public func save() async {
-        guard canSave, !isSavingKey else {
+        guard canSave else {
             return
         }
         isSavingKey = true
@@ -101,9 +102,10 @@ public final class SettingsModel {
         trimmedEmail.allSatisfy(\.isASCII) && trimmedEmail.wholeMatch(of: /[^@\s]+@[^@\s]+\.[^@\s]+/) != nil
     }
 
-    /// False while the field still holds what is already stored.
+    /// False while the field still holds what is already stored, or a write
+    /// is running.
     public var canSaveEmail: Bool {
-        emailLooksValid && trimmedEmail != savedEmail
+        emailLooksValid && trimmedEmail != savedEmail && !isSavingEmail
     }
 
     public var emailMessage: String? {
@@ -151,7 +153,7 @@ public final class SettingsModel {
     }
 
     public func saveEmail() async {
-        guard canSaveEmail, !isSavingEmail else {
+        guard canSaveEmail else {
             return
         }
         isSavingEmail = true
