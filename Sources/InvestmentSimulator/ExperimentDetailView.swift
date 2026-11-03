@@ -13,6 +13,8 @@ struct ExperimentDetailView: View {
     let limitOrderRows: (Date) -> [LimitOrderRow]
     /// Whether the table includes expired and cancelled orders.
     @Binding var showsExpiredAndCancelledOrders: Bool
+    let onBuy: () -> Void
+    let onBuyLimit: () -> Void
     let onSell: (Purchase) -> Void
     let onSellLimit: (Purchase) -> Void
     let onCancelOrder: (UUID) -> Void
@@ -30,6 +32,15 @@ struct ExperimentDetailView: View {
 
     var body: some View {
         VStack(spacing: 24) {
+            // The selection can outlive its purchase, as after the experiment reloads.
+            let selected = purchase(withID: selectedPurchase)
+            ExperimentActionRow(
+                canSell: selected != nil,
+                onBuy: onBuy,
+                onBuyLimit: onBuyLimit,
+                onSell: { selected.map(onSell) },
+                onSellLimit: { selected.map(onSellLimit) },
+            )
             if purchases.isEmpty, !hasLimitOrders {
                 ContentUnavailableView(
                     "No Purchases",
@@ -49,23 +60,6 @@ struct ExperimentDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .toolbar {
-            Button("Market Sell…", systemImage: "dollarsign.arrow.circlepath") {
-                if let purchase = purchase(withID: selectedPurchase) {
-                    onSell(purchase)
-                }
-            }
-            .help("Sell shares of the selected purchase now at the market price")
-            .disabled(purchase(withID: selectedPurchase) == nil)
-            Button("Sell Limit…", systemImage: "tag") {
-                if let purchase = purchase(withID: selectedPurchase) {
-                    onSellLimit(purchase)
-                }
-            }
-            .help("Place a sell limit order on the selected purchase")
-            // The selection can outlive its purchase, as after the experiment reloads.
-            .disabled(purchase(withID: selectedPurchase) == nil)
-        }
         .confirmationDialog(
             cancelTitle,
             isPresented: Binding(get: { orderToCancel != nil }, set: {
