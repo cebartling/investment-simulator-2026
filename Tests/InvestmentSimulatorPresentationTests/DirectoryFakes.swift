@@ -48,13 +48,20 @@ final class FakeContactEmail: ContactEmailStoring {
 
     private let email: Mutex<String?>
     private let failsToSave: Bool
-    private let failsToCheck: Bool
+    private let failsToCheck: Mutex<Bool>
+    private let failsToRead: Bool
     private let reads = Mutex(0)
 
-    init(_ email: String? = nil, failsToSave: Bool = false, failsToCheck: Bool = false) {
+    init(
+        _ email: String? = nil,
+        failsToSave: Bool = false,
+        failsToCheck: Bool = false,
+        failsToRead: Bool = false,
+    ) {
         self.email = Mutex(email)
         self.failsToSave = failsToSave
-        self.failsToCheck = failsToCheck
+        self.failsToCheck = Mutex(failsToCheck)
+        self.failsToRead = failsToRead
     }
 
     /// How many times the email itself was read.
@@ -62,13 +69,21 @@ final class FakeContactEmail: ContactEmailStoring {
         reads.withLock { $0 }
     }
 
+    /// Lets later checks succeed, as when the user finally allows Keychain access.
+    func allowChecks() {
+        failsToCheck.withLock { $0 = false }
+    }
+
     func contactEmail() throws -> String? {
         reads.withLock { $0 += 1 }
+        if failsToRead {
+            throw StoreError()
+        }
         return email.withLock { $0 }
     }
 
     func hasContactEmail() throws -> Bool {
-        if failsToCheck {
+        if failsToCheck.withLock({ $0 }) {
             throw StoreError()
         }
         return email.withLock { $0 != nil }

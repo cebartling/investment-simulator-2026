@@ -6,13 +6,15 @@ import SwiftUI
 struct SettingsView: View {
     @Bindable var model: SettingsModel
 
+    private static let maskedKey = String(repeating: "•", count: 16)
     private static let apiKeysPage = URL(string: "https://www.equibles.com/dashboard/apikeys")!
 
     var body: some View {
         Form {
             Section {
                 LabeledContent("Status", value: model.hasStoredKey ? "API key saved" : "No API key")
-                SecureField("API key", text: $model.keyText, prompt: Text("eq_…"))
+                // The key is never read back; dots stand in for it while one is stored.
+                SecureField("API key", text: $model.keyText, prompt: Text(model.hasStoredKey ? Self.maskedKey : "eq_…"))
                     .onSubmit(model.save)
                 HStack {
                     Button("Save Key", action: model.save)
@@ -58,6 +60,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .task { model.loadStoredEmail() }
         // A grouped form fills its window; size the window to the content.
         .frame(width: 460, height: 520)
     }

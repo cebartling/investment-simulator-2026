@@ -74,7 +74,7 @@ struct SettingsModelTests {
         #expect(model.emailErrorMessage == "Couldn't check the Keychain for a saved email.")
     }
 
-    @Test func `saving stores the trimmed email and clears the field`() throws {
+    @Test func `saving stores the trimmed email and keeps it in the field`() throws {
         let emails = FakeContactEmail()
         let model = model(emails)
         model.emailText = "  me@example.com \n"
@@ -82,9 +82,118 @@ struct SettingsModelTests {
         model.saveEmail()
 
         #expect(try emails.contactEmail() == "me@example.com")
-        #expect(model.emailText.isEmpty)
+        #expect(model.emailText == "me@example.com")
         #expect(model.hasStoredEmail)
         #expect(model.emailErrorMessage == nil)
+    }
+
+    @Test func `a saved email can't be saved again until it changes`() {
+        let model = model()
+        model.emailText = "me@example.com"
+        model.saveEmail()
+
+        #expect(!model.canSaveEmail)
+        #expect(model.emailMessage == nil)
+        model.emailText = "you@example.com"
+        #expect(model.canSaveEmail)
+    }
+
+    @Test func `loading shows the stored email in the field`() {
+        let emails = FakeContactEmail("me@example.com")
+        let model = model(emails)
+
+        model.loadStoredEmail()
+
+        #expect(model.emailText == "me@example.com")
+        #expect(!model.canSaveEmail)
+        #expect(model.emailMessage == nil)
+        #expect(model.emailErrorMessage == nil)
+        #expect(emails.readCount == 1)
+    }
+
+    @Test func `loading with no stored email doesn't read the Keychain`() {
+        let emails = FakeContactEmail()
+        let model = model(emails)
+
+        model.loadStoredEmail()
+
+        #expect(model.emailText.isEmpty)
+        #expect(emails.readCount == 0)
+    }
+
+    @Test func `loading doesn't overwrite what the user has typed`() {
+        let model = model(FakeContactEmail("me@example.com"))
+        model.emailText = "you@example.com"
+
+        model.loadStoredEmail()
+
+        #expect(model.emailText == "you@example.com")
+    }
+
+    @Test func `loading finds an email that the launch-time check missed`() {
+        let emails = FakeContactEmail("me@example.com", failsToCheck: true)
+        let model = model(emails)
+        emails.allowChecks()
+
+        model.loadStoredEmail()
+
+        #expect(model.emailText == "me@example.com")
+        #expect(model.hasStoredEmail)
+        #expect(model.emailErrorMessage == nil)
+    }
+
+    @Test func `loading notices an email that was deleted outside the app`() throws {
+        let emails = FakeContactEmail("me@example.com")
+        let model = model(emails)
+        try emails.setContactEmail(nil)
+
+        model.loadStoredEmail()
+
+        #expect(!model.hasStoredEmail)
+        #expect(model.emailText.isEmpty)
+    }
+
+    @Test func `loading twice reads once and doesn't refill a cleared field`() {
+        let emails = FakeContactEmail("me@example.com")
+        let model = model(emails)
+        model.loadStoredEmail()
+        model.emailText = ""
+
+        model.loadStoredEmail()
+
+        #expect(model.emailText.isEmpty)
+        #expect(emails.readCount == 1)
+    }
+
+    @Test func `a failed load is tried again next time`() {
+        let model = model(FakeContactEmail("me@example.com", failsToRead: true))
+
+        model.loadStoredEmail()
+        model.loadStoredEmail()
+
+        #expect(model.emailErrorMessage != nil)
+    }
+
+    @Test func `removing the email keeps an unrelated edit in the field`() {
+        let model = model(FakeContactEmail("me@example.com"))
+        model.loadStoredEmail()
+        model.emailText = "you@example.com"
+
+        model.removeEmail()
+
+        #expect(model.emailText == "you@example.com")
+        #expect(!model.hasStoredEmail)
+        #expect(model.canSaveEmail)
+    }
+
+    @Test func `a stored email that can't be read says so`() {
+        let model = model(FakeContactEmail("me@example.com", failsToRead: true))
+
+        model.loadStoredEmail()
+
+        #expect(model.emailErrorMessage == "Couldn't read the saved email from the Keychain.")
+        #expect(model.emailText.isEmpty)
+        #expect(model.hasStoredEmail)
     }
 
     @Test(arguments: [
@@ -119,14 +228,25 @@ struct SettingsModelTests {
         #expect(model.emailMessage == nil)
     }
 
-    @Test func `removing the email forgets it`() throws {
+    @Test func `removing the email forgets it and empties the field`() throws {
         let emails = FakeContactEmail("me@example.com")
         let model = model(emails)
+        model.loadStoredEmail()
 
         model.removeEmail()
 
         #expect(try emails.contactEmail() == nil)
         #expect(!model.hasStoredEmail)
+        #expect(model.emailText.isEmpty)
+    }
+
+    @Test func `the same email can be saved again after it was removed`() {
+        let model = model(FakeContactEmail("me@example.com"))
+        model.loadStoredEmail()
+        model.removeEmail()
+        model.emailText = "me@example.com"
+
+        #expect(model.canSaveEmail)
     }
 
     @Test func `a failed email save explains itself and keeps the field`() {
