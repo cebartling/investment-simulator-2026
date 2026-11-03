@@ -2,29 +2,12 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// The Research window's sidebar: a field for a ticker or company name, and
-/// the open tickers, which the matches replace while there are any.
+/// The Research window's sidebar: the open tickers, which the matches for the
+/// header's search text replace while there are any.
 struct ResearchSidebar: View {
     @Bindable var model: ResearchWindowModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            TextField("Ticker or company", text: $model.symbolText, prompt: Text("Ticker or company…"))
-                .onSubmit { model.open() }
-                .task(id: model.symbolText) { await model.search() }
-            if let message = model.symbolMessage ?? model.openError?.localizedDescription {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
-            if let message = model.searchMessage {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.top, 8)
         Group {
             if model.searchResults.isEmpty {
                 openTickers

@@ -12,12 +12,16 @@ struct ResearchView: View {
 
     var body: some View {
         // Not a second NavigationSplitView: the library window has the one.
-        HSplitView {
-            VStack(spacing: 0) {
-                ResearchSidebar(model: model)
+        VStack(spacing: 0) {
+            ResearchSearchHeader(model: model)
+            Divider()
+            HSplitView {
+                VStack(spacing: 0) {
+                    ResearchSidebar(model: model)
+                }
+                .frame(minWidth: 180, idealWidth: 220, maxWidth: 300)
+                detail
             }
-            .frame(minWidth: 180, idealWidth: 220, maxWidth: 300)
-            detail
         }
         // The saved tickers load when Research is first shown, not at launch.
         .task { model.restore() }
