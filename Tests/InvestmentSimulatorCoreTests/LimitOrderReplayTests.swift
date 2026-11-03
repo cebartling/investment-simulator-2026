@@ -109,7 +109,7 @@ struct LimitOrderReplayTests {
 
         #expect(replayed.limitOrders.map(\.filledOn) == [nil, "2026-04-15"])
         #expect(replayed.cashBalance == experiment.cashBalance + Money(120))
-        // A saved experiment is rebuilt this way when its file is opened.
+        // A saved experiment is rebuilt this way when it is loaded from the library.
         let reopened = try Experiment(
             cashBalance: replayed.cashBalance,
             purchases: replayed.purchases,

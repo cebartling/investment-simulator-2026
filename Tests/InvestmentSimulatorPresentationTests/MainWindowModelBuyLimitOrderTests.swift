@@ -168,6 +168,24 @@ extension MainWindowModelTests {
         #expect(model.canCheckOrders(at: threeDaysLater))
     }
 
+    /// A stored experiment can hold less cash than its open buy orders
+    /// reserve; the fill then fails, and the message says why in words.
+    @Test func `a fill the experiment rejects shows the reason, not the error's name`() async throws {
+        let bar = try DailyBar(sessionDate: "2026-10-28", open: 10, high: 10, low: 8, close: 9)
+        let experiment = try Experiment(cashBalance: Money(0), buyLimitOrders: [makeBuyOrder(shares: 4)])
+        let model = await loadedModel(experiment: experiment,
+                                      quotes: FakeQuotes(.failure(.missingAPIKey)),
+                                      dailyPrices: FakeDailyPrices(["AAPL": [bar]]),
+                                      clock: { threeDaysLater })
+
+        #expect(await model.checkLimitOrders() == nil)
+        #expect(model.experiment == experiment)
+        #expect(
+            model.orderCheckMessage
+                == "Couldn't fill the orders: The purchase costs more than the experiment's available cash.",
+        )
+    }
+
     /// A model with $100 of cash, a VTI purchase of 10 shares, and `buyOrders`
     /// and `sellOrders` placed.
     func makeModelWithBuyOrders(

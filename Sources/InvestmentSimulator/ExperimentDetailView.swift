@@ -63,7 +63,7 @@ struct ExperimentDetailView: View {
                 }
             }
             .help("Place a sell limit order on the selected purchase")
-            // The selection can outlive its purchase, as after File › Revert To.
+            // The selection can outlive its purchase, as after the experiment reloads.
             .disabled(purchase(withID: selectedPurchase) == nil)
         }
         .confirmationDialog(

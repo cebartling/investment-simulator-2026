@@ -1,7 +1,7 @@
 import Foundation
 import InvestmentSimulatorCore
 
-/// Buying from Research (ADR-0020).
+/// Buying from Research (ADR-0021).
 public extension MainWindowModel {
     /// True while any of this window's sheets shows. Research can't start a
     /// purchase then, as that would replace what the user is typing.

@@ -216,7 +216,7 @@ struct ExperimentSaleTests {
         try Experiment(cashBalance: Money(1000)).purchasing(makePurchase(shares: shares, price: "10"), at: Self.now)
     }
 
-    /// The experiment rebuilt from what its file saves.
+    /// The experiment rebuilt from what its stored record saves.
     private func reopen(_ experiment: Experiment) throws -> Experiment {
         try Experiment(
             cashBalance: experiment.cashBalance,

@@ -32,12 +32,12 @@ Releases are built from `vX.Y.Z` tags; see [Releasing](docs/releasing.md).
 
 - `Sources/InvestmentSimulatorCore`: UI-free logic, covered by tests
 - `Sources/InvestmentSimulatorPresentation`: UI-free `@Observable` presentation models, covered by tests
-- `Sources/InvestmentSimulatorPersistence`: versioned `.invsim` JSON DTOs and the codec, covered by tests
+- `Sources/InvestmentSimulatorPersistence`: the GRDB experiment repository, schema and migrations, covered by tests
 - `Sources/InvestmentSimulatorMarketData`: the Equibles quote adapter, covered by tests with a fake HTTP transport
-- `Sources/InvestmentSimulator`: SwiftUI app entry point, document, views, and the Keychain store for the API key
+- `Sources/InvestmentSimulator`: SwiftUI app entry point, library window, views, and the Keychain store for the API key
 - `Tests/InvestmentSimulatorCoreTests`: Swift Testing suites for Core
 - `Tests/InvestmentSimulatorPresentationTests`: Swift Testing suites for Presentation
 - `Tests/InvestmentSimulatorPersistenceTests`: Swift Testing suites for Persistence
 - `Tests/InvestmentSimulatorMarketDataTests`: Swift Testing suites for MarketData
-- `Resources/Info.plist`: bundle metadata and the `.invsim` document type, used by `just bundle`
+- `Resources/Info.plist`: bundle metadata, used by `just bundle`
 - `docs/adr/`: Architecture Decision Records, starting with [ADR-0001: Hexagonal Architecture](docs/adr/0001-hexagonal-architecture.md)

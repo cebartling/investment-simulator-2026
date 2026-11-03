@@ -1,10 +1,9 @@
 import Foundation
 
-/// One investment experiment, saved as one `.invsim` document (ADR-0005,
-/// where it is called a scenario). It starts with a cash balance, buys
-/// investments from it, sells them at a quote, and places limit orders to
-/// sell them, whose fills add to the cash, and to buy more, whose fills
-/// become purchases.
+/// One investment experiment, stored in the library database (ADR-0021).
+/// It starts with a cash balance, buys investments from it, sells them at a
+/// quote, and places limit orders to sell them, whose fills add to the cash,
+/// and to buy more, whose fills become purchases.
 public struct Experiment: Sendable, Hashable {
     /// A new experiment with no cash yet.
     public static let empty = Experiment(
@@ -32,10 +31,10 @@ public struct Experiment: Sendable, Hashable {
     /// Market sales, in the order they were made (ADR-0016). Filled sell
     /// orders are in `limitOrders`, not here.
     public let sales: [Sale]
-    /// What the user calls the experiment, or nil to go by its file's name.
+    /// What the user calls the experiment, or nil to show it as "Untitled".
     public let name: String?
     public let notes: String?
-    /// When the experiment was created, or nil when an older document
+    /// When the experiment was created, or nil when an older record
     /// doesn't say (PIN-408).
     public let createdAt: Date?
 

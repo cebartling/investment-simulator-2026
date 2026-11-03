@@ -145,7 +145,7 @@ public final class LibraryWindowModel {
     }
 
     /// Shows experiment `id` with Market Buy filled in for `ticker`, once
-    /// the experiment is read, so the sheet sees its real cash (ADR-0020).
+    /// the experiment is read, so the sheet sees its real cash (ADR-0021).
     public func beginPurchase(of ticker: Ticker, in id: ExperimentID) async {
         await show(id)
         experimentModel(for: id).beginPurchase(of: ticker)

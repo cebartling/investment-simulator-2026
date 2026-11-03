@@ -18,7 +18,7 @@ public struct BuyLimitOrder: Sendable, Hashable, Identifiable {
     public let cancelledAt: Date?
 
     /// An order with a known expiry, fill and cancellation, such as one read
-    /// from a file. New orders come from `placed(id:ticker:shares:limitPrice:at:)`.
+    /// from storage. New orders come from `placed(id:ticker:shares:limitPrice:at:)`.
     public init(
         id: UUID,
         ticker: Ticker,

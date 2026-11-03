@@ -15,7 +15,7 @@ struct ExperimentDetailsSheet: View {
                 .font(.title2.bold())
                 .padding([.horizontal, .top], 20)
             Form {
-                TextField("Name", text: $model.name, prompt: Text("Uses the file's name"))
+                TextField("Name", text: $model.name, prompt: Text("Untitled"))
                 TextField("Notes", text: $model.notes, axis: .vertical)
                     .lineLimit(3 ... 6)
             }
