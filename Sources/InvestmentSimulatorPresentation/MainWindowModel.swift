@@ -197,7 +197,7 @@ public final class MainWindowModel {
         do {
             updated = try checked.fillingLimitOrders(from: bars, at: now)
         } catch {
-            orderCheckMessage = "Couldn't fill the orders: \(error.localizedDescription)"
+            orderCheckMessage = "Couldn't fill the orders: \(error.message)"
             return nil
         }
         let filledCount = Self.filledCount(of: updated) - Self.filledCount(of: checked)
