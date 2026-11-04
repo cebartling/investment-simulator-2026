@@ -56,7 +56,7 @@ ADR-0004 gives each screen one `@Observable` model, built by a composition root.
   - `missingContactEmail`: an EDGAR request with no contact email saved.
 
   `QuoteError` doesn't change, and the shell keeps using it for the quote that validates a ticker.
-- **A tab loads every section when it opens,** each as a child task of one task group, with cancellation checks (ADR-0003). Financial statements are the exception: each statement and cadence loads when first shown. Closing a ticker cancels its tasks. Nothing polls, and nothing is cached across launches.
+- **A tab loads every section when it opens,** each as a child task of one task group, with cancellation checks (ADR-0003). Financial statements are the exception: each statement and cadence loads when first shown, which is when the Financials pane is selected. Closing a ticker cancels its tasks. Nothing polls, and nothing is cached across launches.
 - **Sources:**
   - This extends ADR-0012 and doesn't replace it. Equibles serves every data section.
   - SEC EDGAR serves the ticker directory. `company_tickers_exchange.json` is downloaded the first time Research needs it in a launch and kept in memory, never on disk.
@@ -144,3 +144,7 @@ ADR-0004 gives each screen one `@Observable` model, built by a composition root.
   - Reordering tickers.
   - Loading only the selected restored ticker, if reopening them all spends too much of the daily Equibles budget.
   - Third-party news (Finnhub) as its own issue.
+
+## Amendment (PIN-505): panes
+
+A ticker's research is no longer one scrolling stack. A fixed header (symbol, Buy in Experiment menu and quote) sits above a `TabView` with one pane per topic: Overview (chart and profile), Valuation, Financials, Dividends, News (press releases) and Filings. The selected pane lives on `ResearchTabModel.selectedPane`, in memory per ticker; it is not saved with the open tickers. `ResearchWindowModel.selectPane(_:for:)` is the only way to change it. Entering Financials loads the statement shown, and leaving it cancels a load still running while keeping the tables loaded. This replaces the collapsed statements section and `statementsShown`. A new analysis adds a `ResearchPane` case and a branch in `ResearchTickerView`.

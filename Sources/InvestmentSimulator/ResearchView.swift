@@ -39,7 +39,7 @@ struct ResearchView: View {
                 onShowRange: { model.showRange($0, for: tab.ticker) },
                 onRetry: { model.retry($0, for: tab.ticker) },
                 onShowStatements: { model.showStatements($0, for: tab.ticker) },
-                onHideStatements: { model.hideStatements(for: tab.ticker) },
+                onSelectPane: { model.selectPane($0, for: tab.ticker) },
             )
         } else {
             // A sidebar list can be deselected with tickers still open.
@@ -52,7 +52,7 @@ struct ResearchView: View {
     }
 }
 
-/// One ticker's research. Its sections stack below the quote.
+/// One ticker's research: a header with the quote, then a pane per topic.
 struct ResearchTickerView: View {
     let tab: ResearchTabModel
     let library: LibraryWindowModel
@@ -60,68 +60,98 @@ struct ResearchTickerView: View {
     let onShowRange: @MainActor (PriceRange) -> Void
     let onRetry: @MainActor (ResearchTabModel.Section) -> Void
     let onShowStatements: @MainActor (StatementSelection) -> Void
-    let onHideStatements: @MainActor () -> Void
+    let onSelectPane: @MainActor (ResearchPane) -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text(tab.ticker.symbol)
-                        .font(.largeTitle.bold())
-                    Spacer()
-                    buyMenu
-                }
-                quote
-                ResearchChartSection(tab: tab, onShowRange: onShowRange)
-                ResearchSection(
-                    title: "Profile",
-                    state: tab.profileState,
-                    ticker: tab.ticker,
-                    onRetry: { onRetry(.profile) },
-                    content: {
-                        ResearchProfileView(
-                            profile: $0,
-                            exchangeState: tab.exchangeState,
-                            exchangeMessage: tab.exchangeMessage,
-                            onRetryExchange: { onRetry(.exchange) },
-                        )
-                    },
-                )
-                ResearchSection(
-                    title: "Valuation Multiples",
-                    state: tab.multiplesState,
-                    ticker: tab.ticker,
-                    onRetry: { onRetry(.multiples) },
-                    content: ResearchMultiplesView.init,
-                )
-                ResearchStatementsSection(tab: tab, onShow: onShowStatements, onHide: onHideStatements)
-                ResearchSection(
-                    title: "Dividends",
-                    state: tab.dividendsState,
-                    ticker: tab.ticker,
-                    onRetry: { onRetry(.dividends) },
-                    content: { ResearchDividendsView(history: $0, yield: tab.dividendYield) },
-                )
-                ResearchSection(
-                    title: "Press Releases",
-                    state: tab.pressReleasesState,
-                    ticker: tab.ticker,
-                    onRetry: { onRetry(.pressReleases) },
-                    content: ResearchPressReleasesView.init,
-                )
-                ResearchSection(
-                    title: "SEC Filings",
-                    state: tab.filingsState,
-                    ticker: tab.ticker,
-                    // Only these forms are kept: a fund or foreign issuer
-                    // files others, so "no SEC filings" would be untrue.
-                    subject: "10-K, 10-Q or 8-K filings",
-                    onRetry: { onRetry(.filings) },
-                    content: { ResearchFilingsView(filings: $0, link: tab.link(for:)) },
-                )
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(tab.ticker.symbol)
+                    .font(.largeTitle.bold())
+                Spacer()
+                buyMenu
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
+            quote
+            TabView(selection: Binding(get: { tab.selectedPane }, set: { onSelectPane($0) })) {
+                ForEach(ResearchPane.allCases, id: \.self) { pane in
+                    ScrollView {
+                        content(of: pane)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 12)
+                    }
+                    .tabItem { Text(pane.label) }
+                    .tag(pane)
+                }
+            }
+        }
+        .padding(20)
+    }
+
+    /// One branch per pane: a new analysis adds a case and a branch.
+    @ViewBuilder private func content(of pane: ResearchPane) -> some View {
+        switch pane {
+        case .overview:
+            overview
+        case .valuation:
+            ResearchSection(
+                title: "Valuation Multiples",
+                state: tab.multiplesState,
+                ticker: tab.ticker,
+                onRetry: { onRetry(.multiples) },
+                content: ResearchMultiplesView.init,
+            )
+        case .financials:
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Financial Statements")
+                    .font(.headline)
+                ResearchStatementsSection(tab: tab, onShow: onShowStatements)
+            }
+        case .dividends:
+            ResearchSection(
+                title: "Dividends",
+                state: tab.dividendsState,
+                ticker: tab.ticker,
+                onRetry: { onRetry(.dividends) },
+                content: { ResearchDividendsView(history: $0, yield: tab.dividendYield) },
+            )
+        case .news:
+            ResearchSection(
+                title: "Press Releases",
+                state: tab.pressReleasesState,
+                ticker: tab.ticker,
+                onRetry: { onRetry(.pressReleases) },
+                content: ResearchPressReleasesView.init,
+            )
+        case .filings:
+            ResearchSection(
+                title: "SEC Filings",
+                state: tab.filingsState,
+                ticker: tab.ticker,
+                // Only these forms are kept: a fund or foreign issuer
+                // files others, so "no SEC filings" would be untrue.
+                subject: "10-K, 10-Q or 8-K filings",
+                onRetry: { onRetry(.filings) },
+                content: { ResearchFilingsView(filings: $0, link: tab.link(for:)) },
+            )
+        }
+    }
+
+    private var overview: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ResearchChartSection(tab: tab, onShowRange: onShowRange)
+            ResearchSection(
+                title: "Profile",
+                state: tab.profileState,
+                ticker: tab.ticker,
+                onRetry: { onRetry(.profile) },
+                content: {
+                    ResearchProfileView(
+                        profile: $0,
+                        exchangeState: tab.exchangeState,
+                        exchangeMessage: tab.exchangeMessage,
+                        onRetryExchange: { onRetry(.exchange) },
+                    )
+                },
+            )
         }
     }
 

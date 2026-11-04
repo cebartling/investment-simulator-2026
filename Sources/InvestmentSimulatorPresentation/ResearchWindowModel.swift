@@ -227,10 +227,21 @@ public final class ResearchWindowModel {
         return task
     }
 
-    /// Stops showing an open ticker's statements, and loading them.
-    public func hideStatements(for ticker: Ticker) {
-        statementTasks.removeValue(forKey: ticker)?.cancel()
-        tabs.first { $0.ticker == ticker }?.hideStatements()
+    /// Shows a pane of an open ticker. Entering Financials loads the
+    /// statement shown, if it hasn't loaded; leaving it cancels a load still
+    /// running and keeps the tables loaded. The task is nil unless a load
+    /// started.
+    @discardableResult
+    public func selectPane(_ pane: ResearchPane, for ticker: Ticker) -> Task<Void, Never>? {
+        guard let tab = tabs.first(where: { $0.ticker == ticker }) else {
+            return nil
+        }
+        tab.selectedPane = pane
+        guard pane == .financials else {
+            statementTasks.removeValue(forKey: ticker)?.cancel()
+            return nil
+        }
+        return showStatements(tab.statementSelection, for: ticker)
     }
 
     /// Loads one section of an open ticker again, leaving what has already
@@ -272,7 +283,7 @@ public final class ResearchWindowModel {
         let ticker = tab.ticker
         cancelTasks(of: ticker)
         tab.forgetStatements()
-        if tab.statementsShown {
+        if tab.selectedPane == .financials {
             showStatements(tab.statementSelection, for: ticker)
         }
         let task = Task {
