@@ -21,6 +21,9 @@ struct ResearchView: View {
                         .frame(width: 220)
                 }
                 detail
+                    // Else a short detail, like the empty state, shrinks the
+                    // stack and centres it, taking the sidebar with it.
+                    .frame(maxWidth: .infinity)
             }
             .frame(maxHeight: .infinity) // else the stack centres in the window
         }
