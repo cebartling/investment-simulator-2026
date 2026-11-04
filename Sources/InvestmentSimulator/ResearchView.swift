@@ -76,7 +76,7 @@ struct ResearchTickerView: View {
                     ScrollView {
                         content(of: pane)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 12)
+                            .padding(16)
                     }
                     .tabItem { Text(pane.label) }
                     .tag(pane)
