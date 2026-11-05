@@ -103,11 +103,7 @@ struct ResearchTickerView: View {
                 content: ResearchMultiplesView.init,
             )
         case .financials:
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Financial Statements")
-                    .font(.headline)
-                ResearchStatementsSection(tab: tab, onShow: onShowStatements)
-            }
+            ResearchStatementsSection(tab: tab, onShow: onShowStatements)
         case .dividends:
             ResearchSection(
                 title: "Dividends",

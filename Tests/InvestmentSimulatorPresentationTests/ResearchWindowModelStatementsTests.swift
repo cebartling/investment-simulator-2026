@@ -156,18 +156,48 @@ struct ResearchWindowModelStatementsTests {
         #expect(tab.selectedPane == .overview)
     }
 
-    @Test func `a refresh reloads no statements while another pane is selected`() async throws {
+    @Test func `selecting the pane already shown loads nothing again`() async throws {
+        let statements = Self.statements()
+        let model = research(statements)
+        await model.open()?.value
+        let vti = try Ticker("VTI")
+        let again = Run()
+        statements.whileAnswering {
+            guard again.task == nil else {
+                return
+            }
+            again.task = model.selectPane(.financials, for: vti)
+            again.ran = true
+        }
+
+        let first = model.selectPane(.financials, for: vti)
+        await first?.value
+
+        #expect(again.ran)
+        #expect(again.task == nil)
+        #expect(first?.isCancelled == false)
+        #expect(model.selectedTab?.statementState == .loaded(Self.table()))
+    }
+
+    @Test func `a refresh reloads statements only while Financials is selected`() async throws {
         let statements = Self.statements()
         let model = research(statements)
         await model.open()?.value
         let vti = try Ticker("VTI")
         await model.selectPane(.financials, for: vti)?.value
-        model.selectPane(.valuation, for: vti)
-        let before = statements.requests.count
+        var count = statements.requests.count
 
+        // The reload runs as its own task, so let it finish before counting.
         await model.refresh(vti)?.value
+        await settle()
+        #expect(statements.requests.count > count)
 
-        #expect(statements.requests.count == before)
+        model.selectPane(.valuation, for: vti)
+        count = statements.requests.count
+        await model.refresh(vti)?.value
+        await settle()
+
+        #expect(statements.requests.count == count)
     }
 
     @Test func `a newer selection cancels the reload a refresh started`() async throws {
@@ -230,4 +260,13 @@ struct ResearchWindowModelStatementsTests {
 @MainActor
 private final class Run {
     var task: Task<Void, Never>?
+    var ran = false
+}
+
+/// Lets tasks that are ready run, as the fakes answer without waiting.
+@MainActor
+private func settle() async {
+    for _ in 0 ..< 50 {
+        await Task.yield()
+    }
 }

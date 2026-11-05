@@ -229,11 +229,12 @@ public final class ResearchWindowModel {
 
     /// Shows a pane of an open ticker. Entering Financials loads the
     /// statement shown, if it hasn't loaded; leaving it cancels a load still
-    /// running and keeps the tables loaded. The task is nil unless a load
-    /// started.
+    /// running and keeps the tables loaded. Selecting the pane already shown
+    /// does nothing, so a load under way isn't restarted. The task is nil
+    /// unless a load started.
     @discardableResult
     public func selectPane(_ pane: ResearchPane, for ticker: Ticker) -> Task<Void, Never>? {
-        guard let tab = tabs.first(where: { $0.ticker == ticker }) else {
+        guard let tab = tabs.first(where: { $0.ticker == ticker }), tab.selectedPane != pane else {
             return nil
         }
         tab.selectedPane = pane

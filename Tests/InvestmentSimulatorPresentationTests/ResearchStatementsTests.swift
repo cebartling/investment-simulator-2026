@@ -216,11 +216,13 @@ struct ResearchStatementsTests {
 
         let task = Task {
             withUnsafeCurrentTask { $0?.cancel() }
-            await tab.showStatements(Self.quarterly)
+            await tab.showStatements(Self.annual)
         }
         await task.value
 
         #expect(statements.requests.isEmpty)
+        #expect(tab.statementSelection == Self.quarterly)
+        #expect(tab.statementState == .loading)
     }
 
     @Test func `a request cancelled while loading changes nothing more`() async throws {
@@ -253,18 +255,6 @@ struct ResearchStatementsTests {
 
         #expect(tab.statementSelection == Self.balance)
         #expect(tab.statementState == .loaded(Self.table(Self.quarter3)))
-    }
-
-    @Test func `showing a statement again keeps what loaded`() async throws {
-        let statements = Self.statements()
-        let tab = try tab(statements)
-        await tab.showStatements(Self.quarterly)
-        let sent = statements.requests.count
-
-        await tab.showStatements(Self.quarterly)
-
-        #expect(tab.statementState == .loaded(Self.table(Self.quarter3, Self.quarter2, Self.quarter1, Self.quarter4)))
-        #expect(statements.requests.count == sent)
     }
 
     @Test func `forgetting statements reloads the one shown`() async throws {

@@ -80,8 +80,9 @@ public final class ResearchTabModel: Identifiable {
     public private(set) var statementSelection = StatementSelection(kind: .income, cadence: .quarterly)
     public private(set) var statementState = ResearchSectionState<StatementTable>.loading
     /// The pane shown below the header. Statements load only once Financials
-    /// is selected, as each costs several requests. Kept per ticker while the
-    /// app runs; the window model's `selectPane` changes it.
+    /// is selected, as each costs several requests. Kept while the ticker is
+    /// open, so a closed and reopened ticker starts on Overview; the window
+    /// model's `selectPane` changes it.
     public internal(set) var selectedPane = ResearchPane.overview
 
     private let quotes: any QuoteProviding

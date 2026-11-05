@@ -10,6 +10,8 @@ struct ResearchStatementsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            Text("Financial Statements")
+                .font(.headline)
             HStack {
                 Picker("Statement", selection: kind) {
                     ForEach(StatementKind.allCases, id: \.self) { Text($0.label).tag($0) }
