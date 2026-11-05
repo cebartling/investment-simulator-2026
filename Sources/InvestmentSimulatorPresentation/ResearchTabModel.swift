@@ -79,8 +79,11 @@ public final class ResearchTabModel: Identifiable {
     public private(set) var filingsState = ResearchSectionState<[Filing]>.loading
     public private(set) var statementSelection = StatementSelection(kind: .income, cadence: .quarterly)
     public private(set) var statementState = ResearchSectionState<StatementTable>.loading
-    /// Statements load only once shown, as each costs several requests.
-    public private(set) var statementsShown = false
+    /// The pane shown below the header. Statements load only once Financials
+    /// is selected, as each costs several requests. Kept while the ticker is
+    /// open, so a closed and reopened ticker starts on Overview; the window
+    /// model's `selectPane` changes it.
+    public internal(set) var selectedPane = ResearchPane.overview
 
     private let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
@@ -233,7 +236,6 @@ public final class ResearchTabModel: Identifiable {
         guard !Task.isCancelled else {
             return
         }
-        statementsShown = true
         statementSelection = selection
         if let table = tables[selection] {
             statementState = .loaded(table)
@@ -254,11 +256,6 @@ public final class ResearchTabModel: Identifiable {
         if !Task.isCancelled, statementSelection == selection {
             statementState = outcome
         }
-    }
-
-    /// Stops showing statements, keeping the tables loaded.
-    public func hideStatements() {
-        statementsShown = false
     }
 
     private func table(for selection: StatementSelection) async throws(MarketDataError) -> StatementTable {

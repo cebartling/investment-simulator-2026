@@ -47,7 +47,6 @@ struct ResearchStatementsTests {
         await tab.load()
 
         #expect(statements.requests.isEmpty)
-        #expect(tab.statementsShown == false)
         #expect(tab.statementState == .loading)
     }
 
@@ -57,7 +56,6 @@ struct ResearchStatementsTests {
 
         await tab.showStatements(Self.quarterly)
 
-        #expect(tab.statementsShown)
         #expect(tab.statementSelection == Self.quarterly)
         #expect(tab.statementState == .loaded(Self.table(Self.quarter3, Self.quarter2, Self.quarter1, Self.quarter4)))
         #expect(statements.requests.count == 4)
@@ -218,12 +216,13 @@ struct ResearchStatementsTests {
 
         let task = Task {
             withUnsafeCurrentTask { $0?.cancel() }
-            await tab.showStatements(Self.quarterly)
+            await tab.showStatements(Self.annual)
         }
         await task.value
 
-        #expect(tab.statementsShown == false)
         #expect(statements.requests.isEmpty)
+        #expect(tab.statementSelection == Self.quarterly)
+        #expect(tab.statementState == .loading)
     }
 
     @Test func `a request cancelled while loading changes nothing more`() async throws {
@@ -258,20 +257,6 @@ struct ResearchStatementsTests {
         #expect(tab.statementState == .loaded(Self.table(Self.quarter3)))
     }
 
-    @Test func `hiding statements keeps what loaded`() async throws {
-        let statements = Self.statements()
-        let tab = try tab(statements)
-        await tab.showStatements(Self.quarterly)
-        let sent = statements.requests.count
-
-        tab.hideStatements()
-        #expect(tab.statementsShown == false)
-        await tab.showStatements(Self.quarterly)
-
-        #expect(tab.statementState == .loaded(Self.table(Self.quarter3, Self.quarter2, Self.quarter1, Self.quarter4)))
-        #expect(statements.requests.count == sent)
-    }
-
     @Test func `forgetting statements reloads the one shown`() async throws {
         let statements = Self.statements()
         let tab = try tab(statements)
@@ -291,11 +276,10 @@ struct ResearchStatementsTests {
         ])))
     }
 
-    @Test func `loading leaves hidden statements unloaded`() async throws {
+    @Test func `loading leaves the statements unloaded`() async throws {
         let statements = Self.statements()
         let tab = try tab(statements)
         await tab.showStatements(Self.quarterly)
-        tab.hideStatements()
         let sent = statements.requests.count
 
         tab.forgetStatements()

@@ -35,8 +35,68 @@ struct ResearchWindowModelStatementsTests {
         await model.showStatements(Self.quarterly, for: vti)?.value
 
         #expect(model.selectedTab?.statementState == .loaded(Self.table()))
-        model.hideStatements(for: vti)
-        #expect(model.selectedTab?.statementsShown == false)
+    }
+
+    @Test func `a ticker opens on Overview and asks for no statements`() async {
+        let statements = Self.statements()
+        let model = research(statements)
+
+        await model.open()?.value
+
+        #expect(model.selectedTab?.selectedPane == .overview)
+        #expect(statements.requests.isEmpty)
+    }
+
+    @Test func `selecting Financials loads the statement shown`() async throws {
+        let model = research(Self.statements())
+        await model.open()?.value
+        let vti = try Ticker("VTI")
+
+        await model.selectPane(.financials, for: vti)?.value
+
+        #expect(model.selectedTab?.selectedPane == .financials)
+        #expect(model.selectedTab?.statementState == .loaded(Self.table()))
+    }
+
+    @Test func `selecting another pane asks for no statements`() async throws {
+        let statements = Self.statements()
+        let model = research(statements)
+        await model.open()?.value
+        let vti = try Ticker("VTI")
+
+        #expect(model.selectPane(.dividends, for: vti) == nil)
+
+        #expect(model.selectedTab?.selectedPane == .dividends)
+        #expect(statements.requests.isEmpty)
+    }
+
+    @Test func `each ticker keeps the pane it was left on`() async throws {
+        let model = research(Self.statements())
+        await model.open()?.value
+        let vti = try Ticker("VTI")
+        model.selectPane(.filings, for: vti)
+        model.symbolText = "VOO"
+        await model.open()?.value
+
+        try model.selectPane(.news, for: Ticker("VOO"))
+
+        #expect(model.tabs.first { $0.ticker == vti }?.selectedPane == .filings)
+        #expect(model.selectedTab?.selectedPane == .news)
+    }
+
+    @Test func `reselecting Financials uses the table already loaded`() async throws {
+        let statements = Self.statements()
+        let model = research(statements)
+        await model.open()?.value
+        let vti = try Ticker("VTI")
+        await model.selectPane(.financials, for: vti)?.value
+        model.selectPane(.overview, for: vti)
+        let before = statements.requests.count
+
+        await model.selectPane(.financials, for: vti)?.value
+
+        #expect(model.selectedTab?.statementState == .loaded(Self.table()))
+        #expect(statements.requests.count == before)
     }
 
     @Test func `the window model shows nothing for a closed ticker`() throws {
@@ -67,33 +127,77 @@ struct ResearchWindowModelStatementsTests {
         #expect(model.selectedTab?.statementState == .loaded(Self.table()))
     }
 
-    @Test func `hiding statements cancels the one loading`() async throws {
+    @Test func `leaving Financials cancels the statement loading`() async throws {
         let statements = Self.statements()
         let model = research(statements)
         await model.open()?.value
         let vti = try Ticker("VTI")
         let tab = try #require(model.selectedTab)
-        statements.whileAnswering { model.hideStatements(for: vti) }
+        statements.whileAnswering { model.selectPane(.overview, for: vti) }
 
-        await model.showStatements(Self.quarterly, for: vti)?.value
+        await model.selectPane(.financials, for: vti)?.value
 
         #expect(tab.statementState == .loading)
-        #expect(tab.statementsShown == false)
+        #expect(tab.selectedPane == .overview)
     }
 
-    @Test func `hiding statements cancels the reload a refresh started`() async throws {
+    @Test func `leaving Financials cancels the reload a refresh started`() async throws {
         let statements = Self.statements()
         let model = research(statements)
         await model.open()?.value
         let vti = try Ticker("VTI")
         let tab = try #require(model.selectedTab)
-        await model.showStatements(Self.quarterly, for: vti)?.value
-        statements.whileAnswering { model.hideStatements(for: vti) }
+        await model.selectPane(.financials, for: vti)?.value
+        statements.whileAnswering { model.selectPane(.overview, for: vti) }
 
         await model.refresh(vti)?.value
 
         #expect(tab.statementState == .loading)
-        #expect(tab.statementsShown == false)
+        #expect(tab.selectedPane == .overview)
+    }
+
+    @Test func `selecting the pane already shown loads nothing again`() async throws {
+        let statements = Self.statements()
+        let model = research(statements)
+        await model.open()?.value
+        let vti = try Ticker("VTI")
+        let again = Run()
+        statements.whileAnswering {
+            guard again.task == nil else {
+                return
+            }
+            again.task = model.selectPane(.financials, for: vti)
+            again.ran = true
+        }
+
+        let first = model.selectPane(.financials, for: vti)
+        await first?.value
+
+        #expect(again.ran)
+        #expect(again.task == nil)
+        #expect(first?.isCancelled == false)
+        #expect(model.selectedTab?.statementState == .loaded(Self.table()))
+    }
+
+    @Test func `a refresh reloads statements only while Financials is selected`() async throws {
+        let statements = Self.statements()
+        let model = research(statements)
+        await model.open()?.value
+        let vti = try Ticker("VTI")
+        await model.selectPane(.financials, for: vti)?.value
+        var count = statements.requests.count
+
+        // The reload runs as its own task, so let it finish before counting.
+        await model.refresh(vti)?.value
+        await settle()
+        #expect(statements.requests.count > count)
+
+        model.selectPane(.valuation, for: vti)
+        count = statements.requests.count
+        await model.refresh(vti)?.value
+        await settle()
+
+        #expect(statements.requests.count == count)
     }
 
     @Test func `a newer selection cancels the reload a refresh started`() async throws {
@@ -102,7 +206,7 @@ struct ResearchWindowModelStatementsTests {
         await model.open()?.value
         let vti = try Ticker("VTI")
         let tab = try #require(model.selectedTab)
-        await model.showStatements(Self.quarterly, for: vti)?.value
+        await model.selectPane(.financials, for: vti)?.value
         let run = Run()
         statements.whileAnswering {
             guard run.task == nil else {
@@ -134,7 +238,7 @@ struct ResearchWindowModelStatementsTests {
     private func research(_ statements: FakeStatements) -> ResearchWindowModel {
         let data = FakeResearchData()
         let model = ResearchWindowModel(
-            quotes: FakeTickerQuotes(["VTI": .failure(.missingAPIKey)]),
+            quotes: FakeTickerQuotes(["VTI": .failure(.missingAPIKey), "VOO": .failure(.missingAPIKey)]),
             dailyPrices: FakeDailyPrices(),
             ports: ResearchSectionPorts(
                 profiles: data,
@@ -156,4 +260,13 @@ struct ResearchWindowModelStatementsTests {
 @MainActor
 private final class Run {
     var task: Task<Void, Never>?
+    var ran = false
+}
+
+/// Lets tasks that are ready run, as the fakes answer without waiting.
+@MainActor
+private func settle() async {
+    for _ in 0 ..< 50 {
+        await Task.yield()
+    }
 }

@@ -2,47 +2,38 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// A company's statements, closed until asked for: each table costs several
-/// requests (ADR-0019). The open state lives on the tab, because this view
-/// is reused from one ticker to the next.
+/// A company's statements, the Financials pane: each table costs several
+/// requests, so they load only once the pane is selected (ADR-0019).
 struct ResearchStatementsSection: View {
     let tab: ResearchTabModel
     let onShow: @MainActor (StatementSelection) -> Void
-    let onHide: @MainActor () -> Void
 
     var body: some View {
-        DisclosureGroup(isExpanded: Binding(
-            get: { tab.statementsShown },
-            set: { $0 ? onShow(tab.statementSelection) : onHide() },
-        )) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Picker("Statement", selection: kind) {
-                        ForEach(StatementKind.allCases, id: \.self) { Text($0.label).tag($0) }
-                    }
-                    Picker("Cadence", selection: cadence) {
-                        ForEach(StatementCadence.allCases, id: \.self) { Text($0.label).tag($0) }
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-                ResearchSectionContent(
-                    state: tab.statementState,
-                    ticker: tab.ticker,
-                    // A company can have years but no quarters, or the reverse.
-                    subject: "\(tab.statementSelection.cadence.label.lowercased()) financial statements",
-                    // A failed table isn't kept, so showing it again retries it.
-                    onRetry: { onShow(tab.statementSelection) },
-                    content: ResearchStatementTableView.init,
-                )
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 8)
-        } label: {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Financial Statements")
                 .font(.headline)
+            HStack {
+                Picker("Statement", selection: kind) {
+                    ForEach(StatementKind.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+                Picker("Cadence", selection: cadence) {
+                    ForEach(StatementCadence.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            ResearchSectionContent(
+                state: tab.statementState,
+                ticker: tab.ticker,
+                // A company can have years but no quarters, or the reverse.
+                subject: "\(tab.statementSelection.cadence.label.lowercased()) financial statements",
+                // A failed table isn't kept, so showing it again retries it.
+                onRetry: { onShow(tab.statementSelection) },
+                content: ResearchStatementTableView.init,
+            )
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var kind: Binding<StatementKind> {
