@@ -52,6 +52,34 @@ public extension MainWindowModel {
         limitOrderRows(at: date).filter { $0.ticker == ticker }
     }
 
+    /// Loads the latest settled session of `ticker` in the past month into
+    /// `latestSessions`, for its card's Overview. Loads once; a failure is
+    /// asked for again the next time the Overview shows. Daily bars are
+    /// settled sessions, so during trading this is an earlier day's. A live
+    /// quote is to replace it (PIN-511).
+    func loadLatestSession(of ticker: Ticker) async {
+        switch latestSessions[ticker] {
+        case .loading, .loaded, .empty:
+            return
+        case .failed, nil:
+            break
+        }
+        latestSessions[ticker] = .loading
+        let sessions = PriceRange.oneMonth.sessions(endingAt: clock())
+        do throws(QuoteError) {
+            let bars = try await dailyPrices.dailyBars(
+                for: ticker,
+                from: sessions.lowerBound,
+                through: sessions.upperBound,
+            )
+            latestSessions[ticker] = bars.max { $0.sessionDate < $1.sessionDate }.map { .loaded($0) } ?? .empty
+        } catch .unknownTicker {
+            latestSessions[ticker] = .empty
+        } catch {
+            latestSessions[ticker] = .failed(error.localizedDescription)
+        }
+    }
+
     /// Loads the company name of `ticker` into `companyNames` the first
     /// time it is asked for, as each card appears. Until then, and when it
     /// can't load, the card shows the ticker alone. A ticker with no profile

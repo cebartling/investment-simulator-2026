@@ -14,6 +14,16 @@ public nonisolated struct StockCard: Identifiable, Hashable, Sendable {
     }
 }
 
+/// Where a card's Overview stands on its ticker's latest settled session
+/// (PIN-510).
+public enum LatestSessionState: Equatable, Sendable {
+    case loading
+    case loaded(DailyBar)
+    /// No session in the past month, or an unknown ticker.
+    case empty
+    case failed(String)
+}
+
 /// The panes of an open stock card (PIN-510).
 public enum StockPane: Hashable, CaseIterable, Sendable {
     case overview

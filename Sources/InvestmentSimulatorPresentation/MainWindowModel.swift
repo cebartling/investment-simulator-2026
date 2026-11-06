@@ -55,8 +55,12 @@ public final class MainWindowModel {
     /// profile, so none is asked for twice.
     var companyNameRequests: Set<Ticker> = []
 
+    /// Each ticker's latest settled session, for its card's Overview
+    /// (PIN-510).
+    public internal(set) var latestSessions: [Ticker: LatestSessionState] = [:]
+
     let quotes: any QuoteProviding
-    private let dailyPrices: any DailyPriceProviding
+    let dailyPrices: any DailyPriceProviding
     let profiles: any CompanyProfileProviding
     let clock: () -> Date
 
