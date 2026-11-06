@@ -43,6 +43,12 @@ public final class MainWindowModel {
     /// sell, so the window can celebrate each one.
     public internal(set) var celebrationCount = 0
 
+    /// The tickers whose stock card is open (PIN-510). Kept while the app
+    /// runs, never saved.
+    public internal(set) var expandedTickers: Set<Ticker> = []
+    /// The pane each card shows, once one is chosen.
+    var selectedPanes: [Ticker: StockPane] = [:]
+
     /// The company name of each ticker whose profile loaded (PIN-510).
     public internal(set) var companyNames: [Ticker: String] = [:]
     /// The tickers whose name is loaded, loading, or known to have no
