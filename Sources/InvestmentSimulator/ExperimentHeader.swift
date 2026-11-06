@@ -70,31 +70,20 @@ struct ExperimentHeader: View {
         model.holdingsPrices.valuation(of: model.experiment)
     }
 
-    /// One row when the window is wide enough, else two or three, so no
-    /// value is ever cut short.
+    /// One row when the window is wide enough, else more, so no value is
+    /// ever cut short. Every tile is as tall as the tallest (PIN-509).
     private func tiles(at date: Date) -> some View {
         let total = totalValueTile
         let gain = gainTile
         let cash = HeaderTile(title: "Cash", value: currency(model.cashBalance))
         let available = availableTile(at: date)
         let invested = HeaderTile(title: "Invested", value: currency(model.experiment.investedCost.amount))
-        return ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: 12) {
-                total
-                gain
-                cash
-                available
-                invested
-            }
-            Grid(alignment: .topLeading, horizontalSpacing: 12, verticalSpacing: 12) {
-                GridRow { total; gain; cash }
-                GridRow { available; invested }
-            }
-            Grid(alignment: .topLeading, horizontalSpacing: 12, verticalSpacing: 12) {
-                GridRow { total; gain }
-                GridRow { cash; available }
-                GridRow { invested }
-            }
+        return EqualHeightTileLayout(spacing: 12) {
+            total
+            gain
+            cash
+            available
+            invested
         }
     }
 
@@ -160,7 +149,64 @@ private struct HeaderTile: View {
             }
         }
         .padding(10)
-        .frame(minWidth: 120, alignment: .leading)
+        .frame(minWidth: 120, maxHeight: .infinity, alignment: .topLeading)
         .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+/// Lays tiles out left to right, wrapping to a new row when the next tile
+/// won't fit, and gives every tile the height of the tallest one, in every
+/// row. Tiles keep their own widths.
+private struct EqualHeightTileLayout: Layout {
+    let spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let rows = Self.rows(of: sizes, maxWidth: proposal.width ?? .infinity, spacing: spacing)
+        let tileHeight = sizes.map(\.height).max() ?? 0
+        var width: CGFloat = 0
+        for row in rows {
+            let tilesWidth: CGFloat = row.reduce(0) { $0 + sizes[$1].width }
+            let rowWidth: CGFloat = tilesWidth + spacing * CGFloat(row.count - 1)
+            width = max(width, rowWidth)
+        }
+        let height = tileHeight * CGFloat(rows.count) + spacing * CGFloat(max(rows.count - 1, 0))
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal _: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let tileHeight = sizes.map(\.height).max() ?? 0
+        let rows = Self.rows(of: sizes, maxWidth: bounds.width, spacing: spacing)
+        var originY = bounds.minY
+        for row in rows {
+            var originX = bounds.minX
+            for index in row {
+                subviews[index].place(
+                    at: CGPoint(x: originX, y: originY),
+                    anchor: .topLeading,
+                    proposal: ProposedViewSize(width: sizes[index].width, height: tileHeight),
+                )
+                originX += sizes[index].width + spacing
+            }
+            originY += tileHeight + spacing
+        }
+    }
+
+    /// Indices of the tiles in each row. A tile wider than the space still
+    /// gets a row of its own.
+    private static func rows(of sizes: [CGSize], maxWidth: CGFloat, spacing: CGFloat) -> [[Int]] {
+        var rows: [[Int]] = []
+        var rowWidth: CGFloat = 0
+        for (index, size) in sizes.enumerated() {
+            if let last = rows.indices.last, rowWidth + spacing + size.width <= maxWidth {
+                rows[last].append(index)
+                rowWidth += spacing + size.width
+            } else {
+                rows.append([index])
+                rowWidth = size.width
+            }
+        }
+        return rows
     }
 }
