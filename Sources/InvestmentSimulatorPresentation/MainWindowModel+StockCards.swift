@@ -86,6 +86,17 @@ public extension MainWindowModel {
         }
     }
 
+    /// Asks for the quote of `ticker` for its card's Overview (PIN-511) if
+    /// no shares are held: a held ticker's quote comes with the holdings',
+    /// so asking here too would send a second request. Once asked for, the
+    /// ticker stays in Refresh Prices.
+    func priceOverview(of ticker: Ticker) async {
+        guard experiment.heldShares(of: ticker) == 0 else {
+            return
+        }
+        await holdingsPrices.priceOnDemand(ticker)
+    }
+
     /// Loads the sessions of `ticker` again if they were asked for before
     /// its quote's session, as when Refresh Prices runs the morning after
     /// the Overview opened, so the change can show. Never starts the first

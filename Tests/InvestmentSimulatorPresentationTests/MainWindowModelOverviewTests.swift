@@ -145,7 +145,7 @@ extension MainWindowModelTests {
         #expect(prices.requests.count == 1)
     }
 
-    @Test func `a card with no shares shows its quote on demand, with no market value or gain`() async throws {
+    @Test func `a card with no shares asks for its quote once, with no market value or gain`() async throws {
         let quote = try overviewQuote(price: "105")
         let quotes = FakeTickerQuotes(["VTI": .success(quote)])
         let sale = try Sale(
@@ -159,12 +159,24 @@ extension MainWindowModelTests {
         let model = try await makeOverviewModel(quotes: quotes, sales: [sale])
         await model.holdingsPrices.priceNewHoldings(of: model.experiment.heldTickers)
 
-        try await model.holdingsPrices.priceOnDemand(Ticker("VTI"))
+        try await model.priceOverview(of: Ticker("VTI"))
+        try await model.priceOverview(of: Ticker("VTI"))
 
         let overview = try model.overview(of: Ticker("VTI"))
         #expect(overview.price == .quoted(quote))
         #expect(overview.holding == .notHeld)
         #expect(quotes.requests == ["VTI"])
+        #expect(model.holdingsPrices.canRefresh(holding: model.experiment.heldTickers))
+    }
+
+    @Test func `a held stock's Overview leaves its quote to the holdings`() async throws {
+        let quotes = try FakeTickerQuotes(["VTI": .success(overviewQuote(price: "105"))])
+        let model = try await makeOverviewModel(quotes: quotes)
+
+        try await model.priceOverview(of: Ticker("VTI"))
+
+        #expect(quotes.requests.isEmpty)
+        #expect(!model.holdingsPrices.canRefresh(holding: []))
     }
 
     private static let overviewPurchaseID = UUID(uuidString: "00000000-0000-0000-0000-0000000000E1")!

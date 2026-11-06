@@ -19,13 +19,10 @@ struct StockOverviewPane: View {
             .task(id: model.holdingsPrices.lastGoodQuote(of: ticker)?.sessionDate) {
                 await model.reloadSessionsIfStale(of: ticker)
             }
-            // A held ticker's quote comes with the holdings'. One with no
-            // shares is asked for here, also when its last shares go while
-            // the Overview shows, so Refresh Prices covers it.
+            // Runs again when the last shares go while the Overview shows,
+            // so Refresh Prices covers the ticker from then on.
             .task(id: OverviewQuoteRequest(ticker: ticker, isHeld: heldShares > 0)) {
-                if heldShares == 0 {
-                    await model.holdingsPrices.priceOnDemand(ticker)
-                }
+                await model.priceOverview(of: ticker)
             }
     }
 }
