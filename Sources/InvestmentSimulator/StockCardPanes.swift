@@ -281,7 +281,9 @@ struct StockCardPanes: View {
     private static func tableHeight(rows: Int) -> CGFloat {
         let headerHeight: CGFloat = 28
         let rowHeight: CGFloat = 24
-        return headerHeight + rowHeight * CGFloat(min(max(rows, 1), 6)) + 8
+        // The inset style pads above the first row and below the last.
+        let insets: CGFloat = 16
+        return headerHeight + rowHeight * CGFloat(min(max(rows, 1), 6)) + insets
     }
 }
 
