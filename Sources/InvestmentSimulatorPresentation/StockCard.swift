@@ -14,8 +14,8 @@ public nonisolated struct StockCard: Identifiable, Hashable, Sendable {
     }
 }
 
-/// Where a card's Overview stands on its ticker's latest settled session
-/// (PIN-510).
+/// Where a card's Overview stands on its ticker's settled sessions of the
+/// past month (PIN-510, PIN-511).
 public nonisolated enum LatestSessionState: Equatable, Sendable {
     case loading
     case loaded(RecentSessions)
