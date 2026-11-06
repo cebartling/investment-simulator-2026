@@ -86,6 +86,33 @@ public extension MainWindowModel {
         }
     }
 
+    /// What the Overview of `ticker`'s card shows (PIN-511), from the quote
+    /// `holdingsPrices` holds and the sessions `loadLatestSession(of:)`
+    /// loaded. A held ticker's quote is the one the header uses.
+    func overview(of ticker: Ticker) -> StockOverview {
+        let lastSession = latestSessions[ticker]
+        let isHeld = experiment.heldShares(of: ticker) > 0
+        guard let quote = holdingsPrices.lastGoodQuote(of: ticker) else {
+            return StockOverview(
+                price: holdingsPrices.failure(of: ticker).map { .failed($0) } ?? .loading,
+                change: nil,
+                holding: isHeld ? .unpriced : .notHeld,
+                lastSession: lastSession,
+            )
+        }
+        var change: PriceChange?
+        if case let .loaded(recent) = lastSession {
+            change = quote.change(since: recent.bars)
+        }
+        let holding: StockOverview.Holding = isHeld
+            ? .priced(
+                marketValue: experiment.marketValue(of: ticker, at: quote.price),
+                gain: experiment.unrealizedGain(of: ticker, at: quote.price),
+            )
+            : .notHeld
+        return StockOverview(price: .quoted(quote), change: change, holding: holding, lastSession: lastSession)
+    }
+
     /// Loads the company name of `ticker` into `companyNames` the first
     /// time it is asked for, as each card appears. Until then, and when it
     /// can't load, the card shows the ticker alone. A ticker with no profile
