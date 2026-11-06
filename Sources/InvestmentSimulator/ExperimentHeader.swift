@@ -194,12 +194,15 @@ private struct EqualHeightTileLayout: Layout {
     }
 
     /// Indices of the tiles in each row. A tile wider than the space still
-    /// gets a row of its own.
+    /// gets a row of its own. `sizeThatFits` and `placeSubviews` both wrap
+    /// here, and the placed width can differ from the reported one by
+    /// rounding, so the fit check allows `tolerance` to keep them identical.
     private static func rows(of sizes: [CGSize], maxWidth: CGFloat, spacing: CGFloat) -> [[Int]] {
+        let tolerance: CGFloat = 0.5
         var rows: [[Int]] = []
         var rowWidth: CGFloat = 0
         for (index, size) in sizes.enumerated() {
-            if let last = rows.indices.last, rowWidth + spacing + size.width <= maxWidth {
+            if let last = rows.indices.last, rowWidth + spacing + size.width <= maxWidth + tolerance {
                 rows[last].append(index)
                 rowWidth += spacing + size.width
             } else {
