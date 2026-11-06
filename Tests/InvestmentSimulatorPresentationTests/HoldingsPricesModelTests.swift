@@ -3,7 +3,8 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import Testing
 
-/// Pricing the held shares for the Experiment header (PIN-408).
+/// Pricing the held shares for the Experiment header (PIN-408), and the
+/// tickers stock cards ask for (PIN-511).
 @MainActor
 struct HoldingsPricesModelTests {
     @Test func `an experiment with no holdings is valued without quotes`() async throws {
@@ -87,7 +88,7 @@ struct HoldingsPricesModelTests {
         await model.priceNewHoldings(of: experiment.heldTickers)
         try quotes.answer("VTI", with: .success(makeQuote(ticker: "VTI", price: 15)))
 
-        await model.refreshPrices(of: experiment.heldTickers)
+        await model.refreshPrices(holding: experiment.heldTickers)
 
         #expect(quotes.requests == ["VTI", "VTI"])
         let expectedGain = try #require(experiment.gain(prices: [Ticker("VTI"): 15]))
@@ -105,7 +106,7 @@ struct HoldingsPricesModelTests {
         await model.priceNewHoldings(of: experiment.heldTickers)
         quotes.answer("VTI", with: .failure(.unavailable("offline")))
 
-        await model.refreshPrices(of: experiment.heldTickers)
+        await model.refreshPrices(holding: experiment.heldTickers)
 
         let expectedGain = try #require(experiment.gain(prices: [Ticker("VTI"): 12]))
         #expect(model.valuation(of: experiment) == .valued(
@@ -113,6 +114,89 @@ struct HoldingsPricesModelTests {
             gain: expectedGain,
             pricesAsOf: Date(timeIntervalSince1970: 1_793_000_000),
         ))
+        #expect(try model.lastGoodQuote(of: Ticker("VTI"))?.price == 12)
+    }
+
+    @Test func `a ticker's last good quote and failure are unknown until it is quoted`() throws {
+        let model = HoldingsPricesModel(quotes: FakeTickerQuotes([:]))
+
+        #expect(try model.lastGoodQuote(of: Ticker("VTI")) == nil)
+        #expect(try model.failure(of: Ticker("VTI")) == nil)
+    }
+
+    @Test func `a quote on demand is asked for once and kept`() async throws {
+        let quotes = try FakeTickerQuotes(["VTI": .success(makeQuote(ticker: "VTI", price: 12))])
+        let model = HoldingsPricesModel(quotes: quotes)
+
+        try await model.priceOnDemand(Ticker("VTI"))
+        try await model.priceOnDemand(Ticker("VTI"))
+
+        #expect(quotes.requests == ["VTI"])
+        #expect(try model.lastGoodQuote(of: Ticker("VTI")) == makeQuote(ticker: "VTI", price: 12))
+        #expect(try model.failure(of: Ticker("VTI")) == nil)
+    }
+
+    @Test func `a quote on demand skips a ticker the holdings already quoted`() async throws {
+        let quotes = try FakeTickerQuotes(["VTI": .success(makeQuote(ticker: "VTI", price: 12))])
+        let model = HoldingsPricesModel(quotes: quotes)
+        try await model.priceNewHoldings(of: experiment().heldTickers)
+
+        try await model.priceOnDemand(Ticker("VTI"))
+
+        #expect(quotes.requests == ["VTI"])
+    }
+
+    @Test func `a failed quote on demand keeps its failure and waits for a refresh`() async throws {
+        let quotes = FakeTickerQuotes(["AAPL": .failure(.dailyLimitReached)])
+        let model = HoldingsPricesModel(quotes: quotes)
+
+        try await model.priceOnDemand(Ticker("AAPL"))
+        try await model.priceOnDemand(Ticker("AAPL"))
+
+        #expect(quotes.requests == ["AAPL"])
+        #expect(try model.lastGoodQuote(of: Ticker("AAPL")) == nil)
+        #expect(try model.failure(of: Ticker("AAPL")) == .dailyLimitReached)
+    }
+
+    @Test func `refreshing quotes the held tickers and every ticker asked for on demand`() async throws {
+        let quotes = try FakeTickerQuotes([
+            "VTI": .success(makeQuote(ticker: "VTI", price: 12)),
+            "AAPL": .success(makeQuote(ticker: "AAPL", price: 20)),
+        ])
+        let model = HoldingsPricesModel(quotes: quotes)
+        let held = try experiment().heldTickers
+        await model.priceNewHoldings(of: held)
+        try await model.priceOnDemand(Ticker("AAPL"))
+        try quotes.answer("AAPL", with: .success(makeQuote(ticker: "AAPL", price: 25)))
+
+        await model.refreshPrices(holding: held)
+
+        #expect(quotes.requests.sorted() == ["AAPL", "AAPL", "VTI", "VTI"])
+        #expect(try model.lastGoodQuote(of: Ticker("AAPL"))?.price == 25)
+    }
+
+    @Test func `refresh needs a held ticker or one asked for, even if its quote failed`() async throws {
+        let model = HoldingsPricesModel(quotes: FakeTickerQuotes(["AAPL": .failure(.dailyLimitReached)]))
+
+        #expect(!model.canRefresh(holding: []))
+        #expect(try model.canRefresh(holding: experiment().heldTickers))
+
+        try await model.priceOnDemand(Ticker("AAPL"))
+
+        #expect(model.canRefresh(holding: []))
+    }
+
+    @Test func `refresh is not possible while one runs`() async throws {
+        let quotes = try FakeTickerQuotes(["VTI": .success(makeQuote(ticker: "VTI", price: 12))])
+        let model = HoldingsPricesModel(quotes: quotes)
+        let held = try experiment().heldTickers
+        let observed = Observed()
+        quotes.whileAnsweringNext { observed.canRefresh = model.canRefresh(holding: held) }
+
+        await model.refreshPrices(holding: held)
+
+        #expect(observed.canRefresh == false)
+        #expect(model.canRefresh(holding: held))
     }
 
     @Test func `new holdings quote only the tickers not yet quoted`() async throws {
@@ -178,6 +262,11 @@ struct HoldingsPricesModelTests {
     private final class Runs {
         var first: Task<Void, Never>?
         var second: Task<Void, Never>?
+    }
+
+    @MainActor
+    private final class Observed {
+        var canRefresh: Bool?
     }
 
     /// An experiment that started with 1000 and bought one share at 10 of
