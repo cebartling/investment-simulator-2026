@@ -18,8 +18,8 @@ struct LibraryWindow: View {
             detail
         }
         // Tall enough for the fullest grouped-form sheet (about nine rows)
-        // to fit without scrolling, and for both tables to keep a few rows
-        // below the Experiment header (PIN-405, PIN-408).
+        // to fit without scrolling, and for a few stock cards to show below
+        // the Experiment header (PIN-405, PIN-408, ADR-0022).
         .frame(minWidth: 900, minHeight: 640)
         .task { await model.library.load() }
         .sheet(item: newExperimentBinding) { input in
