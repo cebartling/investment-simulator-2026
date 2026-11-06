@@ -2,8 +2,9 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// An open stock card's panes (PIN-510): the ticker's latest session, and
-/// its purchases, sales and orders, each with the buttons that add to it.
+/// An open stock card's panes (PIN-510): the ticker's Overview (PIN-511),
+/// and its purchases, sales and orders, each with the buttons that add to
+/// it.
 struct StockCardPanes: View {
     let model: MainWindowModel
     let ticker: Ticker
@@ -28,8 +29,7 @@ struct StockCardPanes: View {
             .fixedSize()
             switch model.selectedPane(for: ticker) {
             case .overview:
-                StockOverviewPane(state: model.latestSessions[ticker])
-                    .task(id: ticker) { await model.loadLatestSession(of: ticker) }
+                StockOverviewPane(model: model, ticker: ticker, heldShares: heldShares)
             case .purchases:
                 purchasesPane
             case .sales:
@@ -284,59 +284,6 @@ struct StockCardPanes: View {
         // The inset style pads above the first row and below the last.
         let insets: CGFloat = 16
         return headerHeight + rowHeight * CGFloat(min(max(rows, 1), 6)) + insets
-    }
-}
-
-/// The latest settled session's prices (PIN-510), labeled with its day.
-/// A live quote is to replace it (PIN-511).
-struct StockOverviewPane: View {
-    let state: LatestSessionState?
-
-    var body: some View {
-        switch state {
-        case nil, .loading:
-            HStack(spacing: 8) {
-                figures(of: nil)
-                ProgressView()
-                    .controlSize(.small)
-            }
-        case let .loaded(recent):
-            VStack(alignment: .leading, spacing: 6) {
-                figures(of: recent.latest)
-                Text("Last session, \(PriceDateFormatter().day(ofSession: recent.latest.sessionDate))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        case .empty:
-            Text("No sessions in the past month.")
-                .foregroundStyle(.secondary)
-        case let .failed(message):
-            Text(message)
-                .foregroundStyle(.secondary)
-                .help(message)
-        }
-    }
-
-    /// Open, High, Low and Close, or "—" for each until the bar loads.
-    private func figures(of bar: DailyBar?) -> some View {
-        HStack(spacing: 24) {
-            figure("Open", bar?.open)
-            figure("High", bar?.high)
-            figure("Low", bar?.low)
-            figure("Close", bar?.close)
-        }
-    }
-
-    private func figure(_ title: String, _ price: Decimal?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Text(price?.formatted(.currency(code: "USD").precision(.fractionLength(2 ... 4))) ?? "—")
-                .monospacedDigit()
-                .fixedSize()
-        }
-        .accessibilityElement(children: .combine)
     }
 }
 
