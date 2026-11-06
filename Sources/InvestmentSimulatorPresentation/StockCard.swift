@@ -18,10 +18,30 @@ public nonisolated struct StockCard: Identifiable, Hashable, Sendable {
 /// (PIN-510).
 public nonisolated enum LatestSessionState: Equatable, Sendable {
     case loading
-    case loaded(DailyBar)
+    case loaded(RecentSessions)
     /// No session in the past month, or an unknown ticker.
     case empty
     case failed(String)
+}
+
+/// A ticker's settled sessions of the past month, at least one: the latest
+/// for the Overview's last session, and the rest for the change since the
+/// previous close (PIN-511).
+public nonisolated struct RecentSessions: Equatable, Sendable {
+    /// By session date, the latest last.
+    public let bars: [DailyBar]
+
+    public var latest: DailyBar {
+        bars[bars.count - 1]
+    }
+
+    /// Nil with no bars.
+    public init?(_ bars: [DailyBar]) {
+        guard !bars.isEmpty else {
+            return nil
+        }
+        self.bars = bars.sorted { $0.sessionDate < $1.sessionDate }
+    }
 }
 
 /// The panes of an open stock card (PIN-510).

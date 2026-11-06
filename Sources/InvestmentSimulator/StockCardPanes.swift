@@ -300,10 +300,10 @@ struct StockOverviewPane: View {
                 ProgressView()
                     .controlSize(.small)
             }
-        case let .loaded(bar):
+        case let .loaded(recent):
             VStack(alignment: .leading, spacing: 6) {
-                figures(of: bar)
-                Text("Last session, \(PriceDateFormatter().day(ofSession: bar.sessionDate))")
+                figures(of: recent.latest)
+                Text("Last session, \(PriceDateFormatter().day(ofSession: recent.latest.sessionDate))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

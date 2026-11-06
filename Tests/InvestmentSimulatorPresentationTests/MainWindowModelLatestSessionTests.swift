@@ -3,9 +3,11 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import Testing
 
-/// A stock card's Overview: its ticker's latest settled session (PIN-510).
+/// A stock card's Overview: its ticker's latest settled session (PIN-510),
+/// kept with the rest of the past month's for the change since the previous
+/// close (PIN-511).
 extension MainWindowModelTests {
-    @Test func `the Overview shows the latest session of the past month`() async throws {
+    @Test func `the Overview keeps the past month's sessions by date, the latest last`() async throws {
         let latest = try DailyBar(sessionDate: "2026-10-29", open: 11, high: 13, low: 10, close: 12)
         let prices = try FakeDailyPrices(["VTI": [
             makeDailyBar(session: "2026-10-27", high: 20),
@@ -17,7 +19,12 @@ extension MainWindowModelTests {
         try await model.loadLatestSession(of: Ticker("VTI"))
 
         let sessions = PriceRange.oneMonth.sessions(endingAt: fixedNow)
-        #expect(try model.latestSessions[Ticker("VTI")] == .loaded(latest))
+        guard case let .loaded(recent) = try model.latestSessions[Ticker("VTI")] else {
+            Issue.record("No sessions loaded")
+            return
+        }
+        #expect(recent.latest == latest)
+        #expect(recent.bars.map(\.sessionDate) == ["2026-10-27", "2026-10-28", "2026-10-29"])
         #expect(prices.requests == [FakeDailyPrices.Request(
             ticker: "VTI",
             startDate: sessions.lowerBound,

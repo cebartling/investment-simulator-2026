@@ -52,11 +52,12 @@ public extension MainWindowModel {
         limitOrderRows(at: date).filter { $0.ticker == ticker }
     }
 
-    /// Loads the latest settled session of `ticker` in the past month into
-    /// `latestSessions`, for its card's Overview. Loads once a day, in New
-    /// York; a failure is asked for again the next time the Overview shows.
-    /// Daily bars are settled sessions, so during trading this is an earlier
-    /// day's. A live quote is to replace it (PIN-511).
+    /// Loads the settled sessions of `ticker` in the past month into
+    /// `latestSessions`, for its card's Overview: the latest, and the one
+    /// the quote's change is from (PIN-511). Loads once a day, in New York;
+    /// a failure is asked for again the next time the Overview shows. Daily
+    /// bars are settled sessions, so during trading the latest is an earlier
+    /// day's.
     func loadLatestSession(of ticker: Ticker) async {
         let sessions = PriceRange.oneMonth.sessions(endingAt: clock())
         switch latestSessions[ticker] {
@@ -77,7 +78,7 @@ public extension MainWindowModel {
                 from: sessions.lowerBound,
                 through: sessions.upperBound,
             )
-            latestSessions[ticker] = bars.max { $0.sessionDate < $1.sessionDate }.map { .loaded($0) } ?? .empty
+            latestSessions[ticker] = RecentSessions(bars).map { .loaded($0) } ?? .empty
         } catch .unknownTicker {
             latestSessions[ticker] = .empty
         } catch {
