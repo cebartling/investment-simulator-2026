@@ -55,11 +55,13 @@ public final class MainWindowModel {
     /// profile, so none is asked for twice.
     var companyNameRequests: Set<Ticker> = []
 
-    /// Each ticker's latest settled session, for its card's Overview
-    /// (PIN-510).
+    /// Each ticker's settled sessions of the past month, for its card's
+    /// Overview: the latest for the last session (PIN-510), and the rest for
+    /// the change since the previous close (PIN-511).
     public internal(set) var latestSessions: [Ticker: LatestSessionState] = [:]
-    /// The New York day (`yyyy-MM-dd`) each latest session was asked for
-    /// on, so a new day asks again.
+    /// The New York day (`yyyy-MM-dd`) each ticker's sessions were asked for
+    /// on, so a new day asks again, and a quote from a later session waits
+    /// for them before showing its change.
     var latestSessionDays: [Ticker: String] = [:]
 
     let quotes: any QuoteProviding

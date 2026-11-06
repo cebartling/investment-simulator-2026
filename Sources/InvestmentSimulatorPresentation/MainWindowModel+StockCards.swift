@@ -52,11 +52,12 @@ public extension MainWindowModel {
         limitOrderRows(at: date).filter { $0.ticker == ticker }
     }
 
-    /// Loads the latest settled session of `ticker` in the past month into
-    /// `latestSessions`, for its card's Overview. Loads once a day, in New
-    /// York; a failure is asked for again the next time the Overview shows.
-    /// Daily bars are settled sessions, so during trading this is an earlier
-    /// day's. A live quote is to replace it (PIN-511).
+    /// Loads the settled sessions of `ticker` in the past month into
+    /// `latestSessions`, for its card's Overview: the latest, and the one
+    /// the quote's change is from (PIN-511). Loads once a day, in New York;
+    /// a failure is asked for again the next time the Overview shows. Daily
+    /// bars are settled sessions, so during trading the latest is an earlier
+    /// day's.
     func loadLatestSession(of ticker: Ticker) async {
         let sessions = PriceRange.oneMonth.sessions(endingAt: clock())
         switch latestSessions[ticker] {
@@ -77,12 +78,68 @@ public extension MainWindowModel {
                 from: sessions.lowerBound,
                 through: sessions.upperBound,
             )
-            latestSessions[ticker] = bars.max { $0.sessionDate < $1.sessionDate }.map { .loaded($0) } ?? .empty
+            latestSessions[ticker] = RecentSessions(bars).map { .loaded($0) } ?? .empty
         } catch .unknownTicker {
             latestSessions[ticker] = .empty
         } catch {
             latestSessions[ticker] = .failed(error.localizedDescription)
         }
+    }
+
+    /// Asks for the quote of `ticker` for its card's Overview (PIN-511) if
+    /// no shares are held: a held ticker's quote comes with the holdings',
+    /// so asking here too would send a second request. Once asked for, the
+    /// ticker stays in Refresh Prices.
+    func priceOverview(of ticker: Ticker) async {
+        guard experiment.heldShares(of: ticker) == 0 else {
+            return
+        }
+        await holdingsPrices.priceOnDemand(ticker)
+    }
+
+    /// Loads the sessions of `ticker` again if they were asked for before
+    /// its quote's session, as when Refresh Prices runs the morning after
+    /// the Overview opened, so the change can show. Never starts the first
+    /// load: that's `loadLatestSession(of:)`'s, and a quote arriving while it
+    /// runs mustn't cancel it.
+    func reloadSessionsIfStale(of ticker: Ticker) async {
+        guard let quote = holdingsPrices.lastGoodQuote(of: ticker),
+              let askedOn = latestSessionDays[ticker], askedOn < quote.sessionDate
+        else {
+            return
+        }
+        await loadLatestSession(of: ticker)
+    }
+
+    /// What the Overview of `ticker`'s card shows (PIN-511), from the quote
+    /// `holdingsPrices` holds and the sessions `loadLatestSession(of:)`
+    /// loaded. A held ticker's quote is the one the header uses.
+    func overview(of ticker: Ticker) -> StockOverview {
+        let lastSession = latestSessions[ticker]
+        let isHeld = experiment.heldShares(of: ticker) > 0
+        guard let quote = holdingsPrices.lastGoodQuote(of: ticker) else {
+            return StockOverview(
+                price: holdingsPrices.failure(of: ticker).map { .failed($0) } ?? .loading,
+                change: nil,
+                holding: isHeld ? .unpriced : .notHeld,
+                lastSession: lastSession,
+            )
+        }
+        // Sessions asked for before the quote's session, as with the Overview
+        // open overnight, can lack the one before it, so the change would be
+        // from an older close. It waits for them to load again.
+        let sessionsAreCurrent = latestSessionDays[ticker].map { $0 >= quote.sessionDate } ?? false
+        var change: PriceChange?
+        if case let .loaded(recent) = lastSession, sessionsAreCurrent {
+            change = quote.change(since: recent.bars)
+        }
+        let holding: StockOverview.Holding = isHeld
+            ? .priced(
+                marketValue: experiment.marketValue(of: ticker, at: quote.price),
+                gain: experiment.unrealizedGain(of: ticker, at: quote.price),
+            )
+            : .notHeld
+        return StockOverview(price: .quoted(quote), change: change, holding: holding, lastSession: lastSession)
     }
 
     /// Loads the company name of `ticker` into `companyNames` the first

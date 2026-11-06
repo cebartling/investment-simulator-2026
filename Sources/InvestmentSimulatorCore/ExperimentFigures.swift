@@ -70,20 +70,21 @@ public extension Experiment {
     /// The total value at `prices` against the starting cash. Nil unless
     /// every held ticker has a price.
     func gain(prices: [Ticker: Decimal]) -> Gain? {
-        totalValue(prices: prices).map { Gain(amount: $0 - startingCash, startingCash: startingCash) }
+        totalValue(prices: prices).map { Gain(amount: $0 - startingCash, base: startingCash) }
     }
 }
 
-/// How far an experiment's total value is from its starting cash.
+/// How far a value is from its base: an experiment's total value from its
+/// starting cash, or a stock's market value from what its held shares cost.
 public struct Gain: Sendable, Hashable {
     /// Negative for a loss.
     public let amount: Money
-    /// The amount as a percent of the starting cash, unrounded, such as 2.5
-    /// for 2.5%. Nil when the experiment started with no cash.
+    /// The amount as a percent of the base, unrounded, such as 2.5 for 2.5%.
+    /// Nil when the base is zero.
     public let percent: Decimal?
 
-    init(amount: Money, startingCash: Money) {
+    init(amount: Money, base: Money) {
         self.amount = amount
-        percent = startingCash == .zero ? nil : amount.amount / startingCash.amount * 100
+        percent = base == .zero ? nil : amount.amount / base.amount * 100
     }
 }

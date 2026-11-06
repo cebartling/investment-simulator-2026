@@ -2,7 +2,8 @@ import InvestmentSimulatorPresentation
 import SwiftUI
 
 /// The experiment's status bar (PIN-411): a failed save, and the state of
-/// the holdings' prices with Refresh Prices.
+/// the holdings' prices with Refresh Prices, which also requotes the
+/// tickers stock cards with no shares asked for (PIN-511).
 struct ExperimentFooter: View {
     let model: MainWindowModel
 
@@ -23,12 +24,12 @@ struct ExperimentFooter: View {
                 .foregroundStyle(.secondary)
             Button("Refresh Prices", systemImage: "arrow.clockwise") {
                 Task {
-                    await model.holdingsPrices.refreshPrices(of: model.experiment.heldTickers)
+                    await model.holdingsPrices.refreshPrices(holding: model.experiment.heldTickers)
                 }
             }
             .buttonStyle(.borderless)
-            .help("Get the latest price of each holding")
-            .disabled(model.holdingsPrices.isRefreshing || model.experiment.heldTickers.isEmpty)
+            .help("Get the latest price of each stock")
+            .disabled(!model.holdingsPrices.canRefresh(holding: model.experiment.heldTickers))
         }
         .font(.callout)
         .controlSize(.small)

@@ -2,10 +2,12 @@ import Foundation
 import InvestmentSimulatorCore
 import Observation
 
-/// Prices the shares an experiment holds, for the Experiment header's Total
-/// Value and Gain/Loss (PIN-408). Keeps the last good quote of each ticker,
-/// so a failed refresh falls back to it. Nothing polls: the window prices
-/// new holdings, and the user refreshes.
+/// Quotes an experiment's tickers: the shares it holds, for the Experiment
+/// header's Total Value and Gain/Loss (PIN-408) and the stock cards, plus
+/// the tickers a stock card with no shares asks for (PIN-511). Keeps the
+/// last good quote of each ticker, so a failed refresh falls back to it.
+/// Nothing polls: the window prices new holdings, a card asks for its
+/// ticker, and the user refreshes.
 @Observable
 public final class HoldingsPricesModel {
     public enum Valuation: Equatable {
@@ -27,9 +29,24 @@ public final class HoldingsPricesModel {
     private let quotes: any QuoteProviding
     private var lastGoodQuotes: [Ticker: Quote] = [:]
     private var failures: [Ticker: QuoteError] = [:]
+    /// The tickers asked for on demand, which Refresh Prices quotes again
+    /// whether or not they're held.
+    private var tickersAskedFor: Set<Ticker> = []
 
     public init(quotes: any QuoteProviding) {
         self.quotes = quotes
+    }
+
+    /// The latest quote of `ticker` that answered, or nil before one has.
+    public func lastGoodQuote(of ticker: Ticker) -> Quote? {
+        lastGoodQuotes[ticker]
+    }
+
+    /// Why the latest quote of `ticker` failed, or nil when it answered or
+    /// hasn't been asked for. A ticker can have both a failure and a last
+    /// good quote, after a failed refresh.
+    public func failure(of ticker: Ticker) -> QuoteError? {
+        failures[ticker]
     }
 
     /// Quotes the tickers of `tickers` not answered yet, so new holdings get
@@ -37,18 +54,32 @@ public final class HoldingsPricesModel {
     /// still being quoted is quoted again: the window cancels a run when
     /// holdings change, and the cancelled run drops what it was quoting.
     public func priceNewHoldings(of tickers: Set<Ticker>) async {
-        let answered = Set(lastGoodQuotes.keys).union(failures.keys)
-        await quote(tickers.subtracting(answered))
+        await quote(tickers.subtracting(answeredTickers))
     }
 
-    /// Quotes every ticker of `tickers` again.
-    public func refreshPrices(of tickers: Set<Ticker>) async {
+    /// Quotes `ticker` if it isn't answered yet, as `priceNewHoldings(of:)`
+    /// does, and has Refresh Prices quote it from now on. For a stock card
+    /// with no shares held, which the holdings don't price.
+    public func priceOnDemand(_ ticker: Ticker) async {
+        tickersAskedFor.insert(ticker)
+        await quote(Set([ticker]).subtracting(answeredTickers))
+    }
+
+    /// Quotes again every ticker of `heldTickers` and every ticker asked for
+    /// on demand, quoted or failed.
+    public func refreshPrices(holding heldTickers: Set<Ticker>) async {
         guard !isRefreshing else {
             return
         }
         isRefreshing = true
         defer { isRefreshing = false }
-        await quote(tickers)
+        await quote(heldTickers.union(tickersAskedFor))
+    }
+
+    /// True when `refreshPrices(holding:)` has something to quote and isn't
+    /// already running.
+    public func canRefresh(holding heldTickers: Set<Ticker>) -> Bool {
+        !isRefreshing && !heldTickers.union(tickersAskedFor).isEmpty
     }
 
     public func valuation(of experiment: Experiment) -> Valuation {
@@ -63,6 +94,11 @@ public final class HoldingsPricesModel {
             return .unpriced(failure)
         }
         return .pricing
+    }
+
+    /// The tickers with a quote or a failure.
+    private var answeredTickers: Set<Ticker> {
+        Set(lastGoodQuotes.keys).union(failures.keys)
     }
 
     /// Quotes `tickers`, at most `maxConcurrentQuotes` at once. Once
