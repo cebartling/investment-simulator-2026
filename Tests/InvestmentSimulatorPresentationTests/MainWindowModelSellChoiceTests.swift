@@ -40,6 +40,42 @@ extension MainWindowModelTests {
         #expect(!model.isShowingLimitOrder)
     }
 
+    @Test func `asking for a purchase that isn't offered starts on the first with free shares`() async throws {
+        let model = try await makeModelWithChoices()
+
+        try model.beginSale(of: Ticker("VTI"), selecting: SellChoiceIDs.soldOut)
+        try model.beginLimitOrder(of: Ticker("VTI"), selecting: SellChoiceIDs.soldOut)
+
+        #expect(model.sale?.purchase.id == fixedPurchaseID)
+        #expect(model.limitOrder?.purchase.id == fixedPurchaseID)
+    }
+
+    @Test func `a fully sold ticker can't begin a sale or a sell limit order`() async throws {
+        let purchase = try makePurchase(id: SellChoiceIDs.aapl, ticker: "AAPL", shares: 3)
+        let sale = try Sale(
+            id: SellChoiceIDs.sale,
+            purchaseID: purchase.id,
+            shares: 3,
+            pricePerShare: 11,
+            soldAt: Date(timeIntervalSince1970: 1),
+            priceSource: .liveQuote(delayed: false),
+        )
+        let model = try await loadedModel(
+            experiment: Experiment(cashBalance: Money(100), purchases: [purchase], sales: [sale]),
+            quotes: FakeQuotes(.failure(.missingAPIKey)),
+            dailyPrices: FakeDailyPrices(),
+            clock: { fixedNow },
+        )
+
+        try model.beginSale(of: Ticker("AAPL"), selecting: purchase.id)
+        try model.beginLimitOrder(of: Ticker("AAPL"), selecting: purchase.id)
+
+        #expect(model.sale == nil)
+        #expect(!model.isShowingSale)
+        #expect(model.limitOrder == nil)
+        #expect(!model.isShowingLimitOrder)
+    }
+
     /// VTI bought three times, one purchase sold out and another with 4 of
     /// its 10 shares in an open order, and AAPL bought once.
     private func makeModelWithChoices() async throws -> MainWindowModel {
