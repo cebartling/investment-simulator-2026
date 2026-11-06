@@ -256,12 +256,14 @@ public final class MainWindowModel {
         buyLimitOrder = nil
     }
 
-    public func beginLimitOrder(for purchase: Purchase) {
-        limitOrder = LimitOrderModel(
-            purchase: purchase,
-            availableShares: experiment.availableShares(of: purchase, at: clock()),
-            clock: clock,
-        )
+    /// Shows Sell Limit for the purchases of `ticker` still held, starting
+    /// on `purchaseID` if given. Does nothing with none held.
+    public func beginLimitOrder(of ticker: Ticker, selecting purchaseID: UUID? = nil) {
+        let choices = sellablePurchases(of: ticker)
+        guard !choices.isEmpty else {
+            return
+        }
+        limitOrder = LimitOrderModel(choices: choices, selecting: purchaseID, clock: clock)
         isShowingLimitOrder = true
     }
 

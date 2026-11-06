@@ -2,8 +2,8 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// Places a sell limit order on one purchase, priced by a percent profit or
-/// a typed limit price.
+/// Places a sell limit order on one of a ticker's purchases, priced by a
+/// percent profit or a typed limit price.
 struct LimitOrderSheet: View {
     @Bindable var model: LimitOrderModel
     let onPlace: () -> Void
@@ -17,13 +17,7 @@ struct LimitOrderSheet: View {
                 .font(.title2.bold())
                 .padding([.horizontal, .top], 20)
             Form {
-                LabeledContent("Purchase price") {
-                    Text(
-                        model.purchase.pricePerShare,
-                        format: .currency(code: "USD").precision(.fractionLength(2 ... 4)),
-                    )
-                    .monospaced()
-                }
+                PurchasePicker(choices: model.choices, selection: $model.selectedPurchaseID)
                 Picker("Price by", selection: $model.mode) {
                     ForEach(LimitOrderModel.PriceMode.allCases, id: \.self) { mode in
                         Text(mode.title)

@@ -140,24 +140,62 @@ struct LimitOrderModelTests {
         #expect(order.expiresAt == model.expiresAt)
     }
 
+    @Test func `starts on the first purchase with free shares, at its price`() throws {
+        let model = try makeModel(choices: [
+            makeChoice(price: "10", available: 0),
+            makeChoice(id: Self.secondPurchaseID, price: "20.005", available: 6),
+        ])
+
+        #expect(model.purchase.id == Self.secondPurchaseID)
+        #expect(model.availableShares == 6)
+        #expect(model.shares == 6)
+        #expect(model.enteredPrice == 20)
+    }
+
+    @Test func `starts on the purchase asked for`() throws {
+        let model = try makeModel(
+            choices: [
+                makeChoice(price: "10", available: 2),
+                makeChoice(id: Self.secondPurchaseID, price: "20", available: 6),
+            ],
+            selecting: Self.secondPurchaseID,
+        )
+
+        #expect(model.purchase.id == Self.secondPurchaseID)
+        #expect(model.shares == 6)
+    }
+
+    @Test func `choosing another purchase takes its free shares and price`() throws {
+        let model = try makeModel(choices: [
+            makeChoice(price: "10", available: 4),
+            makeChoice(id: Self.secondPurchaseID, price: "20", available: 3),
+        ])
+        model.profitPercent = 10
+
+        model.selectedPurchaseID = Self.secondPurchaseID
+
+        #expect(model.shares == 3)
+        #expect(model.enteredPrice == 20)
+        #expect(model.limitPrice == Money(22))
+        #expect(model.place()?.purchaseID == Self.secondPurchaseID)
+    }
+
+    private static let secondPurchaseID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+
     private func makeModel(
         price: String,
         available: Int,
         clock: @escaping () -> Date = { fixedNow },
     ) throws -> LimitOrderModel {
-        try LimitOrderModel(
-            purchase: Purchase(
-                id: fixedPurchaseID,
-                ticker: Ticker("VTI"),
-                shares: 10,
-                pricePerShare: #require(Decimal(string: price)),
-                pricedAt: Date(timeIntervalSince1970: 1_793_000_000),
-                priceSource: .liveQuote(delayed: false),
-            ),
-            availableShares: available,
-            clock: clock,
-            orderID: fixedOrderID,
-        )
+        try makeModel(choices: [makeChoice(price: price, available: available)], clock: clock)
+    }
+
+    private func makeModel(
+        choices: [SellablePurchase],
+        selecting purchaseID: UUID? = nil,
+        clock: @escaping () -> Date = { fixedNow },
+    ) throws -> LimitOrderModel {
+        LimitOrderModel(choices: choices, selecting: purchaseID, clock: clock, orderID: fixedOrderID)
     }
 }
 

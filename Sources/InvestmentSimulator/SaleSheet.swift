@@ -2,8 +2,8 @@ import InvestmentSimulatorCore
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// Sells free shares of one purchase at a market price, adding the proceeds
-/// to the experiment's cash.
+/// Sells free shares of one of a ticker's purchases at a market price,
+/// adding the proceeds to the experiment's cash.
 struct SaleSheet: View {
     @Bindable var model: SaleModel
     let onSell: () -> Void
@@ -17,13 +17,7 @@ struct SaleSheet: View {
                 .font(.title2.bold())
                 .padding([.horizontal, .top], 20)
             Form {
-                LabeledContent("Purchase price") {
-                    Text(
-                        model.purchase.pricePerShare,
-                        format: .currency(code: "USD").precision(.fractionLength(2 ... 4)),
-                    )
-                    .monospaced()
-                }
+                PurchasePicker(choices: model.choices, selection: $model.selectedPurchaseID)
                 LabeledContent("Shares") {
                     HStack {
                         TextField("Shares", value: $model.shares, format: .number)

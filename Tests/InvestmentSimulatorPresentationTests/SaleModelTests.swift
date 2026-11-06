@@ -101,25 +101,82 @@ struct SaleModelTests {
         #expect(!model.canSell)
     }
 
+    @Test func `starts on the first purchase with free shares`() throws {
+        let model = try makeModel(choices: [
+            makeChoice(price: "10", available: 0),
+            makeChoice(id: Self.secondPurchaseID, price: "20", available: 6),
+        ])
+
+        #expect(model.selectedPurchaseID == Self.secondPurchaseID)
+        #expect(model.purchase.id == Self.secondPurchaseID)
+        #expect(model.availableShares == 6)
+        #expect(model.shares == 6)
+    }
+
+    @Test func `starts on the purchase asked for, even with no free shares`() throws {
+        let model = try makeModel(
+            choices: [
+                makeChoice(price: "10", available: 0),
+                makeChoice(id: Self.secondPurchaseID, price: "20", available: 6),
+            ],
+            selecting: fixedPurchaseID,
+        )
+
+        #expect(model.purchase.id == fixedPurchaseID)
+        #expect(model.shares == 0)
+        #expect(!model.canGetPrice)
+    }
+
+    @Test func `starts on the first purchase when none has free shares`() throws {
+        let model = try makeModel(choices: [
+            makeChoice(price: "10", available: 0),
+            makeChoice(id: Self.secondPurchaseID, price: "20", available: 0),
+        ])
+
+        #expect(model.purchase.id == fixedPurchaseID)
+    }
+
+    @Test func `choosing another purchase takes its free shares and keeps the price`() async throws {
+        let quotes = try FakeQuotes(.success(makeQuote(price: "12.5")))
+        let model = try makeModel(
+            choices: [
+                makeChoice(price: "10", available: 10),
+                makeChoice(id: Self.secondPurchaseID, price: "20", available: 3),
+            ],
+            quotes: quotes,
+        )
+        await model.getPrice()
+
+        model.selectedPurchaseID = Self.secondPurchaseID
+
+        #expect(model.shares == 3)
+        #expect(quotes.requestCount == 1)
+        // 37.50 less 3 shares at 20.
+        #expect(try model.realizedGain == Money(#require(Decimal(string: "-22.5"))))
+        #expect(model.sell()?.purchaseID == Self.secondPurchaseID)
+    }
+
     private static let now = Date(timeIntervalSince1970: 1_793_100_000)
     private static let saleID = UUID(uuidString: "00000000-0000-0000-0000-0000000000C1")!
+    private static let secondPurchaseID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
 
     private func makeModel(
         available: Int,
         cash: Decimal = 0,
         quotes: FakeQuotes = FakeQuotes(.failure(.missingAPIKey)),
     ) throws -> SaleModel {
-        let purchase = try Purchase(
-            id: fixedPurchaseID,
-            ticker: Ticker("VTI"),
-            shares: 10,
-            pricePerShare: 10,
-            pricedAt: Date(timeIntervalSince1970: 1_793_000_000),
-            priceSource: .liveQuote(delayed: false),
-        )
-        return SaleModel(
-            purchase: purchase,
-            availableShares: available,
+        try makeModel(choices: [makeChoice(price: "10", available: available)], cash: cash, quotes: quotes)
+    }
+
+    private func makeModel(
+        choices: [SellablePurchase],
+        selecting purchaseID: UUID? = nil,
+        cash: Decimal = 0,
+        quotes: FakeQuotes = FakeQuotes(.failure(.missingAPIKey)),
+    ) throws -> SaleModel {
+        SaleModel(
+            choices: choices,
+            selecting: purchaseID,
             cashBalance: Money(cash),
             quotes: quotes,
             clock: { Self.now },

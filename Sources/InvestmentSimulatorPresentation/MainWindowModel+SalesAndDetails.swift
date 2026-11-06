@@ -3,15 +3,30 @@ import InvestmentSimulatorCore
 
 /// Market sales and the Sales table (PIN-409).
 public extension MainWindowModel {
-    func beginSale(of purchase: Purchase) {
+    /// Shows Market Sell for the purchases of `ticker` still held, starting
+    /// on `purchaseID` if given. Does nothing with none held.
+    func beginSale(of ticker: Ticker, selecting purchaseID: UUID? = nil) {
+        let choices = sellablePurchases(of: ticker)
+        guard !choices.isEmpty else {
+            return
+        }
         sale = SaleModel(
-            purchase: purchase,
-            availableShares: experiment.availableShares(of: purchase, at: clock()),
+            choices: choices,
+            selecting: purchaseID,
             cashBalance: experiment.cashBalance,
             quotes: quotes,
             clock: clock,
         )
         isShowingSale = true
+    }
+
+    /// The purchases of `ticker` with shares still held, in the order they
+    /// were made, each with its shares free now.
+    internal func sellablePurchases(of ticker: Ticker) -> [SellablePurchase] {
+        let now = clock()
+        return experiment.purchases
+            .filter { $0.ticker == ticker && experiment.heldShares(of: $0) > 0 }
+            .map { SellablePurchase(purchase: $0, availableShares: experiment.availableShares(of: $0, at: now)) }
     }
 
     /// Returns the experiment after the sale.

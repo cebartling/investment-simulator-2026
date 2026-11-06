@@ -354,3 +354,19 @@ func makeQuote(price: String, source: PriceSource = .liveQuote(delayed: true)) t
 }
 
 let fixedPurchaseID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+
+/// A purchase of 10 VTI at `price` that a sell sheet can sell `available`
+/// shares of.
+func makeChoice(id: UUID = fixedPurchaseID, price: String, available: Int) throws -> SellablePurchase {
+    try SellablePurchase(
+        purchase: Purchase(
+            id: id,
+            ticker: Ticker("VTI"),
+            shares: 10,
+            pricePerShare: #require(Decimal(string: price)),
+            pricedAt: Date(timeIntervalSince1970: 1_793_000_000),
+            priceSource: .liveQuote(delayed: false),
+        ),
+        availableShares: available,
+    )
+}

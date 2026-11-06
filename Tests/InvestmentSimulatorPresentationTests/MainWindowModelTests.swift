@@ -88,7 +88,7 @@ struct MainWindowModelTests {
     @Test func `beginning a limit order shows the sheet with the purchase's free shares`() async throws {
         let model = try await makeModelWithPurchase(orders: [makeOrder(shares: 3)])
 
-        try model.beginLimitOrder(for: #require(model.purchases.first))
+        try model.beginLimitOrder(of: Ticker("VTI"))
 
         #expect(model.isShowingLimitOrder)
         #expect(model.limitOrder?.purchase.id == fixedPurchaseID)
@@ -98,7 +98,7 @@ struct MainWindowModelTests {
 
     @Test func `completing a limit order places it and hides the sheet`() async throws {
         let model = try await makeModelWithPurchase()
-        try model.beginLimitOrder(for: #require(model.purchases.first))
+        try model.beginLimitOrder(of: Ticker("VTI"))
         model.limitOrder?.profitPercent = 10
         model.limitOrder?.shares = 4
 
@@ -115,7 +115,7 @@ struct MainWindowModelTests {
 
     @Test func `completing a limit order that can't be placed changes nothing`() async throws {
         let model = try await makeModelWithPurchase()
-        try model.beginLimitOrder(for: #require(model.purchases.first))
+        try model.beginLimitOrder(of: Ticker("VTI"))
         model.limitOrder?.profitPercent = -1
 
         #expect(model.completeLimitOrder() == nil)
@@ -125,7 +125,7 @@ struct MainWindowModelTests {
 
     @Test func `cancelling a limit order hides the sheet`() async throws {
         let model = try await makeModelWithPurchase()
-        try model.beginLimitOrder(for: #require(model.purchases.first))
+        try model.beginLimitOrder(of: Ticker("VTI"))
 
         model.cancelLimitOrder()
 
@@ -160,7 +160,7 @@ struct MainWindowModelTests {
     @Test func `limit order is placed at the time Place Order is chosen`() async throws {
         var now = fixedNow
         let model = try await makeModelWithPurchase(clock: { now })
-        try model.beginLimitOrder(for: #require(model.purchases.first))
+        try model.beginLimitOrder(of: Ticker("VTI"))
         now = fixedNow.addingTimeInterval(3600)
 
         let updated = try #require(model.completeLimitOrder())
