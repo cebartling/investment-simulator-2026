@@ -14,6 +14,19 @@ public struct Quote: Sendable, Hashable {
         self.asOf = asOf
         self.source = source
     }
+
+    /// The session the price is from (`yyyy-MM-dd`): a close's own session,
+    /// else the New York day of `asOf`. The adapter answers a stale live
+    /// quote with the latest close, so a live quote is from the current
+    /// session.
+    public var sessionDate: String {
+        switch source {
+        case let .close(sessionDate), let .limitOrderFill(sessionDate):
+            sessionDate
+        case .liveQuote:
+            InvestmentSimulatorCore.sessionDate(at: asOf)
+        }
+    }
 }
 
 /// Driven port for market prices (ADR-0012). `async` because adapters
