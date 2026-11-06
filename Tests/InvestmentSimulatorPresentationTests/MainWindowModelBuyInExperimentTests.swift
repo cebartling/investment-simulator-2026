@@ -65,12 +65,12 @@ extension MainWindowModelTests {
         let model = try await makeModelWithPurchase()
         let purchase = try #require(model.purchases.first)
 
-        model.beginSale(of: purchase)
+        model.beginSale(of: purchase.ticker)
         #expect(model.isShowingSheet)
         model.cancelSale()
         #expect(!model.isShowingSheet)
 
-        model.beginLimitOrder(for: purchase)
+        model.beginLimitOrder(of: purchase.ticker)
         #expect(model.isShowingSheet)
         model.cancelLimitOrder()
         #expect(!model.isShowingSheet)

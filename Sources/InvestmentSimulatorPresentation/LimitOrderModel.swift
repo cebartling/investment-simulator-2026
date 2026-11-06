@@ -2,8 +2,9 @@ import Foundation
 import InvestmentSimulatorCore
 import Observation
 
-/// Drives the Sell Limit sheet: a limit order on one purchase, priced by a
-/// typed limit price or a percent profit.
+/// Drives the Sell Limit sheet: a limit order on one of a ticker's
+/// purchases, which the user chooses (PIN-510), priced by a typed limit
+/// price or a percent profit.
 @Observable
 public final class LimitOrderModel {
     public enum PriceMode: Hashable, CaseIterable {
@@ -17,27 +18,50 @@ public final class LimitOrderModel {
     public var enteredPrice: Decimal
     public var shares: Int
 
-    public let purchase: Purchase
-    /// Shares of the purchase not already in an open order.
-    public let availableShares: Int
+    /// The purchases of one ticker the order can sell from.
+    public let choices: [SellablePurchase]
+    /// The purchase the order sells from. Choosing another sells all its
+    /// free shares, and a typed price starts again at its price.
+    public var selectedPurchaseID: UUID {
+        didSet {
+            shares = availableShares
+            enteredPrice = Self.startingPrice(of: purchase)
+        }
+    }
 
     private let clock: () -> Date
     private let orderID: UUID
 
-    /// `clock` tells the time; the order is placed when `place()` is
-    /// called. `orderID` identifies it.
+    /// Starts on `purchaseID` when it is one of `choices`, which must not be
+    /// empty, else on the first with free shares. `clock` tells the time;
+    /// the order is placed when `place()` is called. `orderID` identifies it.
     public init(
-        purchase: Purchase,
-        availableShares: Int,
+        choices: [SellablePurchase],
+        selecting purchaseID: UUID? = nil,
         clock: @escaping () -> Date = Date.init,
         orderID: UUID = UUID(),
     ) {
-        self.purchase = purchase
-        self.availableShares = availableShares
+        let initial = choices.choice(withID: choices.initialID(preferring: purchaseID))
+        self.choices = choices
+        selectedPurchaseID = initial.id
         self.clock = clock
         self.orderID = orderID
-        enteredPrice = Money(purchase.pricePerShare).roundedToCents().amount
-        shares = availableShares
+        enteredPrice = Self.startingPrice(of: initial.purchase)
+        shares = initial.availableShares
+    }
+
+    public var purchase: Purchase {
+        choices.choice(withID: selectedPurchaseID).purchase
+    }
+
+    /// Shares of the purchase not already in an open order.
+    public var availableShares: Int {
+        choices.choice(withID: selectedPurchaseID).availableShares
+    }
+
+    /// The purchase price in cents, where a typed price starts.
+    private static func startingPrice(of purchase: Purchase) -> Decimal {
+        Money(purchase.pricePerShare).roundedToCents().amount
     }
 
     /// When the order would expire if it were placed now.

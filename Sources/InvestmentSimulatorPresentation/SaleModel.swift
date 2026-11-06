@@ -2,8 +2,9 @@ import Foundation
 import InvestmentSimulatorCore
 import Observation
 
-/// Drives the Market Sell sheet: sell free shares of one purchase at a
-/// market price, adding the proceeds to the experiment's cash (ADR-0016).
+/// Drives the Market Sell sheet: sell free shares of one of a ticker's
+/// purchases at a market price, adding the proceeds to the experiment's
+/// cash (ADR-0016). The user chooses the purchase (PIN-510).
 @Observable
 public final class SaleModel {
     public enum PriceState: Equatable {
@@ -18,32 +19,50 @@ public final class SaleModel {
     /// True when the last price failed for want of a working API key.
     public private(set) var needsAPIKey = false
 
-    public let purchase: Purchase
-    /// Shares of the purchase neither sold nor in an open sell order.
-    public let availableShares: Int
+    /// The purchases of one ticker the sale can sell from.
+    public let choices: [SellablePurchase]
+    /// The purchase the sale sells from. Choosing another sells all its
+    /// free shares; the price, being the ticker's, stays.
+    public var selectedPurchaseID: UUID {
+        didSet {
+            shares = availableShares
+        }
+    }
+
     public let cashBalance: Money
 
     private let quotes: any QuoteProviding
     private let clock: () -> Date
     private let saleID: UUID
 
-    /// `clock` tells the time; the sale is made when `sell()` is called.
-    /// `saleID` identifies it.
+    /// Starts on `purchaseID` when it is one of `choices`, which must not be
+    /// empty, else on the first with free shares. `clock` tells the time;
+    /// the sale is made when `sell()` is called. `saleID` identifies it.
     public init(
-        purchase: Purchase,
-        availableShares: Int,
+        choices: [SellablePurchase],
+        selecting purchaseID: UUID? = nil,
         cashBalance: Money,
         quotes: any QuoteProviding,
         clock: @escaping () -> Date = Date.init,
         saleID: UUID = UUID(),
     ) {
-        self.purchase = purchase
-        self.availableShares = availableShares
+        let initialID = choices.initialID(preferring: purchaseID)
+        self.choices = choices
+        selectedPurchaseID = initialID
         self.cashBalance = cashBalance
         self.quotes = quotes
         self.clock = clock
         self.saleID = saleID
-        shares = availableShares
+        shares = choices.choice(withID: initialID).availableShares
+    }
+
+    public var purchase: Purchase {
+        choices.choice(withID: selectedPurchaseID).purchase
+    }
+
+    /// Shares of the purchase neither sold nor in an open sell order.
+    public var availableShares: Int {
+        choices.choice(withID: selectedPurchaseID).availableShares
     }
 
     public var sharesMessage: String? {

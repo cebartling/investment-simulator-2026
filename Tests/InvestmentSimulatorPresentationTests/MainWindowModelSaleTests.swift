@@ -8,7 +8,7 @@ extension MainWindowModelTests {
     @Test func `beginning a sale shows the sheet with the purchase's free shares and the cash`() async throws {
         let model = try await makeModelForSale(orders: [makeOrder(shares: 4)])
 
-        try model.beginSale(of: #require(model.purchases.first))
+        try model.beginSale(of: Ticker("VTI"))
 
         #expect(model.isShowingSale)
         #expect(model.sale?.purchase.id == fixedPurchaseID)
@@ -18,7 +18,7 @@ extension MainWindowModelTests {
 
     @Test func `completing a sale credits the proceeds, records it, hides the sheet and celebrates`() async throws {
         let model = try await makeModelForSale(quotes: FakeQuotes(.success(makeQuote(price: "12.5"))))
-        try model.beginSale(of: #require(model.purchases.first))
+        try model.beginSale(of: Ticker("VTI"))
         model.sale?.shares = 4
         await model.sale?.getPrice()
 
@@ -35,7 +35,7 @@ extension MainWindowModelTests {
 
     @Test func `a sale that can't be made leaves the sheet open and doesn't celebrate`() async throws {
         let model = try await makeModelForSale()
-        try model.beginSale(of: #require(model.purchases.first))
+        try model.beginSale(of: Ticker("VTI"))
 
         #expect(model.completeSale() == nil)
         #expect(model.isShowingSale)
@@ -45,7 +45,7 @@ extension MainWindowModelTests {
     @Test func `cancelling a sale hides the sheet and changes nothing`() async throws {
         let model = try await makeModelForSale()
         let before = model.experiment
-        try model.beginSale(of: #require(model.purchases.first))
+        try model.beginSale(of: Ticker("VTI"))
 
         model.cancelSale()
 

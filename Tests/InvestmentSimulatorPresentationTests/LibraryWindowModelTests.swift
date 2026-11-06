@@ -24,6 +24,7 @@ struct LibraryWindowModelTests {
                     repository: repository,
                     quotes: FakeQuotes(.failure(.missingAPIKey)),
                     dailyPrices: FakeDailyPrices(),
+                    profiles: FakeResearchData(),
                 )
             },
         )

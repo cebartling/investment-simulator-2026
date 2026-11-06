@@ -1,9 +1,9 @@
 import InvestmentSimulatorPresentation
 import SwiftUI
 
-/// One experiment in the library window's detail: its header, tables and
-/// footer, and the sheets that change it. The model saves each change
-/// itself (ADR-0021).
+/// One experiment in the library window's detail: its header, stock cards
+/// (PIN-510) and footer, and the sheets that change it. The model saves
+/// each change itself (ADR-0021).
 struct ExperimentView: View {
     @Bindable var model: MainWindowModel
 
@@ -36,23 +36,7 @@ struct ExperimentView: View {
                 onEditDetails: model.beginEditingDetails,
             )
             .padding(.top, 16)
-            ExperimentDetailView(
-                purchases: model.purchases,
-                hasLimitOrders: !model.experiment.limitOrders.isEmpty
-                    || !model.experiment.buyLimitOrders.isEmpty,
-                saleRows: model.saleRows,
-                limitOrderRows: model.limitOrderRows(at:),
-                showsExpiredAndCancelledOrders: $model.showsExpiredAndCancelledOrders,
-                onBuy: model.beginPurchase,
-                onBuyLimit: model.beginBuyLimitOrder,
-                onSell: model.beginSale,
-                onSellLimit: model.beginLimitOrder,
-                onCancelOrder: { model.cancelOrder(id: $0) },
-                canCheckOrders: model.canCheckOrders(at:),
-                isCheckingOrders: model.isCheckingOrders,
-                orderCheckMessage: model.orderCheckMessage,
-                onCheckOrders: { await model.checkLimitOrders() },
-            )
+            StockCardList(model: model)
         }
         // On the detail, not beside the New Experiment sheet, so
         // each sheet has its own view.

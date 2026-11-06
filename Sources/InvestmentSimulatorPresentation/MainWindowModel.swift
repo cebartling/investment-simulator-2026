@@ -43,8 +43,28 @@ public final class MainWindowModel {
     /// sell, so the window can celebrate each one.
     public internal(set) var celebrationCount = 0
 
+    /// The tickers whose stock card is open (PIN-510). Kept while the app
+    /// runs, never saved.
+    public internal(set) var expandedTickers: Set<Ticker> = []
+    /// The pane each card shows, once one is chosen.
+    var selectedPanes: [Ticker: StockPane] = [:]
+
+    /// The company name of each ticker whose profile loaded (PIN-510).
+    public internal(set) var companyNames: [Ticker: String] = [:]
+    /// The tickers whose name is loaded, loading, or known to have no
+    /// profile, so none is asked for twice.
+    var companyNameRequests: Set<Ticker> = []
+
+    /// Each ticker's latest settled session, for its card's Overview
+    /// (PIN-510).
+    public internal(set) var latestSessions: [Ticker: LatestSessionState] = [:]
+    /// The New York day (`yyyy-MM-dd`) each latest session was asked for
+    /// on, so a new day asks again.
+    var latestSessionDays: [Ticker: String] = [:]
+
     let quotes: any QuoteProviding
-    private let dailyPrices: any DailyPriceProviding
+    let dailyPrices: any DailyPriceProviding
+    let profiles: any CompanyProfileProviding
     let clock: () -> Date
 
     /// Where each change is saved (ADR-0021).
@@ -67,11 +87,13 @@ public final class MainWindowModel {
         repository: any ExperimentRepository,
         quotes: any QuoteProviding,
         dailyPrices: any DailyPriceProviding,
+        profiles: any CompanyProfileProviding,
         clock: @escaping () -> Date = Date.init,
     ) {
         experiment = .empty
         self.quotes = quotes
         self.dailyPrices = dailyPrices
+        self.profiles = profiles
         self.clock = clock
         holdingsPrices = HoldingsPricesModel(quotes: quotes)
         storage = ExperimentStorage(id: id, repository: repository)
@@ -256,12 +278,14 @@ public final class MainWindowModel {
         buyLimitOrder = nil
     }
 
-    public func beginLimitOrder(for purchase: Purchase) {
-        limitOrder = LimitOrderModel(
-            purchase: purchase,
-            availableShares: experiment.availableShares(of: purchase, at: clock()),
-            clock: clock,
-        )
+    /// Shows Sell Limit for the purchases of `ticker` still held, starting
+    /// on `purchaseID` if given. Does nothing with none held.
+    public func beginLimitOrder(of ticker: Ticker, selecting purchaseID: UUID? = nil) {
+        let choices = sellablePurchases(of: ticker)
+        guard !choices.isEmpty else {
+            return
+        }
+        limitOrder = LimitOrderModel(choices: choices, selecting: purchaseID, clock: clock)
         isShowingLimitOrder = true
     }
 

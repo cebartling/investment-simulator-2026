@@ -32,7 +32,7 @@ extension MainWindowModelTests {
 
     @Test func `placing a limit order doesn't celebrate`() async throws {
         let model = try await makeModelWithPurchase()
-        try model.beginLimitOrder(for: #require(model.purchases.first))
+        try model.beginLimitOrder(of: Ticker("VTI"))
         model.limitOrder?.profitPercent = 10
 
         _ = try #require(model.completeLimitOrder())

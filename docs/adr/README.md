@@ -35,3 +35,4 @@ ADRs are not edited after acceptance except to change their status. To reverse a
 | [0019](0019-research-window.md) | Research Window, Its Ports, and SEC EDGAR for Tickers | Accepted |
 | [0020](0020-research-buy-in-experiment.md) | Buying from Research Through a Registry of Open Experiments | Superseded by ADR-0021 |
 | [0021](0021-sqlite-library-replaces-document-persistence.md) | Store Experiments in an App-Wide SQLite Database, in a Single Library Window | Accepted |
+| [0022](0022-stock-cards.md) | Show an Experiment's Stocks as Cards, Selling from a Chosen Purchase | Accepted |
