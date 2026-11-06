@@ -53,19 +53,24 @@ public extension MainWindowModel {
     }
 
     /// Loads the latest settled session of `ticker` in the past month into
-    /// `latestSessions`, for its card's Overview. Loads once; a failure is
-    /// asked for again the next time the Overview shows. Daily bars are
-    /// settled sessions, so during trading this is an earlier day's. A live
-    /// quote is to replace it (PIN-511).
+    /// `latestSessions`, for its card's Overview. Loads once a day, in New
+    /// York; a failure is asked for again the next time the Overview shows.
+    /// Daily bars are settled sessions, so during trading this is an earlier
+    /// day's. A live quote is to replace it (PIN-511).
     func loadLatestSession(of ticker: Ticker) async {
+        let sessions = PriceRange.oneMonth.sessions(endingAt: clock())
         switch latestSessions[ticker] {
-        case .loading, .loaded, .empty:
+        case .loading:
             return
+        case .loaded, .empty:
+            guard latestSessionDays[ticker] != sessions.upperBound else {
+                return
+            }
         case .failed, nil:
             break
         }
         latestSessions[ticker] = .loading
-        let sessions = PriceRange.oneMonth.sessions(endingAt: clock())
+        latestSessionDays[ticker] = sessions.upperBound
         do throws(QuoteError) {
             let bars = try await dailyPrices.dailyBars(
                 for: ticker,

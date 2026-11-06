@@ -35,6 +35,19 @@ extension MainWindowModelTests {
         #expect(prices.requests.count == 1)
     }
 
+    @Test func `a latest session loads again once a new day starts`() async throws {
+        var now = fixedNow
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-29", high: 13)]])
+        let model = try await makeSessionModel(prices: prices, clock: { now })
+        try await model.loadLatestSession(of: Ticker("VTI"))
+
+        now = fixedNow.addingTimeInterval(86400)
+        try await model.loadLatestSession(of: Ticker("VTI"))
+
+        #expect(prices.requests.count == 2)
+        #expect(prices.requests.last?.endDate == PriceRange.oneMonth.sessions(endingAt: now).upperBound)
+    }
+
     @Test func `a ticker with no sessions in the past month has none to show`() async throws {
         let model = try await makeSessionModel(prices: FakeDailyPrices())
 
@@ -63,12 +76,15 @@ extension MainWindowModelTests {
         #expect(prices.requests.count == 2)
     }
 
-    private func makeSessionModel(prices: FakeDailyPrices) async throws -> MainWindowModel {
+    private func makeSessionModel(
+        prices: FakeDailyPrices,
+        clock: @escaping () -> Date = { fixedNow },
+    ) async throws -> MainWindowModel {
         try await loadedModel(
             experiment: Experiment(cashBalance: Money(100)),
             quotes: FakeQuotes(.failure(.missingAPIKey)),
             dailyPrices: prices,
-            clock: { fixedNow },
+            clock: clock,
         )
     }
 }

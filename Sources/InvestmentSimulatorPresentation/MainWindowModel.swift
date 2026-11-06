@@ -58,6 +58,9 @@ public final class MainWindowModel {
     /// Each ticker's latest settled session, for its card's Overview
     /// (PIN-510).
     public internal(set) var latestSessions: [Ticker: LatestSessionState] = [:]
+    /// The New York day (`yyyy-MM-dd`) each latest session was asked for
+    /// on, so a new day asks again.
+    var latestSessionDays: [Ticker: String] = [:]
 
     let quotes: any QuoteProviding
     let dailyPrices: any DailyPriceProviding
