@@ -42,6 +42,7 @@ extension MainWindowModelTests {
             repository: repository,
             quotes: FakeQuotes(.failure(.missingAPIKey)),
             dailyPrices: prices,
+            profiles: FakeResearchData(),
             clock: clock,
         )
         return StoredModel(model: model, repository: repository, id: id)

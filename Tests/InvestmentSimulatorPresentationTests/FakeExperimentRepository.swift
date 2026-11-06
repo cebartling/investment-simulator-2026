@@ -130,6 +130,7 @@ func loadedModel(
     experiment: Experiment,
     quotes: any QuoteProviding,
     dailyPrices: any DailyPriceProviding,
+    profiles: any CompanyProfileProviding = FakeResearchData(),
     clock: @escaping () -> Date = Date.init,
 ) async -> MainWindowModel {
     let id = ExperimentID()
@@ -138,6 +139,7 @@ func loadedModel(
         repository: FakeExperimentRepository([id: experiment]),
         quotes: quotes,
         dailyPrices: dailyPrices,
+        profiles: profiles,
         clock: clock,
     )
     await model.load()

@@ -37,7 +37,13 @@ struct InvestmentSimulatorApp: App {
             _library = State(initialValue: LibraryWindowModel(
                 library: library,
                 makeExperimentModel: { id in
-                    MainWindowModel(id: id, repository: repository, quotes: equibles, dailyPrices: equibles)
+                    MainWindowModel(
+                        id: id,
+                        repository: repository,
+                        quotes: equibles,
+                        dailyPrices: equibles,
+                        profiles: researchData,
+                    )
                 },
             ))
             databaseError = nil

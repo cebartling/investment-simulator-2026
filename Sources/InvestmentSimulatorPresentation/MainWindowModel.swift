@@ -43,8 +43,15 @@ public final class MainWindowModel {
     /// sell, so the window can celebrate each one.
     public internal(set) var celebrationCount = 0
 
+    /// The company name of each ticker whose profile loaded (PIN-510).
+    public internal(set) var companyNames: [Ticker: String] = [:]
+    /// The tickers whose name is loaded, loading, or known to have no
+    /// profile, so none is asked for twice.
+    var companyNameRequests: Set<Ticker> = []
+
     let quotes: any QuoteProviding
     private let dailyPrices: any DailyPriceProviding
+    let profiles: any CompanyProfileProviding
     let clock: () -> Date
 
     /// Where each change is saved (ADR-0021).
@@ -67,11 +74,13 @@ public final class MainWindowModel {
         repository: any ExperimentRepository,
         quotes: any QuoteProviding,
         dailyPrices: any DailyPriceProviding,
+        profiles: any CompanyProfileProviding,
         clock: @escaping () -> Date = Date.init,
     ) {
         experiment = .empty
         self.quotes = quotes
         self.dailyPrices = dailyPrices
+        self.profiles = profiles
         self.clock = clock
         holdingsPrices = HoldingsPricesModel(quotes: quotes)
         storage = ExperimentStorage(id: id, repository: repository)
