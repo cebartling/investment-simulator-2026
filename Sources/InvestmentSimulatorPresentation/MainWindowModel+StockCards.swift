@@ -86,6 +86,20 @@ public extension MainWindowModel {
         }
     }
 
+    /// Loads the sessions of `ticker` again if they were asked for before
+    /// its quote's session, as when Refresh Prices runs the morning after
+    /// the Overview opened, so the change can show. Never starts the first
+    /// load: that's `loadLatestSession(of:)`'s, and a quote arriving while it
+    /// runs mustn't cancel it.
+    func reloadSessionsIfStale(of ticker: Ticker) async {
+        guard let quote = holdingsPrices.lastGoodQuote(of: ticker),
+              let askedOn = latestSessionDays[ticker], askedOn < quote.sessionDate
+        else {
+            return
+        }
+        await loadLatestSession(of: ticker)
+    }
+
     /// What the Overview of `ticker`'s card shows (PIN-511), from the quote
     /// `holdingsPrices` holds and the sessions `loadLatestSession(of:)`
     /// loaded. A held ticker's quote is the one the header uses.
@@ -100,8 +114,12 @@ public extension MainWindowModel {
                 lastSession: lastSession,
             )
         }
+        // Sessions asked for before the quote's session, as with the Overview
+        // open overnight, can lack the one before it, so the change would be
+        // from an older close. It waits for them to load again.
+        let sessionsAreCurrent = latestSessionDays[ticker].map { $0 >= quote.sessionDate } ?? false
         var change: PriceChange?
-        if case let .loaded(recent) = lastSession {
+        if case let .loaded(recent) = lastSession, sessionsAreCurrent {
             change = quote.change(since: recent.bars)
         }
         let holding: StockOverview.Holding = isHeld

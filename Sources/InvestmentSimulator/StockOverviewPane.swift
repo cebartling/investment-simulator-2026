@@ -13,6 +13,12 @@ struct StockOverviewPane: View {
     var body: some View {
         StockOverviewContent(overview: model.overview(of: ticker))
             .task(id: ticker) { await model.loadLatestSession(of: ticker) }
+            // A quote from a later session than the sessions were asked for
+            // in needs them again for its change. Its own task, so a quote
+            // arriving doesn't cancel the first load.
+            .task(id: model.holdingsPrices.lastGoodQuote(of: ticker)?.sessionDate) {
+                await model.reloadSessionsIfStale(of: ticker)
+            }
             // A held ticker's quote comes with the holdings'. One with no
             // shares is asked for here, also when its last shares go while
             // the Overview shows, so Refresh Prices covers it.
