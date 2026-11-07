@@ -3,8 +3,8 @@ import InvestmentSimulatorPresentation
 import SwiftUI
 
 /// Chooses the purchase a sell sheet sells from (PIN-510). Each choice
-/// shows its day, shares and price, so it replaces the sheet's purchase
-/// price row.
+/// shows when it was priced (ADR-0024), its shares and price, so it
+/// replaces the sheet's purchase price row.
 struct PurchasePicker: View {
     let choices: [SellablePurchase]
     @Binding var selection: UUID
