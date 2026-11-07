@@ -18,7 +18,7 @@ Every time is already stored to the second:
 
 ## Decision
 
-- **A trade at a live quote shows its day and time in the user's time zone,** such as "Oct 23, 2026 at 10:31 AM", formatted like the Orders table's Placed column. For a purchase, that's its quote's time. For a market sale, it's `soldAt`, which a delayed quote can trail by about 15 minutes.
+- **A trade at a live quote shows its day and time in the user's time zone,** such as "Oct 23, 2026 at 10:31 AM", formatted like the Orders table's Placed column. For a purchase, that's its quote's time. For a market sale, it's `soldAt`, when the user clicked Sell. Its quote is older by however long the sheet stayed open after Get Price, plus about 15 minutes for a delayed quote.
 - **A trade at a close, or a limit fill, shows its New York session day** with no time, because it has no time of its own.
 - **A market sale at a close shows the close's session day, not `soldAt` (amends ADR-0016).** The row reads as the price's day, the same way a purchase at a close does. `soldAt` is still stored, still orders the rows and still drives the share check.
 - **The purchase picker follows the same rule (amends ADR-0022),** since it's where two purchases on one day most need telling apart.
