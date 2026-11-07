@@ -12,7 +12,7 @@ A stock card's Purchases and Sales tables (ADR-0022) showed only the day of each
 
 Every time is already stored to the second:
 
-- A purchase stores its quote's time (`pricedAt`, the quote's `asOf`). A purchase at a close, or filled from a buy limit order, is dated 4 PM in New York on its session (ADR-0013, ADR-0014).
+- A purchase stores its quote's time (`pricedAt`, the quote's `asOf`). A purchase at a close, or filled from a buy limit order, is dated 4 PM in New York on its session (ADR-0015, ADR-0014).
 - A market sale stores when the user sold (`soldAt`, ADR-0016), not its quote's time. A sale at a close can be days after that close.
 - A sell fill has only a session day.
 
