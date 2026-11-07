@@ -71,6 +71,7 @@ struct ResearchStatementTableView: View {
                     ForEach(Array(row.figures.enumerated()), id: \.offset) { _, figure in
                         Text(formatter.statementFigure(figure))
                             .monospaced()
+                            .help(ifPresent: formatter.fullStatementFigure(figure))
                     }
                 }
             }

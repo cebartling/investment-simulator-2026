@@ -47,7 +47,7 @@ struct StockCardView: View {
                 }
                 Spacer(minLength: 12)
                 figure("Shares", card.heldShares.formatted())
-                figure("Avg Price", averagePrice)
+                figure("Avg Price", averagePrice, help: card.averagePrice.flatMap { PriceFormatter().full($0) })
             }
             // The whole row clicks, not just its text.
             .contentShape(Rectangle())
@@ -57,14 +57,14 @@ struct StockCardView: View {
         .help(isExpanded ? "Hide this stock's panes" : "Show this stock's overview, purchases, sales and orders")
     }
 
-    /// The price paid per share held, or "—" with none held.
+    /// The price paid per share held, to the cent, or "—" with none held.
     private var averagePrice: String {
-        card.averagePrice?.formatted(.currency(code: "USD").precision(.fractionLength(2 ... 4))) ?? "—"
+        card.averagePrice.map { PriceFormatter().cents($0) } ?? "—"
     }
 
     /// A title over its value, right-aligned, so values line up from card
     /// to card. The value is never truncated.
-    private func figure(_ title: String, _ value: String) -> some View {
+    private func figure(_ title: String, _ value: String, help: String? = nil) -> some View {
         VStack(alignment: .trailing, spacing: 2) {
             Text(title)
                 .font(.subheadline)
@@ -73,6 +73,7 @@ struct StockCardView: View {
                 .font(.body.weight(.semibold))
                 .monospacedDigit()
                 .fixedSize()
+                .help(ifPresent: help)
         }
         .frame(minWidth: 90, alignment: .trailing)
         .accessibilityElement(children: .combine)

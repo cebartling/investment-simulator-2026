@@ -99,8 +99,9 @@ struct StockCardPanes: View {
             }
             .alignment(.numeric)
             TableColumn("Price") { purchase in
-                Text(purchase.pricePerShare, format: Self.priceFormat)
+                Text(PriceFormatter().cents(purchase.pricePerShare))
                     .monospaced()
+                    .help(ifPresent: PriceFormatter().full(purchase.pricePerShare))
             }
             .alignment(.numeric)
             TableColumn("Cost") { purchase in
@@ -158,8 +159,9 @@ struct StockCardPanes: View {
             }
             .alignment(.numeric)
             TableColumn("Price") { row in
-                Text(row.pricePerShare, format: Self.priceFormat)
+                Text(PriceFormatter().cents(row.pricePerShare))
                     .monospaced()
+                    .help(ifPresent: PriceFormatter().full(row.pricePerShare))
             }
             .alignment(.numeric)
             TableColumn("Proceeds") { row in
@@ -272,8 +274,6 @@ struct StockCardPanes: View {
         Text(text)
             .foregroundStyle(.secondary)
     }
-
-    private static let priceFormat = Decimal.FormatStyle.Currency(code: "USD").precision(.fractionLength(2 ... 4))
 
     /// Tall enough for the header and `rows` rows, up to six, past which the
     /// table scrolls. A table inside a scroll view has no height of its own.

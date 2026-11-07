@@ -66,8 +66,9 @@ struct SaleSheet: View {
         case let .priced(quote):
             LabeledContent("Price") {
                 VStack(alignment: .leading) {
-                    Text(quote.price, format: .currency(code: "USD").precision(.fractionLength(2 ... 4)))
+                    Text(PriceFormatter().cents(quote.price))
                         .monospaced()
+                        .help(ifPresent: PriceFormatter().full(quote.price))
                     Text(PriceDateFormatter().label(for: quote))
                         .font(.caption)
                         .foregroundStyle(.secondary)

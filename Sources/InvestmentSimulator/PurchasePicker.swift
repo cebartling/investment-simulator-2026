@@ -17,13 +17,22 @@ struct PurchasePicker: View {
                     .tag(choice.id)
             }
         }
+        // A menu item can't have a tooltip, so the picker has the chosen
+        // purchase's.
+        .help(ifPresent: fullPrice)
     }
 
-    /// Such as "Oct 23, 2026 at 10:31 AM: 10 at $316.9961", or
-    /// "Oct 23, 2026: 10 at $316.9961" for a purchase at a close.
+    /// The chosen purchase's price in full (PIN-513), or nil when it's whole
+    /// cents.
+    private var fullPrice: String? {
+        choices.first { $0.id == selection }.flatMap { PriceFormatter().full($0.purchase.pricePerShare) }
+    }
+
+    /// Such as "Oct 23, 2026 at 10:31 AM: 10 at $317.00", or
+    /// "Oct 23, 2026: 10 at $317.00" for a purchase at a close.
     private func label(for purchase: Purchase) -> String {
         let when = PriceDateFormatter().tradeTime(of: purchase.pricedAt, source: purchase.priceSource)
-        let price = purchase.pricePerShare.formatted(.currency(code: "USD").precision(.fractionLength(2 ... 4)))
+        let price = PriceFormatter().cents(purchase.pricePerShare)
         return "\(when): \(purchase.shares) at \(price)"
     }
 }

@@ -180,9 +180,10 @@ struct ResearchTickerView: View {
                 .controlSize(.small)
         case let .quoted(quote):
             VStack(alignment: .leading, spacing: 4) {
-                Text(quote.price, format: .currency(code: "USD").precision(.fractionLength(2 ... 4)))
+                Text(PriceFormatter().cents(quote.price))
                     .font(.title2)
                     .monospaced()
+                    .help(ifPresent: PriceFormatter().full(quote.price))
                 Text(PriceDateFormatter().label(for: quote))
                     .foregroundStyle(.secondary)
             }
@@ -354,9 +355,11 @@ struct ResearchDividendsView: View {
             // By position: two dividends can match in every field.
             ForEach(Array(dividends.enumerated()), id: \.offset) { _, dividend in
                 GridRow {
+                    let amount = dividend.amountPerShare
                     Text(dates.day(ofSession: dividend.exDate))
-                    Text(figures.dividendAmount(dividend.amountPerShare, currency: dividend.currency))
+                    Text(figures.dividendAmount(amount, currency: dividend.currency))
                         .monospaced()
+                        .help(ifPresent: figures.fullDividendAmount(amount, currency: dividend.currency))
                 }
             }
         }
