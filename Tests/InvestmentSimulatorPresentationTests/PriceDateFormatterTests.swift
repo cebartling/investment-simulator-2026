@@ -51,6 +51,43 @@ struct PriceDateFormatterTests {
         #expect(formatter.marketDay(of: lateInNewYork) == "Oct 19, 2026")
     }
 
+    @Test(arguments: [true, false])
+    func `a live-quote trade shows its day and time in the user's time zone`(delayed: Bool) {
+        let text = formatter.tradeTime(of: closeTime, source: .liveQuote(delayed: delayed))
+
+        #expect(text.hasPrefix("Oct 24, 2026"))
+        #expect(text.contains("5:00"))
+    }
+
+    @Test(arguments: [
+        PriceSource.close(sessionDate: "2026-10-23"),
+        PriceSource.limitOrderFill(sessionDate: "2026-10-23"),
+    ])
+    func `a trade at a close or a fill shows only its New York session`(source: PriceSource) {
+        #expect(formatter.tradeTime(of: closeTime, source: source) == "Oct 23, 2026")
+    }
+
+    @Test func `two live-quote trades on one day read differently`() {
+        let earlier = formatter.tradeTime(of: closeTime, source: .liveQuote(delayed: true))
+        let later = formatter.tradeTime(of: closeTime.addingTimeInterval(3600), source: .liveQuote(delayed: true))
+
+        #expect(earlier != later)
+    }
+
+    @Test func `a live-quote sale shows when it sold in the user's time zone`() {
+        let text = formatter.tradeTime(ofSaleAt: closeTime, source: .liveQuote(delayed: false))
+
+        #expect(text.hasPrefix("Oct 24, 2026"))
+        #expect(text.contains("5:00"))
+    }
+
+    @Test func `a sale at a close shows the close's session, not when it sold`() {
+        let twoDaysLater = closeTime.addingTimeInterval(2 * 24 * 3600)
+        let text = formatter.tradeTime(ofSaleAt: twoDaysLater, source: .close(sessionDate: "2026-10-23"))
+
+        #expect(text == "Oct 23, 2026")
+    }
+
     private func makeQuote(at date: Date, source: PriceSource) throws -> Quote {
         try Quote(ticker: Ticker("VTI"), price: 373.01, asOf: date, source: source)
     }

@@ -60,7 +60,9 @@ struct LimitOrderSheet: View {
             }
             .padding([.horizontal, .bottom], 20)
         }
-        .frame(width: 420)
+        // Wider than the buy sheets, so a purchase's time fits in the picker
+        // (ADR-0024).
+        .frame(width: 480)
         .interactiveDismissDisabled()
     }
 

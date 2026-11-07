@@ -37,6 +37,32 @@ public struct PriceDateFormatter {
         return date.formatted(style)
     }
 
+    /// When a trade at `date` was priced, for the stock cards' tables
+    /// (PIN-512): a live quote's day and time in the user's time zone, such
+    /// as "Oct 23, 2026 at 10:31 AM", so two trades on one day read apart.
+    /// A close or a limit order fill has no time of its own, so it shows
+    /// its New York session's day, such as "Oct 23, 2026".
+    public func tradeTime(of date: Date, source: PriceSource) -> String {
+        switch source {
+        case .liveQuote:
+            date.formatted(style(date: .abbreviated, time: .shortened, source: source))
+        case .close, .limitOrderFill:
+            day(of: date, source: source)
+        }
+    }
+
+    /// When a market sale made at `soldAt` was priced, as `tradeTime(of:source:)`
+    /// shows a purchase. A sale at a close shows the close's session, such
+    /// as "Oct 23, 2026", not `soldAt`, which can be days later.
+    public func tradeTime(ofSaleAt soldAt: Date, source: SalePriceSource) -> String {
+        switch source {
+        case let .liveQuote(delayed):
+            tradeTime(of: soldAt, source: .liveQuote(delayed: delayed))
+        case let .close(sessionDate):
+            day(ofSession: sessionDate)
+        }
+    }
+
     /// Where a quote's price came from and when.
     public func label(for quote: Quote) -> String {
         let when = quote.asOf.formatted(style(date: .abbreviated, time: .shortened, source: quote.source))

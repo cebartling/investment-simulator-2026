@@ -3,8 +3,8 @@ import InvestmentSimulatorPresentation
 import SwiftUI
 
 /// Chooses the purchase a sell sheet sells from (PIN-510). Each choice
-/// shows its day, shares and price, so it replaces the sheet's purchase
-/// price row.
+/// shows when it was priced (ADR-0024), its shares and price, so it
+/// replaces the sheet's purchase price row.
 struct PurchasePicker: View {
     let choices: [SellablePurchase]
     @Binding var selection: UUID
@@ -19,10 +19,11 @@ struct PurchasePicker: View {
         }
     }
 
-    /// Such as "Oct 23, 2026: 10 at $316.9961".
+    /// Such as "Oct 23, 2026 at 10:31 AM: 10 at $316.9961", or
+    /// "Oct 23, 2026: 10 at $316.9961" for a purchase at a close.
     private func label(for purchase: Purchase) -> String {
-        let day = PriceDateFormatter().day(of: purchase.pricedAt, source: purchase.priceSource)
+        let when = PriceDateFormatter().tradeTime(of: purchase.pricedAt, source: purchase.priceSource)
         let price = purchase.pricePerShare.formatted(.currency(code: "USD").precision(.fractionLength(2 ... 4)))
-        return "\(day): \(purchase.shares) at \(price)"
+        return "\(when): \(purchase.shares) at \(price)"
     }
 }

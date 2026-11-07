@@ -37,3 +37,4 @@ ADRs are not edited after acceptance except to change their status. To reverse a
 | [0021](0021-sqlite-library-replaces-document-persistence.md) | Store Experiments in an App-Wide SQLite Database, in a Single Library Window | Accepted |
 | [0022](0022-stock-cards.md) | Show an Experiment's Stocks as Cards, Selling from a Chosen Purchase | Accepted |
 | [0023](0023-stock-card-live-quote.md) | Show a Stock's Quote, Change and Unrealized Gain on Its Card's Overview | Accepted |
+| [0024](0024-trade-times-on-stock-cards.md) | Show When Each Trade Was Priced on Its Stock Card | Accepted |
