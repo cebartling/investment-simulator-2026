@@ -31,13 +31,29 @@ public struct ResearchFigureFormatter {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    /// A dividend in its own currency, such as "$0.27" or "$0.0975".
+    /// A dividend in its own currency, to the cent, such as "$0.27", or
+    /// "$0.10" for $0.0975 (PIN-513).
     public func dividendAmount(_ amount: Decimal, currency: String) -> String {
-        amount.formatted(.currency(code: currency).precision(.fractionLength(2 ... 6)).locale(locale))
+        PriceFormatter(locale: locale).cents(amount, currency: currency)
+    }
+
+    /// A dividend with the fractions of a cent `dividendAmount(_:currency:)`
+    /// rounds away, such as "$0.0975", or nil when it rounds nothing away.
+    public func fullDividendAmount(_ amount: Decimal, currency: String) -> String? {
+        PriceFormatter(locale: locale).full(amount, currency: currency, maxDecimals: 6)
+    }
+
+    /// A per-share figure with the fractions of a cent `statementFigure(_:)`
+    /// rounds away, such as "$2.0375", or nil for any other figure.
+    public func fullStatementFigure(_ figure: StatementFigure?) -> String? {
+        guard case let .perShare(amount) = figure else {
+            return nil
+        }
+        return fullDividendAmount(amount, currency: "USD")
     }
 
     /// A statement's figure: dollars and share counts compact, such as
-    /// "$109.42B" and "14.66B", and per-share amounts in full, such as "$2.03".
+    /// "$109.42B" and "14.66B", and per-share amounts to the cent, such as "$2.03".
     public func statementFigure(_ figure: StatementFigure?) -> String {
         switch figure {
         case let .money(money):

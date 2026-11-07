@@ -33,6 +33,18 @@ struct ResearchFigureFormatterTests {
 
     @Test func `a statement's per-share figure is in dollars and cents`() throws {
         #expect(try formatter.statementFigure(.perShare(#require(Decimal(string: "2.03")))) == "$2.03")
+        #expect(try formatter.statementFigure(.perShare(#require(Decimal(string: "2.0375")))) == "$2.04")
+    }
+
+    @Test func `a rounded per-share figure is in full on hover`() throws {
+        #expect(try formatter.fullStatementFigure(.perShare(#require(Decimal(string: "2.0375")))) == "$2.0375")
+        #expect(try formatter.fullStatementFigure(.perShare(#require(Decimal(string: "2.03")))) == nil)
+    }
+
+    @Test func `only per-share figures have a full form`() {
+        #expect(formatter.fullStatementFigure(.money(Money(109_417_000_000))) == nil)
+        #expect(formatter.fullStatementFigure(.shares(14_656_110_000)) == nil)
+        #expect(formatter.fullStatementFigure(nil) == nil)
     }
 
     @Test func `a statement's share count is compact, without a dollar sign`() {
@@ -80,12 +92,18 @@ struct ResearchFigureFormatterTests {
         #expect(formatter.classification(of: profile) == nil)
     }
 
-    @Test func `a dividend keeps fractions of a cent`() throws {
+    @Test func `a dividend shows to the cent`() throws {
         #expect(try formatter.dividendAmount(#require(Decimal(string: "0.27")), currency: "USD") == "$0.27")
-        #expect(try formatter.dividendAmount(#require(Decimal(string: "0.0975")), currency: "USD") == "$0.0975")
-        #expect(try formatter.dividendAmount(#require(Decimal(string: "0.82792")), currency: "USD") == "$0.82792")
-        #expect(try formatter.dividendAmount(#require(Decimal(string: "0.061255")), currency: "USD") == "$0.061255")
+        #expect(try formatter.dividendAmount(#require(Decimal(string: "0.0975")), currency: "USD") == "$0.10")
+        #expect(try formatter.dividendAmount(#require(Decimal(string: "0.82792")), currency: "USD") == "$0.83")
+        #expect(try formatter.dividendAmount(#require(Decimal(string: "0.061255")), currency: "USD") == "$0.06")
         #expect(try formatter.dividendAmount(1, currency: "USD") == "$1.00")
+    }
+
+    @Test func `a rounded dividend keeps its fractions of a cent on hover`() throws {
+        #expect(try formatter.fullDividendAmount(#require(Decimal(string: "0.0975")), currency: "USD") == "$0.0975")
+        #expect(try formatter.fullDividendAmount(#require(Decimal(string: "0.061255")), currency: "USD") == "$0.061255")
+        #expect(try formatter.fullDividendAmount(#require(Decimal(string: "0.27")), currency: "USD") == nil)
     }
 
     @Test func `a dividend shows its own currency`() throws {
