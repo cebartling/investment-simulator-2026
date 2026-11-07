@@ -84,7 +84,7 @@ struct StockCardPanes: View {
         Table(purchases, selection: $selectedPurchase) {
             TableColumn("Date") { purchase in
                 HStack {
-                    Text(PriceDateFormatter().day(of: purchase.pricedAt, source: purchase.priceSource))
+                    Text(PriceDateFormatter().tradeTime(of: purchase.pricedAt, source: purchase.priceSource))
                     if case .limitOrderFill = purchase.priceSource {
                         Text("Limit fill")
                             .foregroundStyle(.secondary)
@@ -142,9 +142,8 @@ struct StockCardPanes: View {
         Table(rows) {
             TableColumn("Date") { row in
                 switch row.kind {
-                case .market:
-                    // Sold at the user's own time, like a live quote.
-                    Text(row.soldAt.formatted(date: .abbreviated, time: .omitted))
+                case let .market(source):
+                    Text(PriceDateFormatter().tradeTime(ofSaleAt: row.soldAt, source: source))
                 case let .limitFill(sessionDate):
                     HStack {
                         Text(PriceDateFormatter().day(ofSession: sessionDate))
