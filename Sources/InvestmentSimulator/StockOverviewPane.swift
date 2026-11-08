@@ -65,7 +65,8 @@ private struct StockOverviewContent: View {
                     if let change = overview.change {
                         Text(Self.changeText(change))
                             .monospacedDigit()
-                            .foregroundStyle(Self.color(of: change.amount))
+                            // By the cents shown, so "$0.00" is never green or red.
+                            .foregroundStyle(Self.color(of: Money(change.amount).roundedToCents().amount))
                     }
                 }
                 Text(PriceDateFormatter().label(for: quote))
