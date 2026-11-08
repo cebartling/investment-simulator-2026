@@ -18,7 +18,7 @@ The extra decimals aren't noise in storage. A purchase's cost is its quoted pric
 - **Rounding is banker's rounding through `Money.roundedToCents()`** (ADR-0002), so $342.625 shows as $342.62.
 - **Hovering an amount that rounding shortened shows it in full:** up to 4 decimals for prices, as they showed before, and up to 6 for dividends and per-share figures. An amount rounding didn't shorten, such as $342.61, has no tooltip. The purchase picker's menu items can't have tooltips, so the picker shows the chosen purchase's price. The Overview's change has none, since it's a difference, not a price.
 - **Display only.** Stored prices, costs, proceeds and gains keep every decimal and are computed as before.
-- **The rule lives in Presentation,** in `PriceFormatter` (`cents`, `signedCents`, `full`), tested in `PriceFormatterTests`. `ResearchFigureFormatter` uses it for dividends and per-share figures. Views call it, and attach the tooltip with `help(ifPresent:)`.
+- **The rule lives in Presentation,** in `PriceFormatter` (`cents`, `signedCents`, `full`), tested in `PriceFormatterTests`. `ResearchFigureFormatter` uses it for dividends and per-share figures. Views call it for prices, and attach the tooltip with `help(ifPresent:)`. Amounts already in whole cents, such as costs, cash, gains and limit prices, keep `.currency(code: "USD")`, which shows two decimals.
 
 ## Options Considered
 
@@ -50,6 +50,6 @@ The extra decimals aren't noise in storage. A purchase's cost is its quoted pric
 
 ## Consequences
 
-- **Easier:** reading prices next to costs and gains. Every money format is in one tested type.
+- **Easier:** reading prices next to costs and gains. Every format of an amount that can have fractions of a cent is in one tested type.
 - **Harder:** a shown price times the shares can differ from the shown cost, by up to half a cent per share. Hovering the price shows why.
 - **Revisit:** whether a new place that shows a price needs the tooltip; `PriceFormatter.full` returns nil when it doesn't.
