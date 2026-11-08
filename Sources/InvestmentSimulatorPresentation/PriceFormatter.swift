@@ -24,13 +24,18 @@ public struct PriceFormatter {
     }
 
     /// The amount with up to `maxDecimals` decimals, such as "$342.6138",
-    /// or nil when `cents(_:currency:)` already shows all of it. A quote has
-    /// up to 4 decimals (ADR-0012), a dividend up to 6.
+    /// or nil when `cents(_:currency:)` already shows all of it: when the
+    /// amount to `maxDecimals` decimals is whole cents. A quote has up to 4
+    /// decimals (ADR-0012), a dividend up to 6.
     public func full(_ amount: Decimal, currency: String = "USD", maxDecimals: Int = 4) -> String? {
-        let full = amount.formatted(
-            .currency(code: currency).precision(.fractionLength(2 ... maxDecimals)).locale(locale),
-        )
-        return full == cents(amount, currency: currency) ? nil : full
+        var source = amount
+        var shown = Decimal()
+        NSDecimalRound(&shown, &source, maxDecimals, .bankers)
+        // Decimals, not strings: a tiny negative would format as "-$0.00".
+        guard shown != rounded(amount) else {
+            return nil
+        }
+        return shown.formatted(.currency(code: currency).precision(.fractionLength(2 ... maxDecimals)).locale(locale))
     }
 
     private func rounded(_ amount: Decimal) -> Decimal {

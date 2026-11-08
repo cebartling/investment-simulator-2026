@@ -31,15 +31,28 @@ struct PriceFormatterTests {
         #expect(formatter.signedCents(0) == "$0.00")
     }
 
+    @Test func `a change rounds to the even cent and loses its sign at zero`() throws {
+        #expect(try formatter.signedCents(#require(Decimal(string: "-0.445"))) == "-$0.44")
+        #expect(try formatter.signedCents(#require(Decimal(string: "0.004"))) == "$0.00")
+        #expect(try formatter.signedCents(#require(Decimal(string: "-0.004"))) == "$0.00")
+    }
+
     @Test func `the full price shows the decimals rounding hid`() throws {
         #expect(try formatter.full(#require(Decimal(string: "342.6138"))) == "$342.6138")
         #expect(try formatter.full(#require(Decimal(string: "342.61383333"))) == "$342.6138")
         #expect(try formatter.full(#require(Decimal(string: "0.061255")), maxDecimals: 6) == "$0.061255")
+        #expect(try formatter.full(#require(Decimal(string: "-2.0375")), maxDecimals: 6) == "-$2.0375")
     }
 
     @Test func `there's no full price when rounding hid nothing`() throws {
         #expect(try formatter.full(#require(Decimal(string: "342.61"))) == nil)
         #expect(try formatter.full(#require(Decimal(string: "342.6100"))) == nil)
         #expect(formatter.full(1) == nil)
+        #expect(try formatter.full(#require(Decimal(string: "-2.03"))) == nil)
+    }
+
+    @Test func `there's no full price when only decimals past the most shown differ`() throws {
+        #expect(try formatter.full(#require(Decimal(string: "342.61001"))) == nil)
+        #expect(try formatter.full(#require(Decimal(string: "-0.0000001")), maxDecimals: 6) == nil)
     }
 }
