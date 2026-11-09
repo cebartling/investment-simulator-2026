@@ -39,3 +39,4 @@ ADRs are not edited after acceptance except to change their status. To reverse a
 | [0023](0023-stock-card-live-quote.md) | Show a Stock's Quote, Change and Unrealized Gain on Its Card's Overview | Accepted |
 | [0024](0024-trade-times-on-stock-cards.md) | Show When Each Trade Was Priced on Its Stock Card | Accepted |
 | [0025](0025-money-to-the-cent.md) | Show Money to the Cent, with the Full Value on Hover | Accepted |
+| [0026](0026-market-sale-quote-time.md) | Record a Market Sale's Quote Time | Accepted |

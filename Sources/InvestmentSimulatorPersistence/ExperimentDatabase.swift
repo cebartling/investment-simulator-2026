@@ -31,6 +31,8 @@ public enum ExperimentDatabase {
         }
         do {
             return try GRDBExperimentRepository(writer: pool)
+        } catch let error as ExperimentDatabaseError {
+            throw error
         } catch {
             throw ExperimentDatabaseError.migrationFailed(path: path, underlying: String(describing: error))
         }

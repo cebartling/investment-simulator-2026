@@ -74,6 +74,29 @@ struct SaleTests {
     @Test func `a limit fill source has no sale source`() {
         #expect(SalePriceSource(.limitOrderFill(sessionDate: "2026-10-23")) == nil)
     }
+
+    @Test func `a sale keeps its quote's time apart from when it was sold`() throws {
+        let quotedAt = Date(timeIntervalSince1970: 1_792_999_100)
+
+        let sale = try Sale(
+            id: UUID(),
+            purchaseID: UUID(),
+            shares: 1,
+            pricePerShare: 10,
+            soldAt: Date(timeIntervalSince1970: 1_793_000_000),
+            quotedAt: quotedAt,
+            priceSource: .liveQuote(delayed: true),
+        )
+
+        #expect(sale.quotedAt == quotedAt)
+        #expect(sale.soldAt == Date(timeIntervalSince1970: 1_793_000_000))
+    }
+
+    @Test func `a sale made before quote times were recorded has none`() throws {
+        let sale = try makeSale(shares: 1, price: "10")
+
+        #expect(sale.quotedAt == nil)
+    }
 }
 
 func makeSale(

@@ -51,13 +51,15 @@ public struct PriceDateFormatter {
         }
     }
 
-    /// When a market sale made at `soldAt` was priced, as `tradeTime(of:source:)`
-    /// shows a purchase. A sale at a close shows the close's session, such
-    /// as "Oct 23, 2026", not `soldAt`, which can be days later.
-    public func tradeTime(ofSaleAt soldAt: Date, source: SalePriceSource) -> String {
+    /// When a market sale was priced, as `tradeTime(of:source:)` shows a
+    /// purchase. A sale at a live quote shows its quote's time, `quotedAt`,
+    /// or `soldAt` for a sale made before quote times were recorded
+    /// (ADR-0026). A sale at a close shows the close's session, such as
+    /// "Oct 23, 2026", not `soldAt`, which can be days later.
+    public func tradeTime(ofSaleAt soldAt: Date, quotedAt: Date?, source: SalePriceSource) -> String {
         switch source {
         case let .liveQuote(delayed):
-            tradeTime(of: soldAt, source: .liveQuote(delayed: delayed))
+            tradeTime(of: quotedAt ?? soldAt, source: .liveQuote(delayed: delayed))
         case let .close(sessionDate):
             day(ofSession: sessionDate)
         }

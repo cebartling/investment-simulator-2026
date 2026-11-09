@@ -8,9 +8,14 @@ public struct GRDBExperimentRepository: ExperimentRepository {
     private let writer: any DatabaseWriter
 
     /// Brings the database to the current schema. Does nothing to one that
-    /// is already there.
+    /// is already there. Throws `ExperimentDatabaseError.newerThanApp`, and
+    /// changes nothing, for one a newer version of the app migrated.
     public init(writer: any DatabaseWriter) throws {
-        try ExperimentSchema.migrator().migrate(writer)
+        let migrator = ExperimentSchema.migrator()
+        guard try !writer.read(migrator.hasBeenSuperseded) else {
+            throw ExperimentDatabaseError.newerThanApp(path: writer.path)
+        }
+        try migrator.migrate(writer)
         self.writer = writer
     }
 

@@ -22,6 +22,9 @@ public nonisolated struct SaleRow: Identifiable, Hashable, Sendable {
     public let realizedGain: Money
     /// When the sale was made, or the close of a fill's session.
     public let soldAt: Date
+    /// When a market sale's quote was priced, if it was recorded
+    /// (ADR-0026). Nil for a fill.
+    public let quotedAt: Date?
 }
 
 /// The Sales table (PIN-409).
@@ -42,6 +45,7 @@ public extension MainWindowModel {
                     proceeds: sale.proceeds,
                     realizedGain: sale.realizedGain(on: $0),
                     soldAt: sale.soldAt,
+                    quotedAt: sale.quotedAt,
                 )
             }
         }
@@ -60,6 +64,7 @@ public extension MainWindowModel {
                 proceeds: order.proceeds,
                 realizedGain: order.realizedGain(on: purchase),
                 soldAt: filledAt,
+                quotedAt: nil,
             )
         }
         // Sorting is stable, so sales at the same time keep their order.
