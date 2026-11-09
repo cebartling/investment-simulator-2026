@@ -55,10 +55,11 @@ jobs:
       - name: Select Xcode 27.1
         run: sudo xcode-select -s /Applications/Xcode_27.1.app
 
-      # Same pins and checksums as ci.yml; bump both together with the local
-      # versions.
+      # Same pins, checksums and downloads as ci.yml; bump both together with
+      # the local versions.
       - name: Install tools
         env:
+          GH_TOKEN: ${{ github.token }}
           SWIFTFORMAT_VERSION: 0.64.1
           SWIFTFORMAT_SHA256: 0e5762a848d738602c7a983b26812031e634d85e357db070968b9c805f253eff
           SWIFTLINT_VERSION: 0.65.1
@@ -67,11 +68,11 @@ jobs:
           brew install just
           tools="$RUNNER_TEMP/tools"
           mkdir -p "$tools"
-          curl -fsSL -o "$RUNNER_TEMP/swiftformat.zip" \
-            "https://github.com/nicklockwood/SwiftFormat/releases/download/$SWIFTFORMAT_VERSION/swiftformat.zip"
+          gh release download "$SWIFTFORMAT_VERSION" -R nicklockwood/SwiftFormat \
+            -p swiftformat.zip -O "$RUNNER_TEMP/swiftformat.zip"
           echo "$SWIFTFORMAT_SHA256  $RUNNER_TEMP/swiftformat.zip" | shasum -a 256 -c -
-          curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" \
-            "https://github.com/realm/SwiftLint/releases/download/$SWIFTLINT_VERSION/portable_swiftlint.zip"
+          gh release download "$SWIFTLINT_VERSION" -R realm/SwiftLint \
+            -p portable_swiftlint.zip -O "$RUNNER_TEMP/swiftlint.zip"
           echo "$SWIFTLINT_SHA256  $RUNNER_TEMP/swiftlint.zip" | shasum -a 256 -c -
           unzip -o -q "$RUNNER_TEMP/swiftformat.zip" swiftformat -d "$tools"
           unzip -o -q "$RUNNER_TEMP/swiftlint.zip" swiftlint -d "$tools"
