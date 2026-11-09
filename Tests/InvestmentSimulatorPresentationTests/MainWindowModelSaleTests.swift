@@ -61,6 +61,7 @@ extension MainWindowModelTests {
             shares: 2,
             pricePerShare: #require(Decimal(string: "11.005")),
             soldAt: threeDaysLater,
+            quotedAt: threeDaysLater.addingTimeInterval(-900),
             priceSource: .liveQuote(delayed: true),
         )
         let open = try makeOrder(id: #require(UUID(uuidString: "00000000-0000-0000-0000-0000000000A2")), shares: 1)
@@ -78,10 +79,12 @@ extension MainWindowModelTests {
         #expect(rows[0].proceeds == Money(48))
         #expect(rows[0].realizedGain == Money(8))
         #expect(rows[0].soldAt == filled.filledAt)
+        #expect(rows[0].quotedAt == nil)
         #expect(rows[1].kind == .market(.liveQuote(delayed: true)))
         // 22.01 (22.010) less 20.
         #expect(try rows[1].realizedGain == Money(#require(Decimal(string: "2.01"))))
         #expect(rows[1].soldAt == threeDaysLater)
+        #expect(rows[1].quotedAt == market.quotedAt)
     }
 
     @Test func `an experiment with no sales or fills has no sale rows`() async throws {

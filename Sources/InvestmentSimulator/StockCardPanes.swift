@@ -144,7 +144,7 @@ struct StockCardPanes: View {
             TableColumn("Date") { row in
                 switch row.kind {
                 case let .market(source):
-                    Text(PriceDateFormatter().tradeTime(ofSaleAt: row.soldAt, quotedAt: nil, source: source))
+                    Text(PriceDateFormatter().tradeTime(ofSaleAt: row.soldAt, quotedAt: row.quotedAt, source: source))
                 case let .limitFill(sessionDate):
                     HStack {
                         Text(PriceDateFormatter().day(ofSession: sessionDate))
