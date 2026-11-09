@@ -87,6 +87,10 @@ enum ExperimentSchema {
                 try database.execute(sql: table)
             }
         }
+        // A market sale's quote time (ADR-0026). Sales made before it have none.
+        migrator.registerMigration("v2") { database in
+            try database.execute(sql: "ALTER TABLE sale ADD COLUMN quoted_at REAL")
+        }
         return migrator
     }
 }

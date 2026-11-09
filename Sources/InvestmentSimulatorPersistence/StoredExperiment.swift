@@ -48,12 +48,12 @@ enum StoredExperiment {
             let source = columns(of: sale.priceSource)
             try database.execute(sql: """
             INSERT INTO sale (experiment_id, id, position, purchase_id, shares, price_per_share,
-                              sold_at, price_source, delayed, session_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                              sold_at, quoted_at, price_source, delayed, session_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, arguments: [
                 key, sale.id.uuidString, position, sale.purchaseID.uuidString, sale.shares,
                 sale.pricePerShare.description, StoredValues.stored(sale.soldAt),
-                source.source, source.delayed, source.sessionDate,
+                sale.quotedAt.map(StoredValues.stored), source.source, source.delayed, source.sessionDate,
             ])
         }
     }
@@ -178,6 +178,7 @@ enum StoredExperiment {
             shares: StoredValues.integer(row, "shares", what: "sale shares"),
             pricePerShare: StoredValues.decimal(row, "price_per_share", what: "sale price"),
             soldAt: StoredValues.date(row, "sold_at", what: "sale date"),
+            quotedAt: StoredValues.optionalDate(row, "quoted_at", what: "sale quote date"),
             priceSource: source,
         )
     }

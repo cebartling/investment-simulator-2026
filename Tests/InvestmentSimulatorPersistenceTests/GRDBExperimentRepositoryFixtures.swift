@@ -74,12 +74,14 @@ extension GRDBExperimentRepositoryTests {
         )
     }
 
-    /// Two sales of the second purchase, at a live quote and at a close.
+    /// Two sales of the second purchase: at a live quote, with its quote's
+    /// time, and at a close, with none recorded.
     func makeSales() throws -> [Sale] {
         try [
             Sale(
                 id: uuid(0xC2), purchaseID: uuid(2), shares: 2, pricePerShare: Decimal(string: "348.7123")!,
-                soldAt: Date(timeIntervalSince1970: 1_793_300_000), priceSource: .liveQuote(delayed: true),
+                soldAt: Date(timeIntervalSince1970: 1_793_300_000),
+                quotedAt: Date(timeIntervalSince1970: 1_793_299_099.25), priceSource: .liveQuote(delayed: true),
             ),
             Sale(
                 id: uuid(0xC1), purchaseID: uuid(2), shares: 1, pricePerShare: 350,
