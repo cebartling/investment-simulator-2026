@@ -19,6 +19,7 @@ A sale at a close already stores its session (`SalePriceSource.close(sessionDate
 - **The Sales table shows a sale at a live quote at its quote's time (amends ADR-0024),** in the user's time zone, as the Purchases table shows a purchase. A sale at a close still shows the close's session day.
 - **Sales made before this change have no quote time** (`quotedAt` is nil) and keep showing `soldAt`, as they did. Nothing is backfilled.
 - **Storage:** the `sale` table gains a nullable `quoted_at REAL` column in migration `v2`, the first after `v1` (ADR-0021). The file is migrated in place, never recreated.
+- **A build doesn't open a database a newer build migrated.** GRDB opens a file with migrations it doesn't know, and such a build would drop their columns from every experiment it saves. So when the file lists an unknown migration, `GRDBExperimentRepository` throws `ExperimentDatabaseError.newerThanApp` before migrating anything, and the app shows `DatabaseErrorView`.
 - **The rule lives in Presentation,** in `PriceDateFormatter.tradeTime(ofSaleAt:quotedAt:source:)`, tested in `PriceDateFormatterTests`.
 
 ## Options Considered
@@ -53,5 +54,5 @@ A sale at a close already stores its session (`SalePriceSource.close(sessionDate
 ## Consequences
 
 - **Easier:** matching a sale's price to the moment it was quoted, as a purchase's already is.
-- **Harder:** rows stay in `soldAt` order, so a sale whose sheet stayed open a long time can show an earlier time than the row above it. Old and new live-quote sales read alike but mean different moments.
+- **Harder:** rows stay in `soldAt` order, so a sale whose sheet stayed open a long time can show an earlier time than the row above it. Old and new live-quote sales read alike but mean different moments. Builds from before this change lack the guard: one still opens a migrated file, and every experiment it saves loses its sales' quote times. Once a build has opened a file, a build older than it can't.
 - **Revisit:** marking trades on the Research chart or a card's Overview (PIN-512 item 3).

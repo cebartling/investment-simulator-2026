@@ -44,4 +44,20 @@ struct ExperimentSchemaMigrationTests {
         )
         #expect(experiment.sales == [expected])
     }
+
+    /// A build without a newer migration would drop what it adds on save,
+    /// such as an older build clearing `quoted_at` (ADR-0026).
+    @Test func `a database a newer version of the app migrated isn't opened or changed`() async throws {
+        let queue = try DatabaseQueue()
+        try ExperimentSchema.migrator().migrate(queue, upTo: "v1")
+        try await queue.write { database in
+            try database.execute(sql: "INSERT INTO grdb_migrations (identifier) VALUES ('v99')")
+        }
+
+        #expect(throws: ExperimentDatabaseError.newerThanApp(path: queue.path)) {
+            try GRDBExperimentRepository(writer: queue)
+        }
+        let saleColumns = try await queue.read { try $0.columns(in: "sale").map(\.name) }
+        #expect(!saleColumns.contains("quoted_at"))
+    }
 }
