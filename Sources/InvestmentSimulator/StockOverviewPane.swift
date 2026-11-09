@@ -65,7 +65,8 @@ private struct StockOverviewContent: View {
                     if let change = overview.change {
                         Text(Self.changeText(change))
                             .monospacedDigit()
-                            .foregroundStyle(Self.color(of: change.amount))
+                            // By the cents shown, so "$0.00" is never green or red.
+                            .foregroundStyle(Self.color(of: Money(change.amount).roundedToCents().amount))
                     }
                 }
                 Text(PriceDateFormatter().label(for: quote))
@@ -83,9 +84,10 @@ private struct StockOverviewContent: View {
     }
 
     private func priceText(_ price: Decimal?) -> some View {
-        Text(price.map(Self.perShare) ?? Self.unknown)
+        Text(price.map { PriceFormatter().cents($0) } ?? Self.unknown)
             .font(.title2)
             .monospacedDigit()
+            .help(ifPresent: price.flatMap { PriceFormatter().full($0) })
     }
 
     // MARK: - Holding
@@ -140,16 +142,16 @@ private struct StockOverviewContent: View {
     /// Open, High, Low and Close, or "—" for each until the bar loads.
     private func sessionFigures(of bar: DailyBar?) -> some View {
         HStack(spacing: 24) {
-            figure("Open", bar.map { Self.perShare($0.open) } ?? Self.unknown)
-            figure("High", bar.map { Self.perShare($0.high) } ?? Self.unknown)
-            figure("Low", bar.map { Self.perShare($0.low) } ?? Self.unknown)
-            figure("Close", bar.map { Self.perShare($0.close) } ?? Self.unknown)
+            priceFigure("Open", bar?.open)
+            priceFigure("High", bar?.high)
+            priceFigure("Low", bar?.low)
+            priceFigure("Close", bar?.close)
         }
     }
 
     // MARK: - Formatting
 
-    private func figure(_ title: String, _ value: String, color: Color = .primary) -> some View {
+    private func figure(_ title: String, _ value: String, color: Color = .primary, help: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.subheadline)
@@ -158,23 +160,26 @@ private struct StockOverviewContent: View {
                 .monospacedDigit()
                 .foregroundStyle(color)
                 .fixedSize()
+                .help(ifPresent: help)
         }
         .accessibilityElement(children: .combine)
     }
 
-    private static let unknown = "—"
-
-    /// A price per share, with as many as 4 decimals, as quotes have.
-    private static func perShare(_ price: Decimal) -> String {
-        price.formatted(.currency(code: "USD").precision(.fractionLength(2 ... 4)))
+    /// A price per share to the cent, in full on hover (PIN-513), or "—"
+    /// until it loads.
+    private func priceFigure(_ title: String, _ price: Decimal?) -> some View {
+        figure(
+            title,
+            price.map { PriceFormatter().cents($0) } ?? Self.unknown,
+            help: price.flatMap { PriceFormatter().full($0) },
+        )
     }
+
+    private static let unknown = "—"
 
     /// Such as "+$5.94 (+1.73%)".
     private static func changeText(_ change: PriceChange) -> String {
-        let amount = change.amount.formatted(
-            .currency(code: "USD").precision(.fractionLength(2 ... 4)).sign(strategy: .always(showZero: false)),
-        )
-        return "\(amount) (\(percentText(change.percent)))"
+        "\(PriceFormatter().signedCents(change.amount)) (\(percentText(change.percent)))"
     }
 
     /// Such as "+$123.40 (+3.65%)", or "(—)" for the percent of a cost of
