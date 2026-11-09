@@ -31,7 +31,12 @@ public struct Sale: Sendable, Hashable, Identifiable {
     public let shares: Int
     /// As quoted, which can include fractions of a cent.
     public let pricePerShare: Decimal
+    /// When the user sold, which dates the sale (ADR-0016).
     public let soldAt: Date
+    /// When its quote was priced, the quote's `asOf`, which is earlier than
+    /// `soldAt`. Nil for a sale made before quote times were recorded
+    /// (ADR-0026).
+    public let quotedAt: Date?
     public let priceSource: SalePriceSource
 
     public init(
@@ -40,6 +45,7 @@ public struct Sale: Sendable, Hashable, Identifiable {
         shares: Int,
         pricePerShare: Decimal,
         soldAt: Date,
+        quotedAt: Date? = nil,
         priceSource: SalePriceSource,
     ) throws(SaleError) {
         guard shares > 0 else {
@@ -53,6 +59,7 @@ public struct Sale: Sendable, Hashable, Identifiable {
         self.shares = shares
         self.pricePerShare = pricePerShare
         self.soldAt = soldAt
+        self.quotedAt = quotedAt
         self.priceSource = priceSource
     }
 
