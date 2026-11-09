@@ -89,6 +89,19 @@ struct SaleModelTests {
         #expect(sale.priceSource == .close(sessionDate: "2026-10-23"))
         // When the user sells, not when the close was set (ADR-0016).
         #expect(sale.soldAt == Self.now)
+        #expect(sale.quotedAt == quote.asOf)
+    }
+
+    @Test func `a sale at a live quote records the quote's time apart from when it sold`() async throws {
+        let quote = try makeQuote(price: "12", source: .liveQuote(delayed: true))
+        let model = try makeModel(available: 10, quotes: FakeQuotes(.success(quote)))
+        await model.getPrice()
+
+        let sale = try #require(model.sell())
+
+        #expect(sale.quotedAt == quote.asOf)
+        #expect(sale.soldAt == Self.now)
+        #expect(quote.asOf != Self.now)
     }
 
     @Test func `a quote marked as a limit fill can't be sold at`() async throws {

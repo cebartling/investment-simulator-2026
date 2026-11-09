@@ -102,6 +102,7 @@ public final class SaleModel {
             shares: shares,
             pricePerShare: quote.price,
             soldAt: clock(),
+            quotedAt: quote.asOf,
             priceSource: source,
         )
     }
