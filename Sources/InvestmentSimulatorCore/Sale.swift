@@ -33,9 +33,10 @@ public struct Sale: Sendable, Hashable, Identifiable {
     public let pricePerShare: Decimal
     /// When the user sold, which dates the sale (ADR-0016).
     public let soldAt: Date
-    /// When its quote was priced, the quote's `asOf`, which is earlier than
-    /// `soldAt`. Nil for a sale made before quote times were recorded
-    /// (ADR-0026).
+    /// When its quote was priced, the quote's `asOf`. It is usually earlier
+    /// than `soldAt`, but it comes from the server and `soldAt` from the
+    /// Mac's clock, so nothing checks the order. Nil for a sale made before
+    /// quote times were recorded (ADR-0026).
     public let quotedAt: Date?
     public let priceSource: SalePriceSource
 
