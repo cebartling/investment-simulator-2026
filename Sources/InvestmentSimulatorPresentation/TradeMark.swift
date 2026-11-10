@@ -55,27 +55,3 @@ public nonisolated struct TradeMark: Identifiable, Equatable, Sendable {
         }
     }
 }
-
-/// The trades of a stock card's Chart pane (PIN-515).
-public extension MainWindowModel {
-    /// The trades of `ticker`: each purchase, including buy limit fills and
-    /// purchases sold since, then each market sale, then each filled sell
-    /// order. An order that hasn't filled isn't a trade, so it isn't marked.
-    func tradeMarks(of ticker: Ticker) -> [TradeMark] {
-        let purchases = purchases(of: ticker)
-        let purchaseIDs = Set(purchases.map(\.id))
-        let buys = purchases.map {
-            TradeMark(id: $0.id, side: .buy, sessionDate: $0.sessionDate, price: $0.pricePerShare)
-        }
-        let sales = experiment.sales.filter { purchaseIDs.contains($0.purchaseID) }.map {
-            TradeMark(id: $0.id, side: .sell, sessionDate: $0.sessionDate, price: $0.pricePerShare)
-        }
-        let fills = experiment.limitOrders.compactMap { order -> TradeMark? in
-            guard purchaseIDs.contains(order.purchaseID), let filledOn = order.filledOn else {
-                return nil
-            }
-            return TradeMark(id: order.id, side: .sell, sessionDate: filledOn, price: order.limitPrice.amount)
-        }
-        return buys + sales + fills
-    }
-}
