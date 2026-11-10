@@ -46,6 +46,33 @@ extension MainWindowModelTests {
         #expect(prices.requests.map(\.interval) == [.weekly])
     }
 
+    @Test func `showing a card's chart again while it loads asks once`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices)
+        let again = Run()
+        // The pane shows again, as after switching panes, while its range loads.
+        prices.whileAnswering { again.task = again.task ?? model.showChart(of: vti) }
+
+        await model.showChart(of: vti).value
+        await again.task?.value
+
+        #expect(prices.requests.count == 1)
+        #expect(model.priceChart(of: vti).state == .loaded([ChartPoint(sessionDate: "2026-10-26", close: 1)]))
+    }
+
+    @Test func `showing a card's chart again after it fails asks again`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = FakeDailyPrices(failure: .dailyLimitReached)
+        let model = try await makeChartModel(prices: prices)
+        await model.showChart(of: vti).value
+
+        await model.showChart(of: vti).value
+
+        #expect(prices.requests.count == 2)
+        #expect(model.priceChart(of: vti).state == .failed(.dailyLimitReached))
+    }
+
     @Test func `the chart places only the trades in its range`() async throws {
         let vti = try Ticker("VTI")
         // 8:30 PM on Aug 31 in New York, before the month back from fixedNow.
@@ -90,4 +117,9 @@ extension MainWindowModelTests {
             clock: { fixedNow },
         )
     }
+}
+
+@MainActor
+private final class Run {
+    var task: Task<Void, Never>?
 }

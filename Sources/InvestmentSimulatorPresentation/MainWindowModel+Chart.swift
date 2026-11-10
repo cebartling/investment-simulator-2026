@@ -46,6 +46,20 @@ public extension MainWindowModel {
         return task
     }
 
+    /// Charts the range `ticker`'s chart shows, as its pane appears: from
+    /// memory once loaded, and without asking again while it loads. A failed
+    /// range is asked for again.
+    @discardableResult
+    func showChart(of ticker: Ticker) -> Task<Void, Never> {
+        let chart = priceChart(of: ticker)
+        // Only a newer range cancels the latest task, so while the chart
+        // loads, that task is still loading it.
+        if chart.state == .loading, let loading = chartTasks[ticker] {
+            return loading
+        }
+        return showRange(chart.range, of: ticker)
+    }
+
     /// The trades of `ticker` placed on its chart's axis in `timeZone`,
     /// leaving out those before the range it shows.
     func chartTrades(of ticker: Ticker, in timeZone: TimeZone) -> [TradeMark.Plotted] {
