@@ -262,8 +262,8 @@ struct ResearchWindowModelTests {
         await open("VTI", in: model)
 
         #expect(prices.requests.count == 1)
-        guard case .loaded = model.selectedTab?.chartState else {
-            Issue.record("Expected a loaded chart, got \(String(describing: model.selectedTab?.chartState))")
+        guard case .loaded = model.selectedTab?.chart.state else {
+            Issue.record("Expected a loaded chart, got \(String(describing: model.selectedTab?.chart.state))")
             return
         }
     }
@@ -277,7 +277,7 @@ struct ResearchWindowModelTests {
 
         await model.showRange(.oneYear, for: vti)?.value
 
-        #expect(model.selectedTab?.chartRange == .oneYear)
+        #expect(model.selectedTab?.chart.range == .oneYear)
         #expect(prices.requests.map(\.startDate) == ["2026-04-29", "2025-10-29"])
     }
 
@@ -293,7 +293,7 @@ struct ResearchWindowModelTests {
         await model.showRange(.oneYear, for: vti)?.value
 
         #expect(model.tabs.isEmpty)
-        #expect(tab?.chartState == .loading)
+        #expect(tab?.chart.state == .loading)
     }
 
     private func research(

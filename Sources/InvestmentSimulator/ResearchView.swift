@@ -214,7 +214,7 @@ struct ResearchChartSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("Range", selection: Binding(get: { tab.chartRange }, set: { onShowRange($0) })) {
+            Picker("Range", selection: Binding(get: { tab.chart.range }, set: { onShowRange($0) })) {
                 ForEach(PriceRange.allCases, id: \.self) { range in
                     Text(range.label).tag(range)
                 }
@@ -228,7 +228,7 @@ struct ResearchChartSection: View {
     }
 
     @ViewBuilder private var chart: some View {
-        switch tab.chartState {
+        switch tab.chart.state {
         case .loading:
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -251,7 +251,7 @@ struct ResearchChartSection: View {
                 Text(error.localizedDescription)
                     .foregroundStyle(.red)
                 // A failed range isn't kept, so showing it again retries it.
-                Button("Retry") { onShowRange(tab.chartRange) }
+                Button("Retry") { onShowRange(tab.chart.range) }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

@@ -16,14 +16,14 @@ struct ResearchWindowModelRetryTests {
         let model = research(quotes, prices: prices, data: data)
         await open("VTI", in: model)
         let tab = try #require(model.selectedTab)
-        let chart = tab.chartState
+        let chart = tab.chart.state
         data.answerMultiples(with: .success(multiples))
 
         await model.retry(.multiples, for: vti)?.value
 
         #expect(tab.multiplesState == .loaded(multiples))
         #expect(tab.profileState == .loaded(profile))
-        #expect(tab.chartState == chart)
+        #expect(tab.chart.state == chart)
         #expect(quotes.requests == ["VTI"])
         #expect(prices.requests.count == 1)
         #expect(data.requestCount == 6)
