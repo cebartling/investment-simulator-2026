@@ -5,6 +5,10 @@ import Testing
 
 /// A stock card's Chart pane (PIN-515).
 extension MainWindowModelTests {
+    @Test func `the Chart pane follows Overview`() {
+        #expect(StockPane.allCases == [.overview, .chart, .purchases, .sales, .orders])
+    }
+
     @Test func `each card keeps one chart, starting at six months`() async throws {
         let vti = try Ticker("VTI")
         let model = try await makeChartModel()

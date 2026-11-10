@@ -47,6 +47,8 @@ public nonisolated struct RecentSessions: Equatable, Sendable {
 /// The panes of an open stock card (PIN-510).
 public nonisolated enum StockPane: Hashable, CaseIterable, Sendable {
     case overview
+    /// The closes, with the trades marked on them (PIN-515).
+    case chart
     case purchases
     case sales
     case orders

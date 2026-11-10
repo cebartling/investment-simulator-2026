@@ -30,6 +30,8 @@ struct StockCardPanes: View {
             switch model.selectedPane(for: ticker) {
             case .overview:
                 StockOverviewPane(model: model, ticker: ticker, heldShares: heldShares)
+            case .chart:
+                StockChartPane(model: model, ticker: ticker)
             case .purchases:
                 purchasesPane
             case .sales:
@@ -290,6 +292,7 @@ private extension StockPane {
     var title: String {
         switch self {
         case .overview: "Overview"
+        case .chart: "Chart"
         case .purchases: "Purchases"
         case .sales: "Sales"
         case .orders: "Orders"
