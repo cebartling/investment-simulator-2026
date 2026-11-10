@@ -44,6 +44,18 @@ public struct Purchase: Sendable, Hashable, Identifiable {
         self.priceSource = priceSource
     }
 
+    /// The session the purchase was priced in (`yyyy-MM-dd`), by the rule
+    /// `Quote.sessionDate` follows: a close's or a fill's own session, else
+    /// the New York day of `pricedAt` (PIN-515).
+    public var sessionDate: String {
+        switch priceSource {
+        case let .close(sessionDate), let .limitOrderFill(sessionDate):
+            sessionDate
+        case .liveQuote:
+            InvestmentSimulatorCore.sessionDate(at: pricedAt)
+        }
+    }
+
     /// Price times shares, rounded to cents: what the purchase takes from cash.
     public var cost: Money {
         cost(of: shares)
