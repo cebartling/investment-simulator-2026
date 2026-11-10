@@ -90,8 +90,8 @@ struct ResearchTabModelTests {
     @Test func `the chart starts loading six months`() throws {
         let tab = try tab(FakeQuotes(.failure(.missingAPIKey)))
 
-        #expect(tab.chartRange == .sixMonths)
-        #expect(tab.chartState == .loading)
+        #expect(tab.chart.range == .sixMonths)
+        #expect(tab.chart.state == .loading)
     }
 
     @Test func `loading quotes and charts six months of daily closes, oldest first`() async throws {
@@ -111,7 +111,7 @@ struct ResearchTabModelTests {
 
         await tab.load()
 
-        #expect(tab.chartState == .empty)
+        #expect(tab.chart.state == .empty)
     }
 
     @Test func `a chart error stays in the chart`() async throws {
@@ -120,7 +120,7 @@ struct ResearchTabModelTests {
 
         await tab.load()
 
-        #expect(tab.chartState == .failed(.dailyLimitReached))
+        #expect(tab.chart.state == .failed(.dailyLimitReached))
         #expect(tab.quoteState == .quoted(quote))
     }
 
@@ -131,7 +131,7 @@ struct ResearchTabModelTests {
 
         await tab.load()
 
-        #expect(tab.chartState == .empty)
+        #expect(tab.chart.state == .empty)
     }
 
     @Test func `a late failure doesn't hide a newer chart of the same range`() async throws {
@@ -143,9 +143,9 @@ struct ResearchTabModelTests {
             ports: FakeResearchData().ports,
             clock: { Self.now },
         )
-        prices.beforeAnsweringFirst { await tab.showRange(.sixMonths) }
+        prices.beforeAnsweringFirst { await tab.chart.showRange(.sixMonths) }
 
-        await tab.showRange(.sixMonths)
+        await tab.chart.showRange(.sixMonths)
 
         #expect(closes(tab) == [12])
     }
@@ -162,11 +162,11 @@ struct ResearchTabModelTests {
             ports: FakeResearchData().ports,
             clock: { Self.now },
         )
-        prices.beforeAnsweringFirst { await tab.showRange(.oneYear) }
+        prices.beforeAnsweringFirst { await tab.chart.showRange(.oneYear) }
 
-        await tab.showRange(.sixMonths)
+        await tab.chart.showRange(.sixMonths)
 
-        #expect(tab.chartRange == .oneYear)
+        #expect(tab.chart.range == .oneYear)
         #expect(closes(tab) == [12])
     }
 
@@ -175,19 +175,19 @@ struct ResearchTabModelTests {
         let tab = try tab(FakeQuotes(.failure(.missingAPIKey)), prices: prices)
         await tab.load()
 
-        await tab.showRange(.sixMonths)
+        await tab.chart.showRange(.sixMonths)
 
         #expect(prices.requests.count == 2)
-        #expect(tab.chartState == .failed(.unavailable("Couldn't reach Equibles.")))
+        #expect(tab.chart.state == .failed(.unavailable("Couldn't reach Equibles.")))
     }
 
     @Test func `five years asks for weekly bars`() async throws {
         let prices = try FakeDailyPrices(["VTI": [bar("2026-10-28", close: 12)]])
         let tab = try tab(FakeQuotes(.failure(.missingAPIKey)), prices: prices)
 
-        await tab.showRange(.fiveYears)
+        await tab.chart.showRange(.fiveYears)
 
-        #expect(tab.chartRange == .fiveYears)
+        #expect(tab.chart.range == .fiveYears)
         #expect(closes(tab) == [12])
         #expect(prices.requests == [
             .init(ticker: "VTI", startDate: "2021-10-29", endDate: "2026-10-29", interval: .weekly),
@@ -198,11 +198,11 @@ struct ResearchTabModelTests {
         let prices = try FakeDailyPrices(["VTI": [bar("2026-10-28", close: 12)]])
         let tab = try tab(FakeQuotes(.failure(.missingAPIKey)), prices: prices)
         await tab.load()
-        await tab.showRange(.oneYear)
+        await tab.chart.showRange(.oneYear)
 
-        await tab.showRange(.sixMonths)
+        await tab.chart.showRange(.sixMonths)
 
-        #expect(tab.chartRange == .sixMonths)
+        #expect(tab.chart.range == .sixMonths)
         #expect(closes(tab) == [12])
         #expect(prices.requests.map(\.startDate) == ["2026-04-29", "2025-10-29"])
     }
@@ -221,11 +221,11 @@ struct ResearchTabModelTests {
         let prices = try FakeDailyPrices(["VTI": [bar("2026-10-28", close: 12)]])
         let tab = try tab(FakeQuotes(.failure(.missingAPIKey)), prices: prices)
 
-        let task = Task { await tab.showRange(.oneYear) }
+        let task = Task { await tab.chart.showRange(.oneYear) }
         task.cancel()
         await task.value
 
-        #expect(tab.chartRange == .sixMonths)
+        #expect(tab.chart.range == .sixMonths)
         #expect(prices.requests.isEmpty)
     }
 
@@ -235,10 +235,10 @@ struct ResearchTabModelTests {
         let run = Run()
         prices.whileAnswering { run.task?.cancel() }
 
-        run.task = Task { await tab.showRange(.oneYear) }
+        run.task = Task { await tab.chart.showRange(.oneYear) }
         await run.task?.value
 
-        #expect(tab.chartState == .loading)
+        #expect(tab.chart.state == .loading)
     }
 
     private func tab(
@@ -255,7 +255,7 @@ struct ResearchTabModelTests {
     }
 
     private func closes(_ tab: ResearchTabModel) -> [Decimal]? {
-        guard case let .loaded(points) = tab.chartState else {
+        guard case let .loaded(points) = tab.chart.state else {
             return nil
         }
         return points.map(\.close)

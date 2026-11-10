@@ -64,6 +64,12 @@ public final class MainWindowModel {
     /// for them before showing its change.
     var latestSessionDays: [Ticker: String] = [:]
 
+    /// Each card's Chart pane (PIN-515), once shown, with the ranges it
+    /// loaded. Kept while the app runs, never saved.
+    var priceCharts: [Ticker: PriceChartModel] = [:]
+    /// The range each chart is loading, so a newer one replaces it.
+    var chartTasks: [Ticker: Task<Void, Never>] = [:]
+
     let quotes: any QuoteProviding
     let dailyPrices: any DailyPriceProviding
     let profiles: any CompanyProfileProviding

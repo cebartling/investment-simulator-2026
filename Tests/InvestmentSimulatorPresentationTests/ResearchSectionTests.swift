@@ -74,8 +74,8 @@ struct ResearchSectionTests {
         await tab.load()
 
         #expect(tab.quoteState == .quoted(quote))
-        guard case .loaded = tab.chartState else {
-            Issue.record("Expected a chart, got \(tab.chartState)")
+        guard case .loaded = tab.chart.state else {
+            Issue.record("Expected a chart, got \(tab.chart.state)")
             return
         }
     }
@@ -215,7 +215,7 @@ struct ResearchSectionTests {
         let task = Task { await tab.load() }
         task.cancel()
         await task.value
-        await tab.showRange(.sixMonths)
+        await tab.chart.showRange(.sixMonths)
 
         #expect(prices.requests.count == 1)
     }

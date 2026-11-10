@@ -210,7 +210,7 @@ public final class ResearchWindowModel {
             return nil
         }
         chartTasks[ticker]?.cancel()
-        let task = Task { await tab.showRange(range) }
+        let task = Task { await tab.chart.showRange(range) }
         chartTasks[ticker] = task
         return task
     }

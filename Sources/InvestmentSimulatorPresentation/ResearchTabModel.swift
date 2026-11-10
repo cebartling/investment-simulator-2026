@@ -44,14 +44,6 @@ public final class ResearchTabModel: Identifiable {
         case failed(QuoteError)
     }
 
-    public enum ChartState: Equatable {
-        case loading
-        /// Oldest first.
-        case loaded([ChartPoint])
-        case empty
-        case failed(QuoteError)
-    }
-
     /// The parts of a ticker's research that load through a section port.
     public nonisolated enum Section: CaseIterable, Sendable {
         case profile
@@ -64,8 +56,8 @@ public final class ResearchTabModel: Identifiable {
 
     public let ticker: Ticker
     public private(set) var quoteState = QuoteState.loading
-    public private(set) var chartRange = PriceRange.sixMonths
-    public private(set) var chartState = ChartState.loading
+    /// The price history chart, which keeps its own range and state.
+    public let chart: PriceChartModel
     public private(set) var profileState = ResearchSectionState<CompanyProfile>.loading
     /// Empty when EDGAR doesn't list the ticker, or lists no exchange for it.
     public private(set) var exchangeState = ResearchSectionState<String>.loading
@@ -86,11 +78,8 @@ public final class ResearchTabModel: Identifiable {
     public internal(set) var selectedPane = ResearchPane.overview
 
     private let quotes: any QuoteProviding
-    private let dailyPrices: any DailyPriceProviding
     private let ports: ResearchSectionPorts
     private let clock: () -> Date
-    /// Each range's points once loaded, so going back to it asks for nothing.
-    private var charts: [PriceRange: [ChartPoint]] = [:]
     /// Each table once loaded, so going back to it asks for nothing.
     private var tables: [StatementSelection: StatementTable] = [:]
     /// Each statement's newest period, where the walk back starts from.
@@ -105,7 +94,7 @@ public final class ResearchTabModel: Identifiable {
     ) {
         self.ticker = ticker
         self.quotes = quotes
-        self.dailyPrices = dailyPrices
+        chart = PriceChartModel(ticker: ticker, dailyPrices: dailyPrices, clock: clock)
         self.ports = ports
         self.clock = clock
     }
@@ -147,10 +136,10 @@ public final class ResearchTabModel: Identifiable {
         guard !Task.isCancelled else {
             return
         }
-        charts = [:]
-        let range = chartRange
+        chart.forgetRanges()
+        let range = chart.range
         await withTaskGroup { group in
-            group.addTask { await self.showRange(range) }
+            group.addTask { await self.chart.showRange(range) }
             for section in Section.allCases where section != .exchange {
                 group.addTask { await self.load(section) }
             }
@@ -179,54 +168,6 @@ public final class ResearchTabModel: Identifiable {
             }
             quoteState = .failed(error)
         }
-    }
-
-    /// Charts `range`, from memory if it was loaded before. A request
-    /// cancelled before it starts changes nothing; one cancelled or
-    /// superseded while loading changes nothing more.
-    public func showRange(_ range: PriceRange) async {
-        guard !Task.isCancelled else {
-            return
-        }
-        chartRange = range
-        if let points = charts[range] {
-            show(points)
-            return
-        }
-        chartState = .loading
-        let sessions = range.sessions(endingAt: clock())
-        let bars: [DailyBar]
-        do throws(QuoteError) {
-            bars = try await dailyPrices.dailyBars(
-                for: ticker,
-                from: sessions.lowerBound,
-                through: sessions.upperBound,
-                interval: range.interval,
-            )
-        } catch .unknownTicker {
-            // The quote validates the ticker, so here a 404 means no
-            // history: an empty state, not an error (ADR-0019).
-            bars = []
-        } catch {
-            // A newer request may have charted this range already.
-            guard !Task.isCancelled, chartRange == range, charts[range] == nil else {
-                return
-            }
-            chartState = .failed(error)
-            return
-        }
-        guard !Task.isCancelled else {
-            return
-        }
-        let points = bars.sorted { $0.sessionDate < $1.sessionDate }.map { ChartPoint(bar: $0) }
-        charts[range] = points
-        if chartRange == range {
-            show(points)
-        }
-    }
-
-    private func show(_ points: [ChartPoint]) {
-        chartState = points.isEmpty ? .empty : .loaded(points)
     }
 
     /// Shows a statement's table, from memory if it was loaded before. A
@@ -353,40 +294,6 @@ public extension ResearchTabModel {
         case .failed(.missingContactEmail): "Add your SEC contact email in Settings to see the exchange."
         case let .failed(error): error.localizedDescription
         case .loading, .loaded, .empty: nil
-        }
-    }
-}
-
-/// One bar's close and the session day it belongs to. It holds no time zone,
-/// so a cached range stays right when the Mac's zone changes; `plot` places it
-/// on the chart's axis in the zone the view names.
-public nonisolated struct ChartPoint: Equatable, Sendable {
-    public let sessionDate: String
-    public let close: Decimal
-
-    public init(bar: DailyBar) {
-        self.init(sessionDate: bar.sessionDate, close: bar.close)
-    }
-
-    public init(sessionDate: String, close: Decimal) {
-        self.sessionDate = sessionDate
-        self.close = close
-    }
-
-    /// A close at its place on a chart axis.
-    public struct Plotted: Equatable, Sendable {
-        public let date: Date
-        public let close: Decimal
-    }
-
-    /// Places each close at noon of its session's day in `timeZone`, which
-    /// must be the zone the chart axis uses, so the axis shows the session's
-    /// own day and no daylight saving change moves it to another day. A point
-    /// whose session date isn't a real date is left out.
-    public static func plot(_ points: [ChartPoint], in timeZone: TimeZone) -> [Plotted] {
-        let parser = SessionDateParser(timeZone: timeZone)
-        return points.compactMap { point in
-            parser.date(of: point.sessionDate, hour: 12).map { Plotted(date: $0, close: point.close) }
         }
     }
 }
