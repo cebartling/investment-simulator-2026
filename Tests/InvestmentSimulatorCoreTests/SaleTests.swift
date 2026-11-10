@@ -97,6 +97,32 @@ struct SaleTests {
 
         #expect(sale.quotedAt == nil)
     }
+
+    @Test func `a sale at a live quote is in its quote's New York session`() throws {
+        // 00:30 UTC on Sep 1 is 8:30 PM on Aug 31 in New York; the user sold
+        // a day later.
+        let sale = try makeSale(
+            shares: 1,
+            price: "10",
+            soldAt: Date(timeIntervalSince1970: 1_788_309_000),
+            quotedAt: Date(timeIntervalSince1970: 1_788_222_600),
+        )
+
+        #expect(sale.sessionDate == "2026-08-31")
+    }
+
+    @Test func `a live-quote sale with no quote time is in the session it was sold in`() throws {
+        let sale = try makeSale(shares: 1, price: "10", soldAt: Date(timeIntervalSince1970: 1_788_222_600))
+
+        #expect(sale.sessionDate == "2026-08-31")
+    }
+
+    @Test func `a sale at a close is in the close's session`() throws {
+        // Sold days after the session it closed.
+        let sale = try makeSale(shares: 1, price: "10", source: .close(sessionDate: "2026-10-23"))
+
+        #expect(sale.sessionDate == "2026-10-23")
+    }
 }
 
 func makeSale(
@@ -105,6 +131,7 @@ func makeSale(
     shares: Int,
     price: String,
     soldAt: Date = Date(timeIntervalSince1970: 1_793_000_000),
+    quotedAt: Date? = nil,
     source: SalePriceSource = .liveQuote(delayed: true),
 ) throws -> Sale {
     try Sale(
@@ -113,6 +140,7 @@ func makeSale(
         shares: shares,
         pricePerShare: #require(Decimal(string: price)),
         soldAt: soldAt,
+        quotedAt: quotedAt,
         priceSource: source,
     )
 }
