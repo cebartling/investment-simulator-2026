@@ -54,8 +54,8 @@ public extension MainWindowModel {
     }
 
     /// Charts the range `ticker`'s chart shows, as its pane appears: from
-    /// memory once loaded that day, and without asking again while it loads.
-    /// A failed range is asked for again.
+    /// memory once loaded that day and since the last `refreshPrices()`, and
+    /// without asking again while it loads. A failed range is asked for again.
     @discardableResult
     func showChart(of ticker: Ticker) -> Task<Void, Never> {
         let chart = priceChart(of: ticker)

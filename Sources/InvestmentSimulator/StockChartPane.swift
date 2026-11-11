@@ -17,8 +17,9 @@ struct StockChartPane: View {
             trades: model.chartTrades(of: ticker, in: timeZone),
             onShowRange: { model.showRange($0, of: ticker) },
         )
-        // A range loaded or still loading isn't asked for again, so showing
-        // the pane again asks for nothing.
+        // A range loaded that day and since the last Refresh Prices, or still
+        // loading, isn't asked for again, so showing the pane again then asks
+        // for nothing (PIN-519).
         .task(id: ticker) { await model.showChart(of: ticker).value }
     }
 }
