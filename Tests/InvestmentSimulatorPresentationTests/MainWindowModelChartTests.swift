@@ -193,13 +193,21 @@ extension MainWindowModelTests {
         let threeDaysLater = fixedNow.addingTimeInterval(3 * 86400)
         // Made after the bars loaded, so it shows past the last close (ADR-0027).
         let madeToday = try makeChartPurchase(pricedAt: threeDaysLater, source: .liveQuote(delayed: true))
-        let model = try await makeChartModel(purchases: [firstSession, madeToday], clock: { now })
+        let prices = try FakeDailyPrices([
+            "VTI": [makeDailyBar(session: "2026-09-28", high: 1), makeDailyBar(session: "2026-10-26", high: 1)],
+        ])
+        let model = try await makeChartModel(purchases: [firstSession, madeToday], prices: prices, clock: { now })
         await model.showRange(.oneMonth, of: vti).value
 
         // The pane stays open, so nothing asks for the month's bars again (PIN-520).
         now = threeDaysLater
         let trades = model.chartTrades(of: vti, in: .gmt)
 
+        #expect(prices.requests.count == 1)
+        #expect(model.priceChart(of: vti).state == .loaded([
+            ChartPoint(sessionDate: "2026-09-28", close: 1),
+            ChartPoint(sessionDate: "2026-10-26", close: 1),
+        ]))
         #expect(trades.map(\.id) == [firstSession.id, madeToday.id])
     }
 
