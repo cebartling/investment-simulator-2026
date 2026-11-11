@@ -21,8 +21,15 @@ public final class PriceChartModel {
 
     private let dailyPrices: any DailyPriceProviding
     private let clock: () -> Date
-    /// Each range's points once loaded, so going back to it asks for nothing.
-    private var charts: [PriceRange: [ChartPoint]] = [:]
+    /// Each range once loaded, with the sessions it was asked for, so going
+    /// back to it asks for nothing.
+    private var charts: [PriceRange: (sessions: ClosedRange<String>, points: [ChartPoint])] = [:]
+
+    /// The sessions the range shown was asked for, nil until it loads. They
+    /// end on the day it loaded, which may be before today (PIN-520).
+    public var loadedSessions: ClosedRange<String>? {
+        charts[range]?.sessions
+    }
 
     public init(ticker: Ticker, dailyPrices: any DailyPriceProviding, clock: @escaping () -> Date) {
         self.ticker = ticker
@@ -43,7 +50,7 @@ public final class PriceChartModel {
             return
         }
         self.range = range
-        if let points = charts[range] {
+        if let points = charts[range]?.points {
             show(points)
             return
         }
@@ -74,7 +81,7 @@ public final class PriceChartModel {
             return
         }
         let points = bars.sorted { $0.sessionDate < $1.sessionDate }.map { ChartPoint(bar: $0) }
-        charts[range] = points
+        charts[range] = (sessions, points)
         if self.range == range {
             show(points)
         }
