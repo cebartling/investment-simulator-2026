@@ -203,6 +203,21 @@ extension MainWindowModelTests {
         #expect(trades.map(\.id) == [firstSession.id, madeToday.id])
     }
 
+    @Test func `a chart keeps its trades marked on the bars it draws until they reload`() async throws {
+        let vti = try Ticker("VTI")
+        let purchase = try makeChartPurchase(source: .close(sessionDate: "2026-10-23"))
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(purchases: [purchase], prices: prices)
+        await model.showChart(of: vti).value
+
+        // Nothing shows the chart, so Refresh Prices only has it ask again
+        // once shown, and until then it still draws the bars it loaded.
+        await model.refreshPrices()
+
+        #expect(model.priceChart(of: vti).state == .loaded([ChartPoint(sessionDate: "2026-10-26", close: 1)]))
+        #expect(model.chartTrades(of: vti, in: .gmt).map(\.id) == [purchase.id])
+    }
+
     private func makeChartPurchase(
         pricedAt: Date = Date(timeIntervalSince1970: 0),
         source: PriceSource,

@@ -18,17 +18,21 @@ public final class PriceChartModel {
     public let ticker: Ticker
     public private(set) var range = PriceRange.sixMonths
     public private(set) var state = State.loading
+    /// The sessions the bars `state` holds were asked for, nil while loading
+    /// or failed. They end on the day the bars loaded, which may be before
+    /// today (PIN-520), and stay until new bars replace them, even once
+    /// `forgetRanges()` has the next `showRange` ask again.
+    public private(set) var shownSessions: ClosedRange<String>?
 
     private let dailyPrices: any DailyPriceProviding
     private let clock: () -> Date
-    /// Each range once loaded, with the sessions it was asked for, so going
-    /// back to it asks for nothing.
-    private var charts: [PriceRange: (sessions: ClosedRange<String>, points: [ChartPoint])] = [:]
+    /// Each range once loaded, so going back to it asks for nothing.
+    private var charts: [PriceRange: Loaded] = [:]
 
-    /// The sessions the range shown was asked for, nil until it loads. They
-    /// end on the day it loaded, which may be before today (PIN-520).
-    public var loadedSessions: ClosedRange<String>? {
-        charts[range]?.sessions
+    /// A range's closes and the sessions they were asked for.
+    private struct Loaded {
+        let sessions: ClosedRange<String>
+        let points: [ChartPoint]
     }
 
     public init(ticker: Ticker, dailyPrices: any DailyPriceProviding, clock: @escaping () -> Date) {
@@ -50,11 +54,12 @@ public final class PriceChartModel {
             return
         }
         self.range = range
-        if let points = charts[range]?.points {
-            show(points)
+        if let loaded = charts[range] {
+            show(loaded)
             return
         }
         state = .loading
+        shownSessions = nil
         let sessions = range.sessions(endingAt: clock())
         let bars: [DailyBar]
         do throws(QuoteError) {
@@ -75,20 +80,23 @@ public final class PriceChartModel {
                 return
             }
             state = .failed(error)
+            shownSessions = nil
             return
         }
         guard !Task.isCancelled else {
             return
         }
         let points = bars.sorted { $0.sessionDate < $1.sessionDate }.map { ChartPoint(bar: $0) }
-        charts[range] = (sessions, points)
+        let loaded = Loaded(sessions: sessions, points: points)
+        charts[range] = loaded
         if self.range == range {
-            show(points)
+            show(loaded)
         }
     }
 
-    private func show(_ points: [ChartPoint]) {
-        state = points.isEmpty ? .empty : .loaded(points)
+    private func show(_ loaded: Loaded) {
+        state = loaded.points.isEmpty ? .empty : .loaded(loaded.points)
+        shownSessions = loaded.sessions
     }
 }
 

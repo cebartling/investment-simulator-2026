@@ -83,17 +83,17 @@ public extension MainWindowModel {
     }
 
     /// The trades of `ticker` placed on its chart's axis in `timeZone`,
-    /// leaving out those before the bars it shows, none until they load.
-    /// Bars loaded on an earlier day start before today's range does
+    /// leaving out those before the bars it shows, none while it loads or
+    /// failed. Bars loaded on an earlier day start before today's range does
     /// (PIN-520), and a trade made since still shows past the last close.
     func chartTrades(of ticker: Ticker, in timeZone: TimeZone) -> [TradeMark.Plotted] {
         let chart = priceChart(of: ticker)
-        guard let loaded = chart.loadedSessions else {
+        guard let shown = chart.shownSessions else {
             return []
         }
         let today = chart.range.sessions(endingAt: clock()).upperBound
         // The later of the two, so a clock set back can't end before the start.
-        let sessions = loaded.lowerBound ... max(loaded.upperBound, today)
+        let sessions = shown.lowerBound ... max(shown.upperBound, today)
         return TradeMark.plot(tradeMarks(of: ticker), in: timeZone, within: sessions)
     }
 }
