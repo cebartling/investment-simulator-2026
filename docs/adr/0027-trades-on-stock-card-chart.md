@@ -63,10 +63,15 @@ A stock card lists its trades in the Purchases and Sales tables (ADR-0022), but 
 ## Consequences
 
 - **Easier:** seeing where the market was at each trade.
+- **Reloading (PIN-519):** a card's chart loads its bars again on a new New York day and on Refresh Prices.
+  - On a new day, showing the pane or picking a range asks again (`chartDays`, checked in `showRange(_:of:)`), as the Overview's sessions do (`loadLatestSession(of:)`). On the same day, neither asks for anything.
+  - Refresh Prices (`MainWindowModel.refreshPrices()`) reloads the range of each chart whose pane shows, as Research's Refresh does, and has every other card's chart ask again the next time it shows.
+  - Both, not one. The day check covers ranges switched to, and other experiments' cards, without a refresh. Refresh gets a session that settled after the chart loaded that day.
 - **Harder:**
   - A mark shows no details, such as shares, price or time.
   - Trades in one week can overlap on the five-year chart.
-  - A card's chart keeps the ranges it loaded for the app's run, so a chart left open overnight lacks the latest session until the app restarts.
+  - A chart left showing overnight keeps the older bars until its pane shows again, a range is picked or Refresh Prices runs. Nothing reloads on a timer.
+  - A failed reload shows its error and Retry instead of the older bars, as Research's does.
 - **Revisit:**
   - Marks on Research's chart, with an experiment picker above it.
   - A trade's details on hover.

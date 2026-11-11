@@ -69,6 +69,9 @@ public final class MainWindowModel {
     var priceCharts: [Ticker: PriceChartModel] = [:]
     /// The range each chart is loading, so a newer one replaces it.
     var chartTasks: [Ticker: Task<Void, Never>] = [:]
+    /// The New York day (`yyyy-MM-dd`) each chart's ranges were asked for
+    /// on, so a new day asks again (PIN-519).
+    var chartDays: [Ticker: String] = [:]
 
     let quotes: any QuoteProviding
     let dailyPrices: any DailyPriceProviding
