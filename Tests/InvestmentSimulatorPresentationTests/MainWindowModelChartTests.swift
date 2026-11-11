@@ -185,6 +185,62 @@ extension MainWindowModelTests {
         #expect(halfYearTrades.map(\.id) == [august.id, october.id])
     }
 
+    @Test func `a chart loaded on an earlier day still marks the trades in its bars`() async throws {
+        let vti = try Ticker("VTI")
+        var now = fixedNow
+        // Monday, Sep 28: the first session of the month back from fixedNow (Oct 27).
+        let firstSession = try makeChartPurchase(source: .close(sessionDate: "2026-09-28"))
+        let threeDaysLater = fixedNow.addingTimeInterval(3 * 86400)
+        // Made after the bars loaded, so it shows past the last close (ADR-0027).
+        let madeToday = try makeChartPurchase(pricedAt: threeDaysLater, source: .liveQuote(delayed: true))
+        let prices = try FakeDailyPrices([
+            "VTI": [makeDailyBar(session: "2026-09-28", high: 1), makeDailyBar(session: "2026-10-26", high: 1)],
+        ])
+        let model = try await makeChartModel(purchases: [firstSession, madeToday], prices: prices, clock: { now })
+        await model.showRange(.oneMonth, of: vti).value
+
+        // The pane stays open, so nothing asks for the month's bars again (PIN-520).
+        now = threeDaysLater
+        let trades = model.chartTrades(of: vti, in: .gmt)
+
+        #expect(prices.requests.count == 1)
+        #expect(model.priceChart(of: vti).state == .loaded([
+            ChartPoint(sessionDate: "2026-09-28", close: 1),
+            ChartPoint(sessionDate: "2026-10-26", close: 1),
+        ]))
+        #expect(trades.map(\.id) == [firstSession.id, madeToday.id])
+    }
+
+    @Test func `a clock set back before the bars still marks the trades in them`() async throws {
+        let vti = try Ticker("VTI")
+        var now = fixedNow
+        let purchase = try makeChartPurchase(source: .close(sessionDate: "2026-09-28"))
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-09-28", high: 1)]])
+        let model = try await makeChartModel(purchases: [purchase], prices: prices, clock: { now })
+        await model.showRange(.oneMonth, of: vti).value
+
+        // Aug 28, before the bars' first session, as when the Mac's date is
+        // set back.
+        now = fixedNow.addingTimeInterval(-60 * 86400)
+
+        #expect(model.chartTrades(of: vti, in: .gmt).map(\.id) == [purchase.id])
+    }
+
+    @Test func `a chart keeps its trades marked on the bars it draws until they reload`() async throws {
+        let vti = try Ticker("VTI")
+        let purchase = try makeChartPurchase(source: .close(sessionDate: "2026-10-23"))
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(purchases: [purchase], prices: prices)
+        await model.showChart(of: vti).value
+
+        // Nothing shows the chart, so Refresh Prices only has it ask again
+        // once shown, and until then it still draws the bars it loaded.
+        await model.refreshPrices()
+
+        #expect(model.priceChart(of: vti).state == .loaded([ChartPoint(sessionDate: "2026-10-26", close: 1)]))
+        #expect(model.chartTrades(of: vti, in: .gmt).map(\.id) == [purchase.id])
+    }
+
     private func makeChartPurchase(
         pricedAt: Date = Date(timeIntervalSince1970: 0),
         source: PriceSource,
