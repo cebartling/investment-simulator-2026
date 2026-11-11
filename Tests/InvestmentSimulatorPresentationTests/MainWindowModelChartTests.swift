@@ -203,6 +203,21 @@ extension MainWindowModelTests {
         #expect(trades.map(\.id) == [firstSession.id, madeToday.id])
     }
 
+    @Test func `a clock set back before the bars still marks the trades in them`() async throws {
+        let vti = try Ticker("VTI")
+        var now = fixedNow
+        let purchase = try makeChartPurchase(source: .close(sessionDate: "2026-09-28"))
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-09-28", high: 1)]])
+        let model = try await makeChartModel(purchases: [purchase], prices: prices, clock: { now })
+        await model.showRange(.oneMonth, of: vti).value
+
+        // Aug 28, before the bars' first session, as when the Mac's date is
+        // set back.
+        now = fixedNow.addingTimeInterval(-60 * 86400)
+
+        #expect(model.chartTrades(of: vti, in: .gmt).map(\.id) == [purchase.id])
+    }
+
     @Test func `a chart keeps its trades marked on the bars it draws until they reload`() async throws {
         let vti = try Ticker("VTI")
         let purchase = try makeChartPurchase(source: .close(sessionDate: "2026-10-23"))
