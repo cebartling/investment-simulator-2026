@@ -26,7 +26,7 @@ public extension MainWindowModel {
     }
 
     /// The chart of `ticker`'s Chart pane: the same one every time, so the
-    /// ranges it loaded survive switching panes.
+    /// ranges it loaded that day survive switching panes.
     func priceChart(of ticker: Ticker) -> PriceChartModel {
         if let chart = priceCharts[ticker] {
             return chart
@@ -36,10 +36,17 @@ public extension MainWindowModel {
         return chart
     }
 
-    /// Charts `range` for `ticker`, replacing a range still loading.
+    /// Charts `range` for `ticker`, replacing a range still loading. Ranges
+    /// loaded on an earlier New York day are asked for again (PIN-519), as
+    /// `loadLatestSession(of:)` asks again for the Overview's sessions.
     @discardableResult
     func showRange(_ range: PriceRange, of ticker: Ticker) -> Task<Void, Never> {
         let chart = priceChart(of: ticker)
+        let today = range.sessions(endingAt: clock()).upperBound
+        if chartDays[ticker] != today {
+            chart.forgetRanges()
+            chartDays[ticker] = today
+        }
         chartTasks[ticker]?.cancel()
         let task = Task { await chart.showRange(range) }
         chartTasks[ticker] = task
@@ -47,8 +54,8 @@ public extension MainWindowModel {
     }
 
     /// Charts the range `ticker`'s chart shows, as its pane appears: from
-    /// memory once loaded, and without asking again while it loads. A failed
-    /// range is asked for again.
+    /// memory once loaded that day and since the last `refreshPrices()`, and
+    /// without asking again while it loads. A failed range is asked for again.
     @discardableResult
     func showChart(of ticker: Ticker) -> Task<Void, Never> {
         let chart = priceChart(of: ticker)
@@ -58,6 +65,21 @@ public extension MainWindowModel {
             return loading
         }
         return showRange(chart.range, of: ticker)
+    }
+
+    /// Refresh Prices: quotes again what `HoldingsPricesModel.refreshPrices(holding:)`
+    /// does, and has each card's chart ask again (PIN-519), at once if its
+    /// Chart pane shows, else the next time it shows.
+    func refreshPrices() async {
+        for chart in priceCharts.values {
+            chart.forgetRanges()
+        }
+        let showing = priceCharts.keys.filter { expandedTickers.contains($0) && selectedPane(for: $0) == .chart }
+        let reloads = showing.map { showRange(priceChart(of: $0).range, of: $0) }
+        await holdingsPrices.refreshPrices(holding: experiment.heldTickers)
+        for reload in reloads {
+            await reload.value
+        }
     }
 
     /// The trades of `ticker` placed on its chart's axis in `timeZone`,

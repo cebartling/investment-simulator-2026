@@ -73,6 +73,99 @@ extension MainWindowModelTests {
         #expect(model.priceChart(of: vti).state == .failed(.dailyLimitReached))
     }
 
+    @Test func `showing a card's chart again the same day asks for nothing`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices)
+        await model.showChart(of: vti).value
+
+        await model.showChart(of: vti).value
+
+        #expect(prices.requests.count == 1)
+    }
+
+    @Test func `showing a card's chart on a new day loads it again`() async throws {
+        let vti = try Ticker("VTI")
+        var now = fixedNow
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices, clock: { now })
+        await model.showChart(of: vti).value
+
+        now = fixedNow.addingTimeInterval(86400)
+        await model.showChart(of: vti).value
+
+        #expect(prices.requests.count == 2)
+        #expect(prices.requests.last?.endDate == PriceRange.sixMonths.sessions(endingAt: now).upperBound)
+    }
+
+    @Test func `a range picked on a new day loads again`() async throws {
+        let vti = try Ticker("VTI")
+        var now = fixedNow
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices, clock: { now })
+        await model.showRange(.oneYear, of: vti).value
+        await model.showRange(.sixMonths, of: vti).value
+
+        now = fixedNow.addingTimeInterval(86400)
+        await model.showRange(.oneYear, of: vti).value
+
+        #expect(prices.requests.count == 3)
+        #expect(prices.requests.last?.endDate == PriceRange.oneYear.sessions(endingAt: now).upperBound)
+    }
+
+    @Test func `a chart showing loads again on Refresh Prices`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let quotes = FakeQuotes(.failure(.missingAPIKey))
+        let model = try await makeChartModel(
+            purchases: [makeChartPurchase(source: .close(sessionDate: "2026-10-23"))],
+            prices: prices,
+            quotes: quotes,
+        )
+        model.toggleExpansion(of: vti)
+        model.selectPane(.chart, for: vti)
+        await model.showChart(of: vti).value
+
+        await model.refreshPrices()
+
+        #expect(prices.requests.count == 2)
+        #expect(model.priceChart(of: vti).state == .loaded([ChartPoint(sessionDate: "2026-10-26", close: 1)]))
+        // It still quotes the holdings, as Refresh Prices did before.
+        #expect(quotes.requestCount == 1)
+    }
+
+    @Test func `a hidden chart loads again once shown after Refresh Prices`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices)
+        model.toggleExpansion(of: vti)
+        await model.showChart(of: vti).value
+
+        // The card shows Overview, so its chart waits to be shown.
+        await model.refreshPrices()
+        #expect(prices.requests.count == 1)
+
+        await model.showChart(of: vti).value
+        #expect(prices.requests.count == 2)
+    }
+
+    @Test func `a closed card's chart loads again once shown after Refresh Prices`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices)
+        model.toggleExpansion(of: vti)
+        model.selectPane(.chart, for: vti)
+        await model.showChart(of: vti).value
+        model.toggleExpansion(of: vti)
+
+        // Chart stays selected, but the card is closed, so nothing shows it.
+        await model.refreshPrices()
+        #expect(prices.requests.count == 1)
+
+        await model.showChart(of: vti).value
+        #expect(prices.requests.count == 2)
+    }
+
     @Test func `the chart places only the trades in its range`() async throws {
         let vti = try Ticker("VTI")
         // 8:30 PM on Aug 31 in New York, before the month back from fixedNow.
@@ -109,12 +202,14 @@ extension MainWindowModelTests {
     private func makeChartModel(
         purchases: [Purchase] = [],
         prices: FakeDailyPrices = FakeDailyPrices(),
+        quotes: FakeQuotes = FakeQuotes(.failure(.missingAPIKey)),
+        clock: @escaping () -> Date = { fixedNow },
     ) async throws -> MainWindowModel {
         try await loadedModel(
             experiment: Experiment(cashBalance: Money(10000), purchases: purchases),
-            quotes: FakeQuotes(.failure(.missingAPIKey)),
+            quotes: quotes,
             dailyPrices: prices,
-            clock: { fixedNow },
+            clock: clock,
         )
     }
 }
