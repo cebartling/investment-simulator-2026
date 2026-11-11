@@ -149,6 +149,23 @@ extension MainWindowModelTests {
         #expect(prices.requests.count == 2)
     }
 
+    @Test func `a closed card's chart loads again once shown after Refresh Prices`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices)
+        model.toggleExpansion(of: vti)
+        model.selectPane(.chart, for: vti)
+        await model.showChart(of: vti).value
+        model.toggleExpansion(of: vti)
+
+        // Chart stays selected, but the card is closed, so nothing shows it.
+        await model.refreshPrices()
+        #expect(prices.requests.count == 1)
+
+        await model.showChart(of: vti).value
+        #expect(prices.requests.count == 2)
+    }
+
     @Test func `the chart places only the trades in its range`() async throws {
         let vti = try Ticker("VTI")
         // 8:30 PM on Aug 31 in New York, before the month back from fixedNow.
