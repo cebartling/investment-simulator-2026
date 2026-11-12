@@ -69,9 +69,6 @@ public final class MainWindowModel {
     /// `priceChart(of:)` adds to it while a pane draws, which would draw every
     /// view that read it again, and views observe each chart, never this.
     @ObservationIgnored var priceCharts: [Ticker: PriceChartModel] = [:]
-    /// The range each chart is loading, so a newer one replaces it. Not
-    /// observed: no view reads it (PIN-522).
-    @ObservationIgnored var chartTasks: [Ticker: Task<Void, Never>] = [:]
     /// The New York day (`yyyy-MM-dd`) each chart's ranges were asked for
     /// on, so a new day asks again (PIN-519). Not observed: no view reads it
     /// (PIN-522).
