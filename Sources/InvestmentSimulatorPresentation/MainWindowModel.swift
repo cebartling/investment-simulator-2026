@@ -65,13 +65,17 @@ public final class MainWindowModel {
     var latestSessionDays: [Ticker: String] = [:]
 
     /// Each card's Chart pane (PIN-515), once shown, with the ranges it
-    /// loaded. Kept while the app runs, never saved.
-    var priceCharts: [Ticker: PriceChartModel] = [:]
-    /// The range each chart is loading, so a newer one replaces it.
-    var chartTasks: [Ticker: Task<Void, Never>] = [:]
+    /// loaded. Kept while the app runs, never saved. Not observed (PIN-522):
+    /// `priceChart(of:)` adds to it while a pane draws, which would draw every
+    /// view that read it again, and views observe each chart, never this.
+    @ObservationIgnored var priceCharts: [Ticker: PriceChartModel] = [:]
+    /// The range each chart is loading, so a newer one replaces it. Not
+    /// observed: no view reads it (PIN-522).
+    @ObservationIgnored var chartTasks: [Ticker: Task<Void, Never>] = [:]
     /// The New York day (`yyyy-MM-dd`) each chart's ranges were asked for
-    /// on, so a new day asks again (PIN-519).
-    var chartDays: [Ticker: String] = [:]
+    /// on, so a new day asks again (PIN-519). Not observed: no view reads it
+    /// (PIN-522).
+    @ObservationIgnored var chartDays: [Ticker: String] = [:]
 
     let quotes: any QuoteProviding
     let dailyPrices: any DailyPriceProviding

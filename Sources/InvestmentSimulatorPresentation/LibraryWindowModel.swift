@@ -15,8 +15,12 @@ public final class LibraryWindowModel {
     public let library: LibraryModel
 
     private let makeExperimentModel: (ExperimentID) -> MainWindowModel
-    private var experimentModels: [ExperimentID: MainWindowModel] = [:]
-    private var loads: [ExperimentID: Task<Void, Never>] = [:]
+    /// Not observed (PIN-522): `experimentModel(for:)` adds to it while the
+    /// detail draws, which would draw the whole window again, and views
+    /// observe each model, never this.
+    @ObservationIgnored private var experimentModels: [ExperimentID: MainWindowModel] = [:]
+    /// Not observed: no view reads it (PIN-522).
+    @ObservationIgnored private var loads: [ExperimentID: Task<Void, Never>] = [:]
     private var showsResearch = false
     private var isCreating = false
 
