@@ -47,10 +47,7 @@ public extension MainWindowModel {
             chart.forgetRanges()
             chartDays[ticker] = today
         }
-        chartTasks[ticker]?.cancel()
-        let task = Task { await chart.showRange(range) }
-        chartTasks[ticker] = task
-        return task
+        return chart.load(range)
     }
 
     /// Charts the range `ticker`'s chart shows, as its pane appears: from
@@ -59,12 +56,7 @@ public extension MainWindowModel {
     @discardableResult
     func showChart(of ticker: Ticker) -> Task<Void, Never> {
         let chart = priceChart(of: ticker)
-        // Only a newer range cancels the latest task, so while the chart
-        // loads, that task is still loading it.
-        if chart.state == .loading, let loading = chartTasks[ticker] {
-            return loading
-        }
-        return showRange(chart.range, of: ticker)
+        return chart.loadInProgress ?? showRange(chart.range, of: ticker)
     }
 
     /// Refresh Prices: quotes again what `HoldingsPricesModel.refreshPrices(holding:)`

@@ -2,9 +2,9 @@ import Foundation
 import InvestmentSimulatorCore
 import Observation
 
-/// One ticker's price history chart: the range shown, its state, and each
-/// range's closes once loaded. Research's chart and a stock card's Chart pane
-/// (PIN-515) both use it.
+/// One ticker's price history chart: the range shown, its state, each range's
+/// closes once loaded, and the range still loading (PIN-523). Research's chart
+/// and a stock card's Chart pane (PIN-515) both use it.
 @Observable
 public final class PriceChartModel {
     public enum State: Equatable {
@@ -28,6 +28,10 @@ public final class PriceChartModel {
     private let clock: () -> Date
     /// Each range once loaded, so going back to it asks for nothing.
     private var charts: [PriceRange: Loaded] = [:]
+    /// The range `load(_:)` started last, so a newer one replaces it. A
+    /// `showRange` awaited directly, as Research's first load, isn't kept.
+    /// Not observed: no view reads it (PIN-522).
+    @ObservationIgnored private var loading: Task<Void, Never>?
 
     /// A range's closes and the sessions they were asked for.
     private struct Loaded {
@@ -44,6 +48,29 @@ public final class PriceChartModel {
     /// Forgets the ranges loaded before, so the next `showRange` asks again.
     public func forgetRanges() {
         charts = [:]
+    }
+
+    /// Charts `range` in a task of its own, cancelling the range still loading.
+    @discardableResult
+    public func load(_ range: PriceRange) -> Task<Void, Never> {
+        loading?.cancel()
+        let task = Task { await showRange(range) }
+        loading = task
+        return task
+    }
+
+    /// The task `load(_:)` started last, while the chart is loading, so
+    /// showing it again while it loads asks once. A `showRange` awaited
+    /// directly isn't tracked: call `cancelLoad()` first, as Research does,
+    /// or this may return a task that has ended.
+    public var loadInProgress: Task<Void, Never>? {
+        state == .loading ? loading : nil
+    }
+
+    /// Cancels the range still loading. The chart keeps what it shows.
+    public func cancelLoad() {
+        loading?.cancel()
+        loading = nil
     }
 
     /// Charts `range`, from memory if it was loaded before. A request
