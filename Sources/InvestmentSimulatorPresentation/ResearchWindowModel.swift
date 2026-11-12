@@ -259,7 +259,7 @@ public final class ResearchWindowModel {
         guard let index = tabs.firstIndex(where: { $0.ticker == ticker }) else {
             return
         }
-        cancelTasks(of: ticker)
+        cancelTasks(of: tabs[index])
         tabs.remove(at: index)
         if selection == ticker {
             selection = tabs.indices.contains(index) ? tabs[index].ticker : tabs.last?.ticker
@@ -277,7 +277,7 @@ public final class ResearchWindowModel {
         reportsUnknown: Bool = true,
     ) -> Task<Void, Never> {
         let ticker = tab.ticker
-        cancelTasks(of: ticker)
+        cancelTasks(of: tab)
         tab.forgetStatements()
         if tab.selectedPane == .financials {
             showStatements(tab.statementSelection, for: ticker)
@@ -287,7 +287,7 @@ public final class ResearchWindowModel {
             guard !Task.isCancelled, case .failed(.unknownTicker) = tab.quoteState else {
                 return
             }
-            drop(ticker, reselecting: previous)
+            drop(tab, reselecting: previous)
             if let typed, symbolText.isEmpty {
                 symbolText = typed
             }
@@ -299,22 +299,22 @@ public final class ResearchWindowModel {
         return task
     }
 
-    private func cancelTasks(of ticker: Ticker) {
-        tasks.removeValue(forKey: ticker)?.cancel()
-        cancelPartialTasks(of: ticker)
+    private func cancelTasks(of tab: ResearchTabModel) {
+        tasks.removeValue(forKey: tab.ticker)?.cancel()
+        cancelPartialTasks(of: tab)
     }
 
     /// Cancels what loads one part of a ticker, apart from its full load.
-    /// Its tab must still be open, for its chart's range.
-    private func cancelPartialTasks(of ticker: Ticker) {
-        tabs.first { $0.ticker == ticker }?.chart.cancelLoad()
-        statementTasks.removeValue(forKey: ticker)?.cancel()
-        retryTasks.removeValue(forKey: ticker)?.values.forEach { $0.cancel() }
+    private func cancelPartialTasks(of tab: ResearchTabModel) {
+        tab.chart.cancelLoad()
+        statementTasks.removeValue(forKey: tab.ticker)?.cancel()
+        retryTasks.removeValue(forKey: tab.ticker)?.values.forEach { $0.cancel() }
     }
 
-    private func drop(_ ticker: Ticker, reselecting previous: Ticker?) {
+    private func drop(_ tab: ResearchTabModel, reselecting previous: Ticker?) {
+        let ticker = tab.ticker
         tasks[ticker] = nil
-        cancelPartialTasks(of: ticker)
+        cancelPartialTasks(of: tab)
         tabs.removeAll { $0.ticker == ticker }
         if selection == ticker {
             selection = tabs.contains { $0.ticker == previous } ? previous : tabs.last?.ticker
