@@ -59,8 +59,10 @@ public final class PriceChartModel {
         return task
     }
 
-    /// The task still loading the range shown, nil once it loaded, failed or
-    /// was cancelled, so showing the chart again while it loads asks once.
+    /// The task `load(_:)` started last, while the chart is loading, so
+    /// showing it again while it loads asks once. A `showRange` awaited
+    /// directly isn't tracked: call `cancelLoad()` first, as Research does,
+    /// or this may return a task that has ended.
     public var loadInProgress: Task<Void, Never>? {
         state == .loading ? loading : nil
     }
