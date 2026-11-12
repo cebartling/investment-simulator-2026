@@ -49,8 +49,6 @@ public final class ResearchWindowModel {
     /// that opens a ticker first can't overwrite the last session's list.
     private var isRestored = false
     private var tasks: [Ticker: Task<Void, Never>] = [:]
-    /// Each ticker's chart range still loading, apart from its first load.
-    private var chartTasks: [Ticker: Task<Void, Never>] = [:]
     /// Each ticker's statement table still loading.
     private var statementTasks: [Ticker: Task<Void, Never>] = [:]
     /// Each ticker's section retries still loading.
@@ -209,10 +207,7 @@ public final class ResearchWindowModel {
         guard let tab = tabs.first(where: { $0.ticker == ticker }) else {
             return nil
         }
-        chartTasks[ticker]?.cancel()
-        let task = Task { await tab.chart.showRange(range) }
-        chartTasks[ticker] = task
-        return task
+        return tab.chart.load(range)
     }
 
     /// Shows a statement for an open ticker, replacing one still loading.
@@ -310,8 +305,9 @@ public final class ResearchWindowModel {
     }
 
     /// Cancels what loads one part of a ticker, apart from its full load.
+    /// Its tab must still be open, for its chart's range.
     private func cancelPartialTasks(of ticker: Ticker) {
-        chartTasks.removeValue(forKey: ticker)?.cancel()
+        tabs.first { $0.ticker == ticker }?.chart.cancelLoad()
         statementTasks.removeValue(forKey: ticker)?.cancel()
         retryTasks.removeValue(forKey: ticker)?.values.forEach { $0.cancel() }
     }
