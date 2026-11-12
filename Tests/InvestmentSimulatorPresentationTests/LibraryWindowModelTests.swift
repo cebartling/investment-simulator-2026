@@ -104,6 +104,22 @@ struct LibraryWindowModelTests {
         #expect(model.experimentModel(for: id) !== model.experimentModel(for: ExperimentID()))
     }
 
+    @Test func `a new experiment's model changes nothing the window observes`() {
+        let shown = ExperimentID()
+        let (model, _) = makeModel()
+        model.destination = .experiment(shown)
+        // What `LibraryWindow.detail` reads.
+        let draw = { (id: ExperimentID) in
+            _ = model.destination
+            _ = model.experimentModel(for: id)
+        }
+        draw(shown)
+
+        let changed = changesObserved(by: { draw(shown) }, when: { _ = model.experimentModel(for: ExperimentID()) })
+
+        #expect(!changed)
+    }
+
     @Test func `deleting an experiment drops its model`() async throws {
         let id = ExperimentID()
         let (model, _) = makeModel([id: experiment(named: "Index funds")])
