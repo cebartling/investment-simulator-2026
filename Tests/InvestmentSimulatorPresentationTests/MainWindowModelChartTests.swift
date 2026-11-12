@@ -241,6 +241,22 @@ extension MainWindowModelTests {
         #expect(model.chartTrades(of: vti, in: .gmt).map(\.id) == [purchase.id])
     }
 
+    @Test func `drawing a card's Chart pane changes nothing another card's pane observes`() async throws {
+        let vti = try Ticker("VTI")
+        let aapl = try Ticker("AAPL")
+        let model = try await makeChartModel()
+        // What `StockChartPane.body` reads.
+        let draw = { (ticker: Ticker) in
+            _ = model.priceChart(of: ticker)
+            _ = model.chartTrades(of: ticker, in: .gmt)
+        }
+        draw(vti)
+
+        let changed = changesObserved(by: { draw(vti) }, when: { draw(aapl) })
+
+        #expect(!changed)
+    }
+
     private func makeChartPurchase(
         pricedAt: Date = Date(timeIntervalSince1970: 0),
         source: PriceSource,
