@@ -84,3 +84,12 @@ Two limits remain:
 
 - A chart left showing overnight keeps the older bars until its pane shows again, a range is picked or Refresh Prices runs. Nothing reloads on a timer.
 - A failed reload shows its error and Retry instead of the older bars, as Research's does.
+
+## Amendment (PIN-524): the Overview's month fills 1M
+
+A card's Overview loads the past month of daily bars (`loadLatestSession(of:)`), the same request the chart's 1M range sends. So the chart no longer loads 1M only when it is opened: the Overview's month becomes it.
+
+- **What's kept:** when the Overview's month loads, `MainWindowModel.keepOverviewBars(_:askedFor:of:)` hands it to the card's chart as its 1M range for that New York day, through `PriceChartModel.keep(_:askedFor:as:)`. Picking 1M that day asks for nothing.
+- **What isn't:** a month asked for on an earlier day, as when the load ran past midnight, or a load that failed or found an unknown ticker. 1M then asks as before.
+- **Reloads are unchanged:** a new day and Refresh Prices forget the kept month as they do every range (PIN-519), so 1M asks again.
+- **A 1M load already running** replaces the kept month when it ends, or keeps it if it fails.
