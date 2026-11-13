@@ -37,17 +37,26 @@ public extension MainWindowModel {
     }
 
     /// Charts `range` for `ticker`, replacing a range still loading. Ranges
-    /// loaded on an earlier New York day are asked for again (PIN-519), as
-    /// `loadLatestSession(of:)` asks again for the Overview's sessions.
+    /// asked for on another New York day are asked for again (PIN-519), as
+    /// `loadLatestSession(of:)` asks again for the Overview's sessions, each
+    /// by its own day (PIN-524).
     @discardableResult
     func showRange(_ range: PriceRange, of ticker: Ticker) -> Task<Void, Never> {
         let chart = priceChart(of: ticker)
-        let today = range.sessions(endingAt: clock()).upperBound
-        if chartDays[ticker] != today {
-            chart.forgetRanges()
-            chartDays[ticker] = today
-        }
+        chart.forgetRanges(notAskedOn: range.sessions(endingAt: clock()).upperBound)
         return chart.load(range)
+    }
+
+    /// Keeps the month of `ticker`'s bars its Overview loaded, asked for
+    /// over `sessions`, as its chart's 1M range (PIN-524), so picking 1M
+    /// that day asks for nothing. Bars asked for on an earlier New York
+    /// day, as when the load ran past midnight, aren't kept. A new day and
+    /// Refresh Prices forget them as they do every range.
+    internal func keepOverviewBars(_ bars: [DailyBar], askedFor sessions: ClosedRange<String>, of ticker: Ticker) {
+        guard sessions.upperBound == PriceRange.oneMonth.sessions(endingAt: clock()).upperBound else {
+            return
+        }
+        priceChart(of: ticker).keep(bars, askedFor: sessions, as: .oneMonth)
     }
 
     /// Charts the range `ticker`'s chart shows, as its pane appears: from

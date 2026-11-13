@@ -166,6 +166,108 @@ extension MainWindowModelTests {
         #expect(prices.requests.count == 2)
     }
 
+    @Test func `picking 1M after the Overview loads asks for no bars`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices)
+        await model.loadLatestSession(of: vti)
+
+        await model.showRange(.oneMonth, of: vti).value
+
+        #expect(prices.requests.count == 1)
+        #expect(model.priceChart(of: vti).state == .loaded([ChartPoint(sessionDate: "2026-10-26", close: 1)]))
+        #expect(model.priceChart(of: vti).shownSessions == PriceRange.oneMonth.sessions(endingAt: fixedNow))
+    }
+
+    @Test func `picking 1M on a new day after the Overview loads asks again`() async throws {
+        let vti = try Ticker("VTI")
+        var now = fixedNow
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices, clock: { now })
+        await model.loadLatestSession(of: vti)
+
+        now = fixedNow.addingTimeInterval(86400)
+        await model.showRange(.oneMonth, of: vti).value
+
+        #expect(prices.requests.count == 2)
+        #expect(prices.requests.last?.endDate == PriceRange.oneMonth.sessions(endingAt: now).upperBound)
+    }
+
+    @Test func `picking 1M after Refresh Prices asks again`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices)
+        await model.loadLatestSession(of: vti)
+
+        await model.refreshPrices()
+        await model.showRange(.oneMonth, of: vti).value
+
+        #expect(prices.requests.count == 2)
+    }
+
+    @Test func `the Overview's month on a new day leaves the chart no range of the day before`() async throws {
+        let vti = try Ticker("VTI")
+        var now = fixedNow
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices, clock: { now })
+        await model.showRange(.sixMonths, of: vti).value
+
+        now = fixedNow.addingTimeInterval(86400)
+        await model.loadLatestSession(of: vti)
+        await model.showRange(.sixMonths, of: vti).value
+
+        #expect(prices.requests.count == 3)
+        #expect(prices.requests.last?.endDate == PriceRange.sixMonths.sessions(endingAt: now).upperBound)
+    }
+
+    @Test func `a range asked for the day before and answered after the Overview's month asks again`() async throws {
+        let vti = try Ticker("VTI")
+        let clock = MovingClock()
+        let yesterdays = try [makeDailyBar(session: "2026-10-23", high: 1)]
+        let todays = try [DailyBar(sessionDate: "2026-10-26", open: 2, high: 2, low: 2, close: 2)]
+        let prices = AnswersFirstLate(first: .success(yesterdays), later: todays)
+        let model = try await makeChartModel(prices: prices, clock: { clock.now })
+        // The New York day ends while 6M loads, and the Overview's month
+        // loads before 6M's answer comes, so that answer is yesterday's.
+        prices.beforeAnsweringFirst {
+            clock.now = fixedNow.addingTimeInterval(86400)
+            await model.loadLatestSession(of: vti)
+        }
+        await model.showRange(.sixMonths, of: vti).value
+
+        await model.showRange(.sixMonths, of: vti).value
+
+        #expect(model.priceChart(of: vti).state == .loaded([ChartPoint(sessionDate: "2026-10-26", close: 2)]))
+        #expect(model.priceChart(of: vti).shownSessions == PriceRange.sixMonths.sessions(endingAt: clock.now))
+    }
+
+    @Test func `bars the Overview asked for yesterday aren't kept for the chart`() async throws {
+        let vti = try Ticker("VTI")
+        let clock = MovingClock()
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices, clock: { clock.now })
+        // The New York day ends while the Overview's month loads.
+        prices.whileAnswering { clock.now = fixedNow.addingTimeInterval(86400) }
+        await model.loadLatestSession(of: vti)
+
+        await model.showRange(.oneMonth, of: vti).value
+
+        #expect(prices.requests.count == 2)
+        #expect(prices.requests.last?.endDate == PriceRange.oneMonth.sessions(endingAt: clock.now).upperBound)
+    }
+
+    @Test func `an Overview that fails keeps nothing for the chart`() async throws {
+        let vti = try Ticker("VTI")
+        let prices = FakeDailyPrices(failure: .dailyLimitReached)
+        let model = try await makeChartModel(prices: prices)
+        await model.loadLatestSession(of: vti)
+
+        await model.showRange(.oneMonth, of: vti).value
+
+        #expect(prices.requests.count == 2)
+        #expect(model.priceChart(of: vti).state == .failed(.dailyLimitReached))
+    }
+
     @Test func `the chart places only the trades in its range`() async throws {
         let vti = try Ticker("VTI")
         // 8:30 PM on Aug 31 in New York, before the month back from fixedNow.
@@ -273,7 +375,7 @@ extension MainWindowModelTests {
 
     private func makeChartModel(
         purchases: [Purchase] = [],
-        prices: FakeDailyPrices = FakeDailyPrices(),
+        prices: any DailyPriceProviding = FakeDailyPrices(),
         quotes: FakeQuotes = FakeQuotes(.failure(.missingAPIKey)),
         clock: @escaping () -> Date = { fixedNow },
     ) async throws -> MainWindowModel {
@@ -289,4 +391,10 @@ extension MainWindowModelTests {
 @MainActor
 private final class Run {
     var task: Task<Void, Never>?
+}
+
+/// A clock a fake can move on while it answers.
+@MainActor
+private final class MovingClock {
+    var now = fixedNow
 }

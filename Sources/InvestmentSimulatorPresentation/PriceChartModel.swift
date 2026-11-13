@@ -4,7 +4,8 @@ import Observation
 
 /// One ticker's price history chart: the range shown, its state, each range's
 /// closes once loaded, and the range still loading (PIN-523). Research's chart
-/// and a stock card's Chart pane (PIN-515) both use it.
+/// and a stock card's Chart pane (PIN-515) both use it. A range's bars can
+/// also be handed to it, as a card's Overview does with its month (PIN-524).
 @Observable
 public final class PriceChartModel {
     public enum State: Equatable {
@@ -26,7 +27,7 @@ public final class PriceChartModel {
 
     private let dailyPrices: any DailyPriceProviding
     private let clock: () -> Date
-    /// Each range once loaded, so going back to it asks for nothing.
+    /// Each range once loaded or kept, so going back to it asks for nothing.
     private var charts: [PriceRange: Loaded] = [:]
     /// The range `load(_:)` started last, so a newer one replaces it. A
     /// `showRange` awaited directly, as Research's first load, isn't kept.
@@ -48,6 +49,15 @@ public final class PriceChartModel {
     /// Forgets the ranges loaded before, so the next `showRange` asks again.
     public func forgetRanges() {
         charts = [:]
+    }
+
+    /// Forgets the ranges whose sessions weren't asked for through `day`, a
+    /// New York day (`yyyy-MM-dd`), so the next `showRange` of each asks
+    /// again (PIN-519). Each range keeps its own day, so one asked for the
+    /// day before that answers after midnight is still asked for again
+    /// (PIN-524).
+    public func forgetRanges(notAskedOn day: String) {
+        charts = charts.filter { $0.value.sessions.upperBound == day }
     }
 
     /// Charts `range` in a task of its own, cancelling the range still loading.
@@ -111,6 +121,19 @@ public final class PriceChartModel {
             return
         }
         guard !Task.isCancelled else {
+            return
+        }
+        keep(bars, askedFor: sessions, as: range)
+    }
+
+    /// Keeps `bars`, asked for over `sessions`, as `range`'s, as if it had
+    /// loaded them, and shows them if `range` is the one shown: a stock
+    /// card's Overview hands over the month it loaded (PIN-524). A load of
+    /// `range` still running replaces them when it ends, or keeps them if
+    /// it fails. Bars asked for on an earlier day than those `range` has,
+    /// as a load that ran past midnight, never replace them.
+    public func keep(_ bars: [DailyBar], askedFor sessions: ClosedRange<String>, as range: PriceRange) {
+        if let kept = charts[range], kept.sessions.upperBound > sessions.upperBound {
             return
         }
         let points = bars.sorted { $0.sessionDate < $1.sessionDate }.map { ChartPoint(bar: $0) }
