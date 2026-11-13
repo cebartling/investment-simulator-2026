@@ -4,7 +4,8 @@ import Observation
 
 /// One ticker's price history chart: the range shown, its state, each range's
 /// closes once loaded, and the range still loading (PIN-523). Research's chart
-/// and a stock card's Chart pane (PIN-515) both use it.
+/// and a stock card's Chart pane (PIN-515) both use it. A range's bars can
+/// also be handed to it, as a card's Overview does with its month (PIN-524).
 @Observable
 public final class PriceChartModel {
     public enum State: Equatable {
@@ -113,6 +114,15 @@ public final class PriceChartModel {
         guard !Task.isCancelled else {
             return
         }
+        keep(bars, askedFor: sessions, as: range)
+    }
+
+    /// Keeps `bars`, asked for over `sessions`, as `range`'s, as if it had
+    /// loaded them, and shows them if `range` is the one shown: a stock
+    /// card's Overview hands over the month it loaded (PIN-524). A load of
+    /// `range` still running replaces them when it ends, or keeps them if
+    /// it fails.
+    public func keep(_ bars: [DailyBar], askedFor sessions: ClosedRange<String>, as range: PriceRange) {
         let points = bars.sorted { $0.sessionDate < $1.sessionDate }.map { ChartPoint(bar: $0) }
         let loaded = Loaded(sessions: sessions, points: points)
         charts[range] = loaded

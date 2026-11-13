@@ -45,6 +45,50 @@ struct PriceChartModelTests {
         #expect(chart.loadInProgress == nil)
     }
 
+    @Test func `bars kept for a range show without a request`() async throws {
+        let prices = FakeDailyPrices()
+        let chart = try makeChart(prices: prices)
+        let month = PriceRange.oneMonth.sessions(endingAt: fixedNow)
+        let bars = try [makeDailyBar(session: "2026-10-26", high: 1), makeDailyBar(session: "2026-10-23", high: 1)]
+
+        chart.keep(bars, askedFor: month, as: .oneMonth)
+        await chart.load(.oneMonth).value
+
+        #expect(chart.state == .loaded([
+            ChartPoint(sessionDate: "2026-10-23", close: 1),
+            ChartPoint(sessionDate: "2026-10-26", close: 1),
+        ]))
+        #expect(chart.shownSessions == month)
+        #expect(prices.requests.isEmpty)
+    }
+
+    @Test func `bars kept while that range fails to load still show`() async throws {
+        let prices = FakeDailyPrices(failure: .dailyLimitReached)
+        let chart = try makeChart(prices: prices)
+        let month = PriceRange.oneMonth.sessions(endingAt: fixedNow)
+        let bars = try [makeDailyBar(session: "2026-10-26", high: 1)]
+        // The Overview's month arrives while the chart asks for its own (PIN-524).
+        prices.whileAnswering { chart.keep(bars, askedFor: month, as: .oneMonth) }
+
+        await chart.load(.oneMonth).value
+
+        #expect(chart.state == .loaded([ChartPoint(sessionDate: "2026-10-26", close: 1)]))
+        #expect(chart.shownSessions == month)
+    }
+
+    @Test func `bars kept for another range leave what shows`() async throws {
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let chart = try makeChart(prices: prices)
+        await chart.load(.sixMonths).value
+
+        let bar = try DailyBar(sessionDate: "2026-10-23", open: 2, high: 2, low: 2, close: 2)
+        chart.keep([bar], askedFor: PriceRange.oneMonth.sessions(endingAt: fixedNow), as: .oneMonth)
+
+        #expect(chart.range == .sixMonths)
+        #expect(chart.state == .loaded([ChartPoint(sessionDate: "2026-10-26", close: 1)]))
+        #expect(chart.shownSessions == PriceRange.sixMonths.sessions(endingAt: fixedNow))
+    }
+
     private func makeChart(prices: FakeDailyPrices) throws -> PriceChartModel {
         try PriceChartModel(ticker: Ticker("VTI"), dailyPrices: prices, clock: { fixedNow })
     }
