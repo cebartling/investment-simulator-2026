@@ -70,10 +70,6 @@ public final class MainWindowModel {
     /// it while a pane draws, which would draw every view that read it
     /// again, and views observe each chart, never this.
     @ObservationIgnored var priceCharts: [Ticker: PriceChartModel] = [:]
-    /// The New York day (`yyyy-MM-dd`) each chart's ranges were asked for
-    /// on, or its Overview's month was kept on (PIN-524), so a new day asks
-    /// again (PIN-519). Not observed: no view reads it (PIN-522).
-    @ObservationIgnored var chartDays: [Ticker: String] = [:]
 
     let quotes: any QuoteProviding
     let dailyPrices: any DailyPriceProviding

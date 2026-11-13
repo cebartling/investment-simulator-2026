@@ -91,6 +91,23 @@ struct PriceChartModelTests {
         #expect(chart.shownSessions == nextMonth)
     }
 
+    @Test func `forgetting the ranges not asked on a day keeps those that were`() async throws {
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let chart = try makeChart(prices: prices)
+        await chart.load(.sixMonths).value
+        let yesterdaysMonth = PriceRange.oneMonth.sessions(endingAt: fixedNow.addingTimeInterval(-86400))
+        try chart.keep([makeDailyBar(session: "2026-10-23", high: 1)], askedFor: yesterdaysMonth, as: .oneMonth)
+
+        chart.forgetRanges(notAskedOn: PriceRange.oneMonth.sessions(endingAt: fixedNow).upperBound)
+        await chart.load(.sixMonths).value
+        await chart.load(.oneMonth).value
+
+        #expect(prices.requests.map(\.startDate) == [
+            PriceRange.sixMonths.sessions(endingAt: fixedNow).lowerBound,
+            PriceRange.oneMonth.sessions(endingAt: fixedNow).lowerBound,
+        ])
+    }
+
     @Test func `bars kept for another range leave what shows`() async throws {
         let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
         let chart = try makeChart(prices: prices)

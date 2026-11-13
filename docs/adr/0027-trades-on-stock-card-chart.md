@@ -93,3 +93,6 @@ A card's Overview loads the past month of daily bars (`loadLatestSession(of:)`),
 - **What isn't:** a month asked for on an earlier day, as when the load ran past midnight, or a load that failed or found an unknown ticker. 1M then asks as before.
 - **Reloads are unchanged:** a new day and Refresh Prices forget the kept month as they do every range (PIN-519), so 1M asks again.
 - **A 1M load already running** replaces the kept month when it ends, or keeps it if it fails. One asked for on an earlier day, as when it ran past midnight, never replaces it.
+- **Each range keeps its own day,** replacing PIN-519's `chartDays`. `showRange(_:of:)` forgets each range whose sessions weren't asked for through today (`PriceChartModel.forgetRanges(notAskedOn:)`). Keeping the Overview's month moves no day for the whole chart, so a 6M, 1Y or 5Y load asked for the day before that answers after the month is kept is still asked for again the next time it shows.
+
+One limit: a month the Overview asked for just before Refresh Prices, but which answers after it, is still kept, so picking 1M doesn't ask again. It was asked for moments before the refresh, and daily bars change only when a session settles.

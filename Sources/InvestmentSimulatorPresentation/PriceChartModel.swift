@@ -51,6 +51,15 @@ public final class PriceChartModel {
         charts = [:]
     }
 
+    /// Forgets the ranges whose sessions weren't asked for through `day`, a
+    /// New York day (`yyyy-MM-dd`), so the next `showRange` of each asks
+    /// again (PIN-519). Each range keeps its own day, so one asked for the
+    /// day before that answers after midnight is still asked for again
+    /// (PIN-524).
+    public func forgetRanges(notAskedOn day: String) {
+        charts = charts.filter { $0.value.sessions.upperBound == day }
+    }
+
     /// Charts `range` in a task of its own, cancelling the range still loading.
     @discardableResult
     public func load(_ range: PriceRange) -> Task<Void, Never> {

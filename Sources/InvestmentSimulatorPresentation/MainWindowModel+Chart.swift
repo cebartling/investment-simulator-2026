@@ -37,11 +37,14 @@ public extension MainWindowModel {
     }
 
     /// Charts `range` for `ticker`, replacing a range still loading. Ranges
-    /// loaded on an earlier New York day are asked for again (PIN-519), as
-    /// `loadLatestSession(of:)` asks again for the Overview's sessions.
+    /// asked for on another New York day are asked for again (PIN-519), as
+    /// `loadLatestSession(of:)` asks again for the Overview's sessions, each
+    /// by its own day (PIN-524).
     @discardableResult
     func showRange(_ range: PriceRange, of ticker: Ticker) -> Task<Void, Never> {
-        chart(of: ticker, on: range.sessions(endingAt: clock()).upperBound).load(range)
+        let chart = priceChart(of: ticker)
+        chart.forgetRanges(notAskedOn: range.sessions(endingAt: clock()).upperBound)
+        return chart.load(range)
     }
 
     /// Keeps the month of `ticker`'s bars its Overview loaded, asked for
@@ -50,22 +53,10 @@ public extension MainWindowModel {
     /// day, as when the load ran past midnight, aren't kept. A new day and
     /// Refresh Prices forget them as they do every range.
     internal func keepOverviewBars(_ bars: [DailyBar], askedFor sessions: ClosedRange<String>, of ticker: Ticker) {
-        let today = PriceRange.oneMonth.sessions(endingAt: clock()).upperBound
-        guard sessions.upperBound == today else {
+        guard sessions.upperBound == PriceRange.oneMonth.sessions(endingAt: clock()).upperBound else {
             return
         }
-        chart(of: ticker, on: today).keep(bars, askedFor: sessions, as: .oneMonth)
-    }
-
-    /// The chart of `ticker`, having forgotten the ranges it loaded before
-    /// `today`, a New York day (PIN-519).
-    private func chart(of ticker: Ticker, on today: String) -> PriceChartModel {
-        let chart = priceChart(of: ticker)
-        if chartDays[ticker] != today {
-            chart.forgetRanges()
-            chartDays[ticker] = today
-        }
-        return chart
+        priceChart(of: ticker).keep(bars, askedFor: sessions, as: .oneMonth)
     }
 
     /// Charts the range `ticker`'s chart shows, as its pane appears: from
