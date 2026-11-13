@@ -205,9 +205,24 @@ extension MainWindowModelTests {
         #expect(prices.requests.count == 2)
     }
 
+    @Test func `the Overview's month on a new day leaves the chart no range of the day before`() async throws {
+        let vti = try Ticker("VTI")
+        var now = fixedNow
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
+        let model = try await makeChartModel(prices: prices, clock: { now })
+        await model.showRange(.sixMonths, of: vti).value
+
+        now = fixedNow.addingTimeInterval(86400)
+        await model.loadLatestSession(of: vti)
+        await model.showRange(.sixMonths, of: vti).value
+
+        #expect(prices.requests.count == 3)
+        #expect(prices.requests.last?.endDate == PriceRange.sixMonths.sessions(endingAt: now).upperBound)
+    }
+
     @Test func `bars the Overview asked for yesterday aren't kept for the chart`() async throws {
         let vti = try Ticker("VTI")
-        let clock = Clock()
+        let clock = MovingClock()
         let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
         let model = try await makeChartModel(prices: prices, clock: { clock.now })
         // The New York day ends while the Overview's month loads.
@@ -359,6 +374,6 @@ private final class Run {
 
 /// A clock a fake can move on while it answers.
 @MainActor
-private final class Clock {
+private final class MovingClock {
     var now = fixedNow
 }

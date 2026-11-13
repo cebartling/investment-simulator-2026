@@ -76,6 +76,21 @@ struct PriceChartModelTests {
         #expect(chart.shownSessions == month)
     }
 
+    @Test func `a load asked for the day before doesn't replace the next day's bars kept meanwhile`() async throws {
+        let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-23", high: 1)]])
+        let chart = try makeChart(prices: prices)
+        let nextMonth = PriceRange.oneMonth.sessions(endingAt: fixedNow.addingTimeInterval(86400))
+        let bars = try [makeDailyBar(session: "2026-10-26", high: 1)]
+        // The day ends while the chart asks for its month, and the Overview
+        // hands over the new day's month before the answer comes (PIN-524).
+        prices.whileAnswering { chart.keep(bars, askedFor: nextMonth, as: .oneMonth) }
+
+        await chart.load(.oneMonth).value
+
+        #expect(chart.state == .loaded([ChartPoint(sessionDate: "2026-10-26", close: 1)]))
+        #expect(chart.shownSessions == nextMonth)
+    }
+
     @Test func `bars kept for another range leave what shows`() async throws {
         let prices = try FakeDailyPrices(["VTI": [makeDailyBar(session: "2026-10-26", high: 1)]])
         let chart = try makeChart(prices: prices)

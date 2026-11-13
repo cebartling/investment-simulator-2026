@@ -27,7 +27,7 @@ public final class PriceChartModel {
 
     private let dailyPrices: any DailyPriceProviding
     private let clock: () -> Date
-    /// Each range once loaded, so going back to it asks for nothing.
+    /// Each range once loaded or kept, so going back to it asks for nothing.
     private var charts: [PriceRange: Loaded] = [:]
     /// The range `load(_:)` started last, so a newer one replaces it. A
     /// `showRange` awaited directly, as Research's first load, isn't kept.
@@ -121,8 +121,12 @@ public final class PriceChartModel {
     /// loaded them, and shows them if `range` is the one shown: a stock
     /// card's Overview hands over the month it loaded (PIN-524). A load of
     /// `range` still running replaces them when it ends, or keeps them if
-    /// it fails.
+    /// it fails. Bars asked for on an earlier day than those `range` has,
+    /// as a load that ran past midnight, never replace them.
     public func keep(_ bars: [DailyBar], askedFor sessions: ClosedRange<String>, as range: PriceRange) {
+        if let kept = charts[range], kept.sessions.upperBound > sessions.upperBound {
+            return
+        }
         let points = bars.sorted { $0.sessionDate < $1.sessionDate }.map { ChartPoint(bar: $0) }
         let loaded = Loaded(sessions: sessions, points: points)
         charts[range] = loaded
