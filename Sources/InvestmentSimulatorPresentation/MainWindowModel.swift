@@ -64,10 +64,11 @@ public final class MainWindowModel {
     /// for them before showing its change.
     var latestSessionDays: [Ticker: String] = [:]
 
-    /// Each card's Chart pane (PIN-515), once shown, with the ranges it
-    /// loaded. Kept while the app runs, never saved. Not observed (PIN-522):
-    /// `priceChart(of:)` adds to it while a pane draws, which would draw every
-    /// view that read it again, and views observe each chart, never this.
+    /// Each card's Chart pane (PIN-515), once shown or once its Overview's
+    /// month loaded (PIN-524), with the ranges it loaded. Kept while the app
+    /// runs, never saved. Not observed (PIN-522): `priceChart(of:)` adds to
+    /// it while a pane draws, which would draw every view that read it
+    /// again, and views observe each chart, never this.
     @ObservationIgnored var priceCharts: [Ticker: PriceChartModel] = [:]
     /// The New York day (`yyyy-MM-dd`) each chart's ranges were asked for
     /// on, so a new day asks again (PIN-519). Not observed: no view reads it

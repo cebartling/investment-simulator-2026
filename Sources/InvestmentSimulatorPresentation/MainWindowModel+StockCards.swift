@@ -57,7 +57,7 @@ public extension MainWindowModel {
     /// the quote's change is from (PIN-511). Loads once a day, in New York;
     /// a failure is asked for again the next time the Overview shows. Daily
     /// bars are settled sessions, so during trading the latest is an earlier
-    /// day's.
+    /// day's. The month also becomes the card chart's 1M range (PIN-524).
     func loadLatestSession(of ticker: Ticker) async {
         let sessions = PriceRange.oneMonth.sessions(endingAt: clock())
         switch latestSessions[ticker] {
@@ -79,6 +79,7 @@ public extension MainWindowModel {
                 through: sessions.upperBound,
             )
             latestSessions[ticker] = RecentSessions(bars).map { .loaded($0) } ?? .empty
+            keepOverviewBars(bars, askedFor: sessions, of: ticker)
         } catch .unknownTicker {
             latestSessions[ticker] = .empty
         } catch {
