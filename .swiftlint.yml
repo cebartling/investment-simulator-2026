@@ -1,3 +1,23 @@
 # swiftformat owns trailing-comma style; the two tools disagree by default.
 disabled_rules:
   - trailing_comma
+
+# SwiftPM stops a target importing a package it doesn't depend on, but not a
+# system framework such as SwiftUI or AppKit. These rules hold Core to
+# Foundation (ADR-0001) and Presentation to Foundation, Observation and Core
+# (ADR-0004). Each is an allow-list: any other module matches.
+custom_rules:
+  core_imports_only_foundation:
+    name: Core Imports
+    included: 'Sources/InvestmentSimulatorCore/'
+    regex: '(?:^|;)[ \t]*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|package|internal|fileprivate|private)\s+)?import\s+(?:(?:typealias|struct|class|enum|protocol|let|var|func)\s+)?+(?!Foundation\b)\w+'
+    message: Core imports only Foundation (ADR-0001).
+    excluded_match_kinds: [comment, comment.mark, comment.url, doccomment, doccomment.field, string]
+    severity: error
+  presentation_imports_only_foundation_observation_core:
+    name: Presentation Imports
+    included: 'Sources/InvestmentSimulatorPresentation/'
+    regex: '(?:^|;)[ \t]*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|package|internal|fileprivate|private)\s+)?import\s+(?:(?:typealias|struct|class|enum|protocol|let|var|func)\s+)?+(?!(?:Foundation|Observation|InvestmentSimulatorCore)\b)\w+'
+    message: Presentation imports only Foundation, Observation and InvestmentSimulatorCore (ADR-0004).
+    excluded_match_kinds: [comment, comment.mark, comment.url, doccomment, doccomment.field, string]
+    severity: error

@@ -61,6 +61,7 @@ The app icon (ADR-0017) comes from the Icon Composer document `Resources/AppIcon
 - SwiftFormat reads its target Swift version from `.swift-version` (6.2). Its defaults rename Swift Testing functions to raw identifiers, e.g. `` @Test func `display name is investment simulator`() ``.
 - SwiftFormat owns trailing-comma style, so `.swiftlint.yml` disables SwiftLint's `trailing_comma` rule.
 - Pass explicit paths to SwiftLint (as `just lint` does); otherwise it scans `.build/`.
+- SwiftPM doesn't stop a target importing a system framework, so `.swiftlint.yml` has custom rules that allow Core only `Foundation` (ADR-0001) and Presentation only `Foundation`, `Observation` and Core (ADR-0004). Allowing another import is an architectural decision: record it in an ADR, then widen the rule.
 
 ## CI
 
