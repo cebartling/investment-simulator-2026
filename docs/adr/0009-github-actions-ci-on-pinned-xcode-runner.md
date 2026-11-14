@@ -69,3 +69,13 @@ The project wants CI to run the same commands as a developer, so there is no sep
   - Pin `just`, `swiftformat` and `swiftlint` versions.
   - Upload the bundled `.app` as a build artifact, and add signing and notarization steps if distribution happens (see ADR-0006).
   - Cache Homebrew and SwiftPM downloads if CI time becomes a concern.
+
+## Amendment (PIN-531): pinned lint tools
+
+CI no longer installs every tool with Homebrew.
+
+- **SwiftFormat and SwiftLint are pinned** by version and SHA-256 in the Install tools step (`SWIFTFORMAT_VERSION`, `SWIFTFORMAT_SHA256`, `SWIFTLINT_VERSION`, `SWIFTLINT_SHA256`), since PR #14. A new tool release can't fail CI on its own, and each download is checked against its checksum before it runs.
+- **They download through the GitHub API** (`gh release download` with the job's token), since PR #66: `swiftformat.zip` from `nicklockwood/SwiftFormat` and `portable_swiftlint.zip` from `realm/SwiftLint`. A release's browser download URL can return 504 for hours while the API still works.
+- **`release.yml` carries the same pins** (ADR-0018), because it copies this step. When either tool is upgraded locally, bump its version and checksum in both workflows in the same change. Take the checksum from the asset the workflows download. Otherwise local and CI lint can disagree.
+- **`just` still comes from Homebrew, unpinned.** It decides no lint or test verdict, so a new release can't fail code that passed locally. Since 1.0 it has promised not to break existing justfiles. Homebrew serves its bottles from its own registry, not from a release download URL, so the 504 doesn't apply. Pin it if a release ever breaks a recipe.
+- **Revisit:** pinning SwiftFormat and SwiftLint is done, and pinning `just` is declined, as above. ADR-0018 added signing and notarization in `release.yml`.

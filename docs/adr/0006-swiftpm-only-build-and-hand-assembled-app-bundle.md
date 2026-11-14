@@ -67,3 +67,7 @@ Xcode itself must still be installed and selected: Command Line Tools alone lack
   - Add Developer ID signing, hardened runtime and notarization to `just bundle` before any distribution outside this machine.
   - Single-source the app name, for example by generating `Info.plist` values from one variable.
   - If UI testing or asset catalogs become necessary, reconsider Option C.
+
+## Amendment (PIN-531): no `AppMetadata`
+
+`AppMetadata` was removed in PR #13, so the app name no longer lives in `AppMetadata.displayName`. The app and executable name appear only in `Resources/Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleExecutable`) and the `justfile` (`app_name`, `app_bundle`). They are still changed together. The Revisit item to single-source the name stands.
