@@ -8,7 +8,7 @@ Each significant architectural decision is recorded here as a numbered ADR.
 2. Fill it in with status `Proposed`; change it to `Accepted` once the decision is made.
 3. Add it to the index below.
 
-ADRs are not edited after acceptance except to change their status or to append an amendment section (`## Amendment (PIN-NNN): <topic>`) that records a later change without reversing the decision. A new decision that changes an earlier one gets its own ADR, which names the ADRs it amends; an amendment section records a smaller follow-up, such as a later PIN refining the same decision. To reverse a decision, write a new ADR and mark the old one `Superseded by ADR-NNNN`.
+ADRs are not edited after acceptance except to change their status, to add an `Amended by ADR-NNNN` line under the header, or to append an amendment section, `## Amendment (PIN-NNN): <topic>`, where PIN-NNN is the issue that wrote it. An amendment section records a follow-up that keeps the decision: a refinement, a stated fact that has since changed, or a settled Revisit item. It says which original statements it replaces. A new decision that changes an earlier one gets its own ADR, which names the ADRs it amends. To reverse a decision, write a new ADR and mark the old one `Superseded by ADR-NNNN`.
 
 ## Index
 
