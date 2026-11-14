@@ -70,4 +70,4 @@ Xcode itself must still be installed and selected: Command Line Tools alone lack
 
 ## Amendment (PIN-531): no `AppMetadata`
 
-`AppMetadata` was removed in PR #13, so the app name no longer lives in `AppMetadata.displayName`. The app and executable name appear only in `Resources/Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleExecutable`) and the `justfile` (`app_name`, `app_bundle`). They are still changed together. The Revisit item to single-source the name stands.
+`AppMetadata` was removed in PR #13, so the app name no longer lives in `AppMetadata.displayName`. `Resources/Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleExecutable`) and the `justfile` (`app_name`, `app_bundle`, `release_zip_prefix`) carry it, and are changed together. The executable name is also `Package.swift`'s executable target, which `just bundle` copies by `app_name`. The display name is also written in Swift (the library window's title and the Application Support folder) and in `release.yml`'s zip path. The Revisit item to single-source the name stands.
