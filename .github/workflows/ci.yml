@@ -27,7 +27,8 @@ jobs:
       # release checksums, so a new tool release can't fail CI on its own.
       # Bump them together with the local versions. They download through
       # the GitHub API (`gh release download`), because a release's
-      # browser download URL can return 504 for hours while the API works.
+      # browser download URL can return 504 for a long time (over half an
+      # hour in PR #66) while the API works.
       - name: Install tools
         env:
           GH_TOKEN: ${{ github.token }}
