@@ -67,3 +67,7 @@ Xcode itself must still be installed and selected: Command Line Tools alone lack
   - Add Developer ID signing, hardened runtime and notarization to `just bundle` before any distribution outside this machine.
   - Single-source the app name, for example by generating `Info.plist` values from one variable.
   - If UI testing or asset catalogs become necessary, reconsider Option C.
+
+## Amendment (PIN-531): no `AppMetadata`, and signing
+
+`AppMetadata` was removed in PR #13, so the app name no longer lives in `AppMetadata.displayName`. `Resources/Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleExecutable`) and the `justfile` (`app_name`, `app_bundle`, `release_zip_prefix`) carry it, and are changed together. The executable name is also the name of `Package.swift`'s executable target; `just bundle` copies the binary it builds by `app_name`. The display name is also written in Swift (the library window's title, the Application Support folder, the EDGAR `User-Agent` and a database error message) and in `release.yml`'s zip name, so a rename has to find these too. Two Revisit items: single-sourcing the app name stands, and Developer ID signing, hardened runtime and notarization are done, by ADR-0018 (`CODESIGN_IDENTITY`, `just notarize`).

@@ -71,3 +71,8 @@ Commands run from the command line and CI (see ADR-0006), so the tools must run 
   - Pin tool versions (for example with a `Brewfile` or mint) if version drift causes CI surprises.
   - Whether to add a SwiftLint custom rule that fails if Core imports a UI or persistence framework (see ADR-0001, "Revisit").
   - Whether to adopt a `.swiftformat` config once defaults need overriding.
+
+## Amendment (PIN-531): pinned tools and import rules
+
+- **Pinned in CI:** CI no longer installs SwiftFormat and SwiftLint with Homebrew. Both workflows pin them by version and SHA-256 and download them through the GitHub API. ADR-0009's amendment (PIN-531) has the details. The Revisit item to pin tool versions is done, without a `Brewfile` or mint. Local installs aren't pinned, so when a tool is upgraded locally, bump the workflow pins to match.
+- **Import rules:** since PIN-530, `.swiftlint.yml` has custom rules that allow Core only `Foundation` (ADR-0001) and Presentation only `Foundation`, `Observation` and Core (ADR-0004). The Revisit item about a rule that fails if Core imports a UI or persistence framework is done.

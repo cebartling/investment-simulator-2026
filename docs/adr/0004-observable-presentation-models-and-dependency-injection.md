@@ -71,3 +71,7 @@ Observation (`@Observable`) is part of the Swift standard library, not SwiftUI, 
 - **Revisit:**
   - Whether `@Environment` for the root model is worth it or whether initializer passing alone is enough.
   - Whether simple screens may skip a presentation model.
+
+## Amendment (PIN-531): a lint rule for Presentation's imports
+
+Option A's pros say the target boundary stops presentation code importing SwiftUI by accident. It doesn't: SwiftPM stops a target importing a package it doesn't depend on, but not a system framework such as SwiftUI. Since PIN-530, a SwiftLint custom rule in `.swiftlint.yml` (`presentation_imports_only_foundation_observation_core`) fails `just lint`, and so CI, when Presentation imports anything but `Foundation`, `Observation` and Core.

@@ -70,3 +70,7 @@ Views and `@Observable` models call SwiftData and other frameworks directly, as 
 - **Revisit:**
   - Whether one target per driven adapter stays worthwhile as their number grows.
   - Whether to add a lint rule or test that fails if Core imports a UI or persistence framework, beyond what SwiftPM already enforces.
+
+## Amendment (PIN-531): a lint rule for Core's imports
+
+SwiftPM stops Core importing an adapter target, but not a system framework such as SwiftUI or AppKit. Since PIN-530, a SwiftLint custom rule in `.swiftlint.yml` (`core_imports_only_foundation`) fails `just lint`, and so CI, when Core imports anything but `Foundation`. The Revisit item about a lint rule or test is done.

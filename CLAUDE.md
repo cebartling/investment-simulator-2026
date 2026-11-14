@@ -52,7 +52,7 @@ Rules from the accepted ADRs:
 
 `AppDelegate` sets the activation policy to `.regular` in `applicationWillFinishLaunching`. A bare SwiftPM executable otherwise launches as a background process with no Dock icon and an unresponsive menu bar. Setting it later, in `didFinishLaunching`, is too late.
 
-`just bundle` assembles the `.app` by hand from `Resources/Info.plist` plus the release binary. The app name and executable name are duplicated across `Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleExecutable`) and the `justfile` (`app_name`, `app_bundle`). Change them together, or the bundle will not launch. ADR-0006 also lists `AppMetadata.displayName`; that type has been removed.
+`just bundle` assembles the `.app` by hand from `Resources/Info.plist` plus the release binary. The app name and executable name are duplicated across `Info.plist` (`CFBundleName`, `CFBundleDisplayName`, `CFBundleExecutable`) and the `justfile` (`app_name`, `app_bundle`). Change them together, or the bundle will not launch.
 
 The app icon (ADR-0017) comes from the Icon Composer document `Resources/AppIcon.icon` (`icon.json` plus SVG layers). Tune its glass and appearances in Icon Composer (inside Xcode.app). `just bundle` compiles it with `xcrun actool` into `Contents/Resources` (`Assets.car` plus `AppIcon.icns`) before `codesign`. It passes absolute paths, because relative ones once resolved against another directory, and reads the deployment target from `LSMinimumSystemVersion`. `actool` can exit 0 without writing anything, so the next line fails the recipe unless both files exist. `Info.plist`'s `CFBundleIconName` and `CFBundleIconFile` must match `actool`'s `--app-icon AppIcon`. LaunchServices caches icons: after a rebuild, check with `lsregister -f` on the bundle or `killall Dock`, not by relaunching the app, which asks for the Keychain.
 
@@ -67,7 +67,7 @@ The app icon (ADR-0017) comes from the Icon Composer document `Resources/AppIcon
 
 `.github/workflows/ci.yml` runs `just lint`, `just test` and `just bundle` on pushes to `main` and on pull requests. It uses the `xcode-27` runner, a GitHub public-preview image, and selects `/Applications/Xcode_27.1.app` to match the local toolchain. When that Xcode is removed from the image, update the path.
 
-CI pins SwiftFormat and SwiftLint by version and SHA-256 in `ci.yml`. When you upgrade either tool locally, update the version and checksum there to match, or CI and local lint can disagree. `release.yml` copies the same pins; bump both workflows together.
+CI pins SwiftFormat and SwiftLint by version and SHA-256 in `ci.yml`. When you upgrade either tool locally, update the version and checksum there to match, or CI and local lint can disagree. `release.yml` copies the same pins; bump both workflows together. Take each checksum from the asset the workflows download (`swiftformat.zip`, `portable_swiftlint.zip`).
 
 ## Releases
 
