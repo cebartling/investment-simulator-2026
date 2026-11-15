@@ -111,6 +111,32 @@ struct ResearchStatementFailureTests {
         #expect(statements.requests.count == sent)
     }
 
+    @Test func `an empty table cancelled while loading is asked for again`() async throws {
+        let statements = FakeStatements([Request(.income, nil): .failure(.noData)])
+        let tab = try tab(statements)
+        let run = Run()
+        statements.whileAnswering { run.task?.cancel() }
+        run.task = Task { await tab.showStatements(Self.quarterly) }
+        await run.task?.value
+        statements.whileAnswering {}
+
+        await tab.showStatements(Self.quarterly)
+
+        #expect(tab.statementState == .empty(.noData))
+        #expect(statements.requests.count == 2)
+    }
+
+    @Test func `forgetting statements asks again for an empty table`() async throws {
+        let statements = FakeStatements([Request(.income, nil): .failure(.noData)])
+        let tab = try tab(statements)
+        await tab.showStatements(Self.quarterly)
+
+        tab.forgetStatements()
+        await tab.showStatements(Self.quarterly)
+
+        #expect(statements.requests.count == 2)
+    }
+
     @Test func `a company reporting in another currency has statements the app can't show`() async throws {
         let statements = FakeStatements([Request(.income, nil): .failure(.unsupportedCurrency)])
         let tab = try tab(statements)
@@ -208,4 +234,9 @@ struct ResearchStatementFailureTests {
             clock: { Date(timeIntervalSince1970: 1_793_000_000) },
         )
     }
+}
+
+@MainActor
+private final class Run {
+    var task: Task<Void, Never>?
 }
