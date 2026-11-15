@@ -72,6 +72,20 @@ struct ResearchStatementFailureTests {
         #expect(tab.statementState == .empty(.noData))
     }
 
+    @Test func `finished years all in another currency say so rather than that there are none`() async throws {
+        let statements = FakeStatements([
+            Request(.income, nil): .success(Self.statement(Self.quarter3)),
+            Request(.income, Self.fy25): .failure(.unsupportedCurrency),
+            Request(.income, Self.fy24): .failure(.unsupportedCurrency),
+            Request(.income, Self.fy23): .failure(.unsupportedCurrency),
+        ])
+        let tab = try tab(statements)
+
+        await tab.showStatements(Self.annual)
+
+        #expect(tab.statementState == .empty(.unsupportedCurrency))
+    }
+
     @Test func `a company reporting in another currency has statements the app can't show`() async throws {
         let statements = FakeStatements([Request(.income, nil): .failure(.unsupportedCurrency)])
         let tab = try tab(statements)

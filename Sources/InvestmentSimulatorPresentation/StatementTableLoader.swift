@@ -23,7 +23,9 @@ nonisolated struct StatementTableLoader {
     /// Asks for the periods walked back from `latest`, all at once. A period
     /// that fails where a retry couldn't help, such as one Equibles doesn't
     /// have, loses its column. Any other failure fails the table, which
-    /// mustn't look complete without it.
+    /// mustn't look complete without it. A table with no column left is
+    /// empty because it's in another currency when every period was,
+    /// otherwise for want of data.
     func table(
         _ selection: StatementSelection,
         endingAt latest: FinancialStatement,
@@ -33,20 +35,26 @@ nonisolated struct StatementTableLoader {
             for period in periods where period != latest.period {
                 group.addTask { await (period, answer(selection.kind, period)) }
             }
-            return await group.reduce(into: [FiscalPeriod: Result<FinancialStatement?, MarketDataError>]()) {
+            return await group.reduce(into: [FiscalPeriod: Result<FinancialStatement, MarketDataError>]()) {
                 $0[$1.0] = $1.1
             }
         }
         var found: [FinancialStatement] = []
+        var dropped: [MarketDataError] = []
         for period in periods {
             if period == latest.period {
                 found.append(latest)
-            } else if let statement = try answers[period]?.get() {
-                found.append(statement)
+            } else if let answer = answers[period] {
+                switch answer {
+                case let .success(statement): found.append(statement)
+                case let .failure(error) where error.emptyReason != nil: dropped.append(error)
+                case let .failure(error): throw error
+                }
             }
         }
         guard !found.isEmpty else {
-            throw .noData
+            let allInAnotherCurrency = !dropped.isEmpty && dropped.allSatisfy { $0 == .unsupportedCurrency }
+            throw allInAnotherCurrency ? .unsupportedCurrency : .noData
         }
         return StatementTable(statements: found)
     }
@@ -54,11 +62,11 @@ nonisolated struct StatementTableLoader {
     private func answer(
         _ kind: StatementKind,
         _ period: FiscalPeriod,
-    ) async -> Result<FinancialStatement?, MarketDataError> {
+    ) async -> Result<FinancialStatement, MarketDataError> {
         do throws(MarketDataError) {
             return try await .success(statements.financialStatement(kind, for: ticker, period: period))
         } catch {
-            return error.emptyReason == nil ? .failure(error) : .success(nil)
+            return .failure(error)
         }
     }
 }
