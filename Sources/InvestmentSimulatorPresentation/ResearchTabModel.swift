@@ -20,7 +20,7 @@ public nonisolated enum ResearchEmptyReason: Equatable, Sendable {
         case .noData: "No \(subject) for \(ticker.symbol)."
         case .nonePublished: "No \(subject) published for \(ticker.symbol)."
         case .notCovered: "Equibles doesn't cover \(ticker.symbol)'s \(subject)."
-        case .unsupportedCurrency: "\(ticker.symbol)'s \(subject) are in a currency the app can't show."
+        case .unsupportedCurrency: "Equibles reports \(ticker.symbol)'s \(subject) in a currency the app can't show."
         }
     }
 }
@@ -60,6 +60,8 @@ public final class ResearchTabModel: Identifiable {
     public let chart: PriceChartModel
     public private(set) var profileState = ResearchSectionState<CompanyProfile>.loading
     /// Empty when EDGAR doesn't list the ticker, or lists no exchange for it.
+    /// The profile shows every empty state as no exchange at all: an exchange
+    /// has no currency, so no other reason applies to it.
     public private(set) var exchangeState = ResearchSectionState<String>.loading
     /// SEC's company ID for the ticker, once the directory has listed it. It
     /// stays nil when EDGAR is off, fails or lacks the ticker; a later failed

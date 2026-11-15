@@ -249,10 +249,16 @@ struct ResearchSectionTests {
         (ResearchEmptyReason.noData, "No press releases for PLUG."),
         (.nonePublished, "No press releases published for PLUG."),
         (.notCovered, "Equibles doesn't cover PLUG's press releases."),
-        (.unsupportedCurrency, "PLUG's press releases are in a currency the app can't show."),
+        (.unsupportedCurrency, "Equibles reports PLUG's press releases in a currency the app can't show."),
     ])
     func `each empty reason reads differently`(reason: ResearchEmptyReason, expected: String) throws {
         #expect(try reason.message(subject: "press releases", ticker: Ticker("PLUG")) == expected)
+    }
+
+    @Test func `a currency the app can't show reads right for a section named in the singular`() throws {
+        let message = try ResearchEmptyReason.unsupportedCurrency.message(subject: "profile", ticker: Ticker("VTI"))
+
+        #expect(message == "Equibles reports VTI's profile in a currency the app can't show.")
     }
 
     private func tab(
