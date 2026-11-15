@@ -86,6 +86,19 @@ struct ResearchStatementFailureTests {
         #expect(tab.statementState == .empty(.unsupportedCurrency))
     }
 
+    @Test func `going back to an empty table asks for nothing`() async throws {
+        let statements = FakeStatements([Request(.income, nil): .failure(.unsupportedCurrency)])
+        let tab = try tab(statements)
+        await tab.showStatements(Self.quarterly)
+        await tab.showStatements(Self.annual)
+        let sent = statements.requests.count
+
+        await tab.showStatements(Self.quarterly)
+
+        #expect(tab.statementState == .empty(.unsupportedCurrency))
+        #expect(statements.requests.count == sent)
+    }
+
     @Test func `a company reporting in another currency has statements the app can't show`() async throws {
         let statements = FakeStatements([Request(.income, nil): .failure(.unsupportedCurrency)])
         let tab = try tab(statements)

@@ -82,8 +82,10 @@ public final class ResearchTabModel: Identifiable {
     private let quotes: any QuoteProviding
     private let ports: ResearchSectionPorts
     private let clock: () -> Date
-    /// Each table once loaded, so going back to it asks for nothing.
-    private var tables: [StatementSelection: StatementTable] = [:]
+    /// Each table once loaded, or why it's empty when a retry couldn't fill
+    /// it, so going back to it asks for nothing. Other failures aren't kept,
+    /// so showing one again retries it.
+    private var tables: [StatementSelection: ResearchSectionState<StatementTable>] = [:]
     /// Each statement's newest period, where the walk back starts from.
     private var latestStatements: [StatementKind: FinancialStatement] = [:]
 
@@ -172,27 +174,35 @@ public final class ResearchTabModel: Identifiable {
         }
     }
 
-    /// Shows a statement's table, from memory if it was loaded before. A
-    /// request cancelled before it starts changes nothing; one cancelled or
-    /// superseded while loading changes nothing more.
+    /// Shows a statement's table, from memory if it was loaded or found empty
+    /// before. A request cancelled before it starts changes nothing; one
+    /// cancelled or superseded while loading changes nothing more.
     public func showStatements(_ selection: StatementSelection) async {
         guard !Task.isCancelled else {
             return
         }
         statementSelection = selection
-        if let table = tables[selection] {
-            statementState = .loaded(table)
+        if let known = tables[selection] {
+            statementState = known
             return
         }
         await load(
             \.statementState,
             isCurrent: { statementSelection == selection },
             from: { () async throws(MarketDataError) in
-                let table = try await table(for: selection)
-                if !Task.isCancelled {
-                    tables[selection] = table
+                let settled: ResearchSectionState<StatementTable>
+                do throws(MarketDataError) {
+                    settled = try await .loaded(table(for: selection))
+                } catch {
+                    guard let reason = error.emptyReason else {
+                        throw error
+                    }
+                    settled = .empty(reason)
                 }
-                return .loaded(table)
+                if !Task.isCancelled {
+                    tables[selection] = settled
+                }
+                return settled
             },
         )
     }
