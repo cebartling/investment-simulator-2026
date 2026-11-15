@@ -53,7 +53,10 @@ ADR-0004 gives each screen one `@Observable` model, built by a composition root.
 - **The new ports throw `MarketDataError`,** a new Core enum:
   - `missingAPIKey`, `invalidAPIKey`, `dailyLimitReached` and `unavailable(String)`, as `QuoteError` has.
   - `noData`: a `404` from a per-ticker endpoint after the tab's quote has already validated the ticker. It shows as an empty state, not an error.
+  - `unsupportedCurrency` (PIN-453): a statement reported entirely in a unit `Money` can't hold, such as another currency. Only the statements adapter throws it.
   - `missingContactEmail`: an EDGAR request with no contact email saved.
+
+  `noData` and `unsupportedCurrency` are the errors a retry can't help (PIN-529). Any section shows them as an empty state without a Retry button, and the exchange row shows nothing. An older statement period that fails with one loses its column. If every period goes that way, the table is empty, and the reason is the currency when every period was in another currency. A table loaded or found empty is kept until the tab reloads. Every other error shows with a Retry button.
 
   `QuoteError` doesn't change, and the shell keeps using it for the quote that validates a ticker.
 - **A tab loads every section when it opens,** each as a child task of one task group, with cancellation checks (ADR-0003). Financial statements are the exception: each statement and cadence loads when first shown, which is when the Financials pane is selected. Closing a ticker cancels its tasks. Nothing polls, and nothing is cached across launches.
