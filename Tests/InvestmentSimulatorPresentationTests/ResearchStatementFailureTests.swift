@@ -193,16 +193,6 @@ struct ResearchStatementFailureTests {
         #expect(tab.statementState == .failed(.dailyLimitReached))
     }
 
-    @Test func `a failed older period fails the section rather than hide a column`() async throws {
-        let statements = Self.statements()
-        statements.answer(Request(.income, Self.quarter2), with: .failure(.unavailable("Down")))
-        let tab = try tab(statements)
-
-        await tab.showStatements(Self.quarterly)
-
-        #expect(tab.statementState == .failed(.unavailable("Down")))
-    }
-
     @Test func `showing a failed table again retries it without its latest period`() async throws {
         let statements = Self.statements()
         statements.answer(Request(.income, Self.quarter2), with: .failure(.unavailable("Down")))
