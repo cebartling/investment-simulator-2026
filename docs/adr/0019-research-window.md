@@ -148,3 +148,9 @@ ADR-0004 gives each screen one `@Observable` model, built by a composition root.
 ## Amendment (PIN-505): panes
 
 A ticker's research is no longer one scrolling stack. A fixed header (symbol, Buy in Experiment menu and quote) sits above a `TabView` with one pane per topic: Overview (chart and profile), Valuation, Financials, Dividends, News (press releases) and Filings. The selected pane lives on `ResearchTabModel.selectedPane`, in memory while the ticker is open; it is not saved with the open tickers, so a reopened ticker starts on Overview. `ResearchWindowModel.selectPane(_:for:)` is the only way to change it. Entering Financials loads the statement shown, and leaving it cancels a load still running while keeping the tables loaded. This replaces the collapsed statements section and `statementsShown`. A new analysis adds a `ResearchPane` case and a branch in `ResearchTickerView`.
+
+## Amendment (PIN-529): errors a retry can't help
+
+This extends the `MarketDataError` list in the Decision with a case PIN-453 added: `unsupportedCurrency`, a statement reported entirely in a unit `Money` can't hold, such as another currency. Only the statements adapter throws it.
+
+`noData` and `unsupportedCurrency` are the errors a retry can't help. Any section shows them as an empty state with no Retry, and the profile then shows no exchange row at all. Every other error shows with a Retry. In a statement table, an older period that fails with either one loses its column. A table can be left with no column only when the latest period isn't one of its own, as with annual columns before the year has ended. It is then empty, because of the currency when every period it dropped was in another currency, and for want of data otherwise. The tab keeps a table that has loaded or come back empty until it reloads.

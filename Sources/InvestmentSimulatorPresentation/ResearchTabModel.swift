@@ -20,7 +20,7 @@ public nonisolated enum ResearchEmptyReason: Equatable, Sendable {
         case .noData: "No \(subject) for \(ticker.symbol)."
         case .nonePublished: "No \(subject) published for \(ticker.symbol)."
         case .notCovered: "Equibles doesn't cover \(ticker.symbol)'s \(subject)."
-        case .unsupportedCurrency: "\(ticker.symbol)'s \(subject) are in a currency the app can't show."
+        case .unsupportedCurrency: "Equibles reports \(ticker.symbol)'s \(subject) in a currency the app can't show."
         }
     }
 }
@@ -60,6 +60,8 @@ public final class ResearchTabModel: Identifiable {
     public let chart: PriceChartModel
     public private(set) var profileState = ResearchSectionState<CompanyProfile>.loading
     /// Empty when EDGAR doesn't list the ticker, or lists no exchange for it.
+    /// The profile shows every empty state as no exchange at all: an exchange
+    /// has no currency, so no other reason applies to it.
     public private(set) var exchangeState = ResearchSectionState<String>.loading
     /// SEC's company ID for the ticker, once the directory has listed it. It
     /// stays nil when EDGAR is off, fails or lacks the ticker; a later failed
@@ -80,8 +82,10 @@ public final class ResearchTabModel: Identifiable {
     private let quotes: any QuoteProviding
     private let ports: ResearchSectionPorts
     private let clock: () -> Date
-    /// Each table once loaded, so going back to it asks for nothing.
-    private var tables: [StatementSelection: StatementTable] = [:]
+    /// Each table once loaded, or why it's empty when a retry couldn't fill
+    /// it, so going back to it asks for nothing. Other failures aren't kept,
+    /// so showing one again retries it.
+    private var tables: [StatementSelection: ResearchSectionState<StatementTable>] = [:]
     /// Each statement's newest period, where the walk back starts from.
     private var latestStatements: [StatementKind: FinancialStatement] = [:]
 
@@ -170,33 +174,37 @@ public final class ResearchTabModel: Identifiable {
         }
     }
 
-    /// Shows a statement's table, from memory if it was loaded before. A
-    /// request cancelled before it starts changes nothing; one cancelled or
-    /// superseded while loading changes nothing more.
+    /// Shows a statement's table, from memory if it was loaded or found empty
+    /// before. A request cancelled before it starts changes nothing; one
+    /// cancelled or superseded while loading changes nothing more.
     public func showStatements(_ selection: StatementSelection) async {
         guard !Task.isCancelled else {
             return
         }
         statementSelection = selection
-        if let table = tables[selection] {
-            statementState = .loaded(table)
+        if let known = tables[selection] {
+            statementState = known
             return
         }
-        statementState = .loading
-        let outcome: ResearchSectionState<StatementTable>
-        do throws(MarketDataError) {
-            let table = try await table(for: selection)
-            guard !Task.isCancelled else {
-                return
-            }
-            tables[selection] = table
-            outcome = .loaded(table)
-        } catch {
-            outcome = error.sectionState()
-        }
-        if !Task.isCancelled, statementSelection == selection {
-            statementState = outcome
-        }
+        await load(
+            \.statementState,
+            isCurrent: { statementSelection == selection },
+            from: { () async throws(MarketDataError) in
+                let settled: ResearchSectionState<StatementTable>
+                do throws(MarketDataError) {
+                    settled = try await .loaded(table(for: selection))
+                } catch {
+                    guard let reason = error.emptyReason else {
+                        throw error
+                    }
+                    settled = .empty(reason)
+                }
+                if !Task.isCancelled {
+                    tables[selection] = settled
+                }
+                return settled
+            },
+        )
     }
 
     private func table(for selection: StatementSelection) async throws(MarketDataError) -> StatementTable {
@@ -261,8 +269,11 @@ public final class ResearchTabModel: Identifiable {
         return .loaded(result.releases.sorted { $0.publishedAt > $1.publishedAt })
     }
 
+    /// Shows `state` loading, then what `request` answers, unless the task
+    /// was cancelled or `isCurrent` says a newer request took over.
     private func load<Value>(
         _ state: ReferenceWritableKeyPath<ResearchTabModel, ResearchSectionState<Value>>,
+        isCurrent: () -> Bool = { true },
         from request: () async throws(MarketDataError) -> ResearchSectionState<Value>,
     ) async {
         guard !Task.isCancelled else {
@@ -275,7 +286,7 @@ public final class ResearchTabModel: Identifiable {
         } catch {
             outcome = error.sectionState()
         }
-        if !Task.isCancelled {
+        if !Task.isCancelled, isCurrent() {
             self[keyPath: state] = outcome
         }
     }
