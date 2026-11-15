@@ -139,6 +139,31 @@ struct ResearchSectionTests {
         #expect(tab.profileState == .loaded(Self.profile))
     }
 
+    @Test(arguments: [
+        (MarketDataError.noData, ResearchEmptyReason?.some(.noData)),
+        (.unsupportedCurrency, .some(.unsupportedCurrency)),
+        (.missingAPIKey, nil),
+        (.invalidAPIKey, nil),
+        (.dailyLimitReached, nil),
+        (.unavailable("Down"), nil),
+        (.missingContactEmail, nil),
+    ])
+    func `only a failure a retry can't help is an empty section`(
+        error: MarketDataError,
+        reason: ResearchEmptyReason?,
+    ) async throws {
+        let tab = try tab(FakeResearchData(multiples: .failure(error)))
+
+        await tab.load()
+
+        let expected: ResearchSectionState<ValuationMultiples> = if let reason {
+            .empty(reason)
+        } else {
+            .failed(error)
+        }
+        #expect(tab.multiplesState == expected)
+    }
+
     @Test func `a currency the app can't show is an empty section in any section`() async throws {
         let tab = try tab(FakeResearchData(profile: .success(Self.profile), dividends: .failure(.unsupportedCurrency)))
 
