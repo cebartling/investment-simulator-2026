@@ -184,21 +184,17 @@ public final class ResearchTabModel: Identifiable {
             statementState = .loaded(table)
             return
         }
-        statementState = .loading
-        let outcome: ResearchSectionState<StatementTable>
-        do throws(MarketDataError) {
-            let table = try await table(for: selection)
-            guard !Task.isCancelled else {
-                return
-            }
-            tables[selection] = table
-            outcome = .loaded(table)
-        } catch {
-            outcome = error.sectionState()
-        }
-        if !Task.isCancelled, statementSelection == selection {
-            statementState = outcome
-        }
+        await load(
+            \.statementState,
+            isCurrent: { statementSelection == selection },
+            from: { () async throws(MarketDataError) in
+                let table = try await table(for: selection)
+                if !Task.isCancelled {
+                    tables[selection] = table
+                }
+                return .loaded(table)
+            },
+        )
     }
 
     private func table(for selection: StatementSelection) async throws(MarketDataError) -> StatementTable {
@@ -263,8 +259,11 @@ public final class ResearchTabModel: Identifiable {
         return .loaded(result.releases.sorted { $0.publishedAt > $1.publishedAt })
     }
 
+    /// Shows `state` loading, then what `request` answers, unless the task
+    /// was cancelled or `isCurrent` says a newer request took over.
     private func load<Value>(
         _ state: ReferenceWritableKeyPath<ResearchTabModel, ResearchSectionState<Value>>,
+        isCurrent: () -> Bool = { true },
         from request: () async throws(MarketDataError) -> ResearchSectionState<Value>,
     ) async {
         guard !Task.isCancelled else {
@@ -277,7 +276,7 @@ public final class ResearchTabModel: Identifiable {
         } catch {
             outcome = error.sectionState()
         }
-        if !Task.isCancelled {
+        if !Task.isCancelled, isCurrent() {
             self[keyPath: state] = outcome
         }
     }
