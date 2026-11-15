@@ -164,13 +164,24 @@ struct ResearchSectionTests {
         #expect(tab.multiplesState == expected)
     }
 
-    @Test func `a currency the app can't show is an empty section in any section`() async throws {
-        let tab = try tab(FakeResearchData(profile: .success(Self.profile), dividends: .failure(.unsupportedCurrency)))
+    @Test(arguments: ResearchTabModel.Section.allCases)
+    func `a currency the app can't show is an empty section in any section`(
+        section: ResearchTabModel.Section,
+    ) async throws {
+        let tab = try tab(
+            FakeResearchData(
+                profile: .failure(.unsupportedCurrency),
+                multiples: .failure(.unsupportedCurrency),
+                dividends: .failure(.unsupportedCurrency),
+                pressReleases: .failure(.unsupportedCurrency),
+                filings: .failure(.unsupportedCurrency),
+            ),
+            directory: FakeDirectory(.failure(.unsupportedCurrency)),
+        )
 
-        await tab.load()
+        await tab.load(section)
 
-        #expect(tab.dividendsState == .empty(.unsupportedCurrency))
-        #expect(tab.profileState == .loaded(Self.profile))
+        #expect(emptyReason(of: section, in: tab) == .unsupportedCurrency)
     }
 
     @Test func `the yield divides the trailing dividends by the quote`() async throws {
@@ -266,6 +277,7 @@ struct ResearchSectionTests {
         otherSections: FakeResearchData? = nil,
         quotes: some QuoteProviding = FakeQuotes(.failure(.missingAPIKey)),
         prices: FakeDailyPrices = FakeDailyPrices(),
+        directory: FakeDirectory = FakeDirectory(),
     ) throws -> ResearchTabModel {
         try ResearchTabModel(
             ticker: Ticker("VTI"),
@@ -278,10 +290,29 @@ struct ResearchSectionTests {
                 pressReleases: otherSections ?? data,
                 filings: otherSections ?? data,
                 statements: FakeStatements(),
-                directory: FakeDirectory(),
+                directory: directory,
             ),
             clock: { Self.now },
         )
+    }
+
+    /// Why a section is empty, or nil while it shows anything else.
+    private func emptyReason(of section: ResearchTabModel.Section, in tab: ResearchTabModel) -> ResearchEmptyReason? {
+        switch section {
+        case .profile: emptyReason(tab.profileState)
+        case .exchange: emptyReason(tab.exchangeState)
+        case .multiples: emptyReason(tab.multiplesState)
+        case .dividends: emptyReason(tab.dividendsState)
+        case .pressReleases: emptyReason(tab.pressReleasesState)
+        case .filings: emptyReason(tab.filingsState)
+        }
+    }
+
+    private func emptyReason(_ state: ResearchSectionState<some Equatable>) -> ResearchEmptyReason? {
+        guard case let .empty(reason) = state else {
+            return nil
+        }
+        return reason
     }
 }
 
