@@ -86,6 +86,18 @@ struct ResearchStatementFailureTests {
         #expect(tab.statementState == .empty(.unsupportedCurrency))
     }
 
+    @Test func `finished years only partly in another currency have no data`() async throws {
+        let statements = FakeStatements([
+            Request(.income, nil): .success(Self.statement(Self.quarter3)),
+            Request(.income, Self.fy25): .failure(.unsupportedCurrency),
+        ])
+        let tab = try tab(statements)
+
+        await tab.showStatements(Self.annual)
+
+        #expect(tab.statementState == .empty(.noData))
+    }
+
     @Test func `going back to an empty table asks for nothing`() async throws {
         let statements = FakeStatements([Request(.income, nil): .failure(.unsupportedCurrency)])
         let tab = try tab(statements)
